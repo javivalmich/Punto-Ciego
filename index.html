@@ -307,6 +307,14 @@ ul.tareas{list-style:none;margin:6px 0;padding:0;display:grid;gap:8px}
 .stats b{color:var(--tiza);font-size:22px;margin-right:4px}
 .sep{margin:0 4px}
 .pie{font-size:13.5px}
+.bot-tag{font-family:var(--txt);font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--sonar);border:1px solid var(--sonar);border-radius:999px;padding:1px 7px;margin-left:6px;line-height:1.4;white-space:nowrap}
+.prueba{border:1px dashed var(--sonar);border-radius:12px;padding:14px}
+.prueba h2{font-size:22px;display:flex;align-items:center;gap:8px}
+.prueba h2 .bot-tag{margin-left:0}
+.pr-fila{display:flex;gap:8px;margin:8px 0 12px}.pr-fila button{flex:1}
+#prFab{position:fixed;left:14px;bottom:calc(84px + env(safe-area-inset-bottom,0px));z-index:45;min-height:36px;padding:4px 12px;border-radius:999px;font-size:13px;opacity:.6;background:var(--casco);border-style:dashed}
+#prFab.solo{bottom:calc(18px + env(safe-area-inset-bottom,0px))}
+#prFab[hidden]{display:none}
 </style>
 </head>
 <body>
@@ -552,6 +560,7 @@ const SUPA={
   key:'sb_publishable_gS_zmhigp_Qt-h8jTyQBCg_r9WwTVU9'   // clave publicable: segura en el repo gracias a RLS
 };
 const QS=new URLSearchParams(location.search);
+const PRUEBAS=QS.get('pruebas')==='1'; /* modo pruebas (bots y atajos): sin este parámetro nada de eso existe */
 const EN_LOCAL=/^(localhost|127\.0\.0\.1)$/.test(location.hostname);
 if(EN_LOCAL&&QS.get('supa')){SUPA.url=QS.get('supa');SUPA.key=QS.get('supakey')||''}
 const SB_LIB=(EN_LOCAL&&QS.get('sblib'))||'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.116.0/dist/umd/supabase.js';
@@ -617,6 +626,7 @@ function errorCuenta(e){
 }
 async function sumarPartida(){
   if(!CUENTAS||!USER||!S||!S.end||!S.end.w)return;
+  if(S.players.some(x=>x.bot))return; /* las partidas con bots no cuentan */
   const p=mine();if(!p||!p.role)return;
   const k='pc.contada.'+S.gid;if(LS.get(k))return;LS.set(k,1);
   const imp=p.role==='imp',gano=(S.end.w==='imp')===imp;
@@ -744,7 +754,7 @@ function limpiaCfg(c,old){
 function nuevaPartida(hostId,name,look){
   const now=ahora();look=limpiaLook(look);
   return {v:1,hb:now,hostId,gid:uid(6),phase:'lobby',cfg:cfgDefecto('piso'),players:[{id:hostId,name,color:look.hood,look,seen:now}],
-    chat:[],ackd:[],log:[],notice:null,meet:null,sab:null,locks:[],sabCd:0,end:null};
+    chat:[],ackd:[],log:[],notice:null,meet:null,sab:null,locks:[],sabCd:0,end:null,...(PRUEBAS?{pruebas:true,pr:{rol:'azar',vel:'normal'}}:{})};
 }
 const maxImp=n=>Math.max(1,Math.floor((n-1)/3));
 function generarTareas(rooms,n){
@@ -770,12 +780,19 @@ function empezar(st,now){
   const rooms=salas(st);if(st.players.length<4||rooms.length<2)return;
   const n=st.players.length,nImp=Math.min(st.cfg.imp,maxImp(n));
   const orden=barajar(st.players.map(p=>p.id)).slice(0,nImp);
+  if(st.pruebas&&st.pr&&st.pr.rol!=='azar')ajustaPapel(st,orden);
   st.players.forEach(p=>{
     p.role=orden.includes(p.id)?'imp':'crew';p.dead=false;p.body=false;p.ejected=false;
     p.emerg=st.cfg.emerg;p.kcd=now+st.cfg.killCd*1000;p.tasks=generarTareas(rooms,st.cfg.tasks);
   });
   st.phase='play';st.gid=uid(6);st.sab=null;st.locks=[];st.sabCd=now+20000;st.meet=null;st.end=null;st.notice=null;
   st.log=[{t:now,txt:'Empieza la partida'}];st.t0=now;
+}
+/* modo pruebas: el anfitrión elige su papel; se cambia solo a quién le toca ser impostor, el reparto sigue siendo el de siempre */
+function ajustaPapel(st,orden){
+  const h=st.hostId,dentro=orden.includes(h);
+  if(st.pr.rol==='imp'&&!dentro)orden[Math.floor(Math.random()*orden.length)]=h;
+  else if(st.pr.rol==='crew'&&dentro){const o=barajar(st.players.filter(x=>x.id!==h&&!orden.includes(x.id)).map(x=>x.id));if(o.length)orden[orden.indexOf(h)]=o[0]}
 }
 function ganador(st,now){
   if(st.phase!=='play')return false;
@@ -802,7 +819,8 @@ function resolver(st,now){
   if(out){const p=P(st,out);if(p){p.dead=true;p.ejected=true;p.body=false;m.res.imp=p.role==='imp';st.log.push({t:now,txt:`Expulsado: ${p.name}${p.role==='imp'?' (impostor)':''}`})}}
   m.res.quedan=st.players.filter(x=>!x.dead&&x.role==='imp').length;
 }
-function reducir(st,a,now){
+/* local: la acción la ha generado este mismo navegador (el anfitrión o sus bots); las que llegan por la red nunca lo son */
+function reducir(st,a,now,local){
   const p=P(st,a.pid),esHost=a.pid===st.hostId;
   switch(a.t){
   case 'ping':if(p)p.seen=now;return false;
@@ -812,21 +830,22 @@ function reducir(st,a,now){
     const libre=c=>!st.players.some(x=>x!==p&&x.color===c);
     if(p){p.name=nombre;p.seen=now;p.look=look;if(p.color!==look.hood&&libre(look.hood))p.color=look.hood;return true}
     if(st.players.length>=15)return true;
+    const bot=!!(local&&a.bot&&st.pruebas&&/^bot-\d+$/.test(a.pid));
     const lc=s=>s.toLowerCase();
     if(st.players.some(x=>lc(x.name)===lc(nombre))){let k=2;while(st.players.some(x=>lc(x.name)===lc(nombre+' '+k)))k++;nombre+=' '+k}
     let c=look.hood;if(!libre(c)){c=0;while(!libre(c))c++}
-    st.players.push({id:a.pid,name:nombre,color:c,look,seen:now});return true;
+    st.players.push({id:a.pid,name:nombre,color:c,look,seen:now,...(bot?{bot:true}:{})});return true;
   }
   case 'leave':
     if(st.phase!=='lobby'||!p)return true;
-    st.players=st.players.filter(x=>x!==p);if(esHost&&st.players.length)st.hostId=st.players[0].id;return true;
+    st.players=st.players.filter(x=>x!==p);if(esHost&&st.players.length)st.hostId=(st.players.find(x=>!x.bot)||st.players[0]).id;return true;
   case 'kick':if(esHost&&st.phase==='lobby'&&a.target!==st.hostId)st.players=st.players.filter(x=>x.id!==a.target);return true;
   case 'cfg':if(esHost&&st.phase==='lobby')st.cfg=limpiaCfg(a.cfg,st.cfg);return true;
   case 'start':if(esHost&&st.phase==='lobby')empezar(st,now);return true;
   case 'end':if(esHost&&st.phase!=='lobby'){st.phase='end';st.end={w:null,why:'El anfitrión ha terminado la partida',t:now};st.sab=null;st.meet=null}return true;
   case 'lobby':
     if(esHost&&st.phase==='end'){
-      st.players=st.players.map(x=>({id:x.id,name:x.name,color:x.color,look:x.look,seen:x.seen}));
+      st.players=st.players.map(x=>({id:x.id,name:x.name,color:x.color,look:x.look,seen:x.seen,...(x.bot?{bot:true}:{})}));
       st.phase='lobby';st.meet=null;st.sab=null;st.locks=[];st.end=null;st.notice=null;st.log=[];st.gid=uid(6);
     }return true;
   case 'task':{
@@ -837,7 +856,7 @@ function reducir(st,a,now){
   case 'kill':{
     if(st.phase!=='play')return true;const v=P(st,a.target);
     if(!p||!v||p.role!=='imp'||p.dead||v.dead||v.role==='imp'||now<p.kcd)return true;
-    v.dead=true;v.body=true;v.diedAt=now;p.kcd=now+st.cfg.killCd*1000;
+    v.dead=true;v.body=true;v.diedAt=now;p.kcd=now+st.cfg.killCd*1000;if(st.pruebas)v.killer=p.id;
     st.log.push({t:now,txt:`${p.name} mató a ${v.name}`});ganador(st,now);return true;
   }
   case 'report':{
@@ -879,6 +898,20 @@ function reducir(st,a,now){
     }else{st.log.push({t:now,txt:`${p.name} reparó: ${SABS[st.sab.kind].n}`});st.sab=null}
     return true;
   }
+  case 'pruebas':{ /* modo pruebas: ajustes del anfitrión */
+    if(!(local&&esHost&&st.pruebas))return true;
+    const r=st.pr||(st.pr={rol:'azar',vel:'normal'});
+    if(['azar','crew','imp'].includes(a.rol))r.rol=a.rol;if(a.vel in BOT_VEL)r.vel=a.vel;return true;
+  }
+  case 'atajo':{ /* modo pruebas: fuerza una situación sin esperar. Solo el anfitrión, en local y en una partida de pruebas */
+    if(!(local&&esHost&&st.pruebas))return true;const m=st.meet;
+    if(a.k==='reunion'){if(st.phase==='play')reunion(st,now,st.hostId,null)}
+    else if(a.k==='debate'){if(st.phase==='meeting'&&m&&m.fase==='disc'){m.fase='vote';m.until=now+st.cfg.vote*1000}}
+    else if(a.k==='resolver'){if(st.phase==='meeting'&&m&&m.fase==='vote')resolver(st,now)}
+    else if(a.k==='kcd'){const q=P(st,a.target);if(q&&q.role==='imp')q.kcd=0}
+    else if(a.k==='sabCd'){st.sabCd=0;if(a.limpia)st.sab=null}
+    return true;
+  }
   case 'chat':{
     if(!p)return true;const txt=String(a.txt||'').trim().slice(0,200);if(!txt)return true;
     if(p.dead&&p.body&&st.phase==='play')return true;
@@ -905,6 +938,179 @@ function tick(st,now){
     }
   }
   return ch;
+}
+
+/* ============ modo pruebas: bots ============
+   Solo existe con ?pruebas=1. Los bots viven en el navegador del anfitrión: generan acciones con sus propios ids
+   (bot-1, bot-2…) y el anfitrión las aplica con el mismo reducer que las de los jugadores reales (aplicar), así que
+   cumplen las mismas reglas. Si el anfitrión se desconecta, los bots se paran; nadie los hereda. */
+const BOT_NOMBRES=['Ana','Luis','Marta','Pablo','Lucía','Hugo','Sara','Diego','Noa','Álex','Irene','Mateo','Carla','Iván','Elena'];
+const BOT_VEL={lenta:2,normal:1,rapida:.4}; /* multiplica todas las esperas */
+let BOT={gid:'',mem:{},rep:null};
+const esBot=p=>!!(p&&p.bot);
+const bots=()=>S?S.players.filter(esBot):[];
+const entre=(a,b)=>a+Math.random()*(b-a);
+const elige=a=>a[Math.floor(Math.random()*a.length)];
+const velBots=()=>BOT_VEL[(S&&S.pr&&S.pr.vel)||'normal']||1;
+const bt=p=>esBot(p)?'<span class="bot-tag">bot</span>':'';
+const enPruebas=()=>!!(PRUEBAS&&S&&S.pruebas&&soyHost());
+function botAccion(pid,t,data){aplicar({id:uid(12),pid,t,...data},true)}
+function botAnade(){
+  if(!enPruebas()||S.phase!=='lobby'||S.players.length>=15)return;
+  let n=1;while(S.players.some(p=>p.id==='bot-'+n))n++;
+  const usados=new Set(S.players.map(p=>p.name.toLowerCase())),r=k=>Math.floor(Math.random()*k);
+  const nombre='Bot '+(BOT_NOMBRES.find(x=>!usados.has('bot '+x.toLowerCase()))||n);
+  const look=limpiaLook({hood:r(COLORES.length),cloth:r(ROPA.length),pat:Math.random()<.6?0:1+r(ESTAMPADOS.length-1),glove:r(GUANTES.length),eye:r(OJOS.length),pants:r(PIEZAS.length),pack:r(PIEZAS.length)});
+  botAccion('bot-'+n,'join',{name:nombre,look,bot:true});
+}
+function botsQuita(){if(enPruebas())for(const b of bots())accion('kick',{target:b.id})}
+/* a quién vota un bot: al azar, saltar, o con más probabilidad quien encontró el cuerpo o estaba cerca de él */
+function botElige(p,m){
+  const ok=S.players.filter(x=>!x.dead&&x.id!==p.id&&!(p.role==='imp'&&x.role==='imp'));
+  if(!ok.length)return 'skip';
+  const r=Math.random(),cad=m.body&&P(S,m.body);
+  if(cad){
+    const sosp=ok.filter(x=>x.id===cad.killer||x.id===m.by);
+    if(r<.5&&sosp.length)return elige(sosp).id;
+    return r<.8?elige(ok).id:'skip';
+  }
+  return r<.55?elige(ok).id:'skip';
+}
+function botsVotan(now,v,ya){
+  const m=S.meet;if(!m||m.fase!=='vote')return;
+  const total=S.cfg.vote*1000,ini=m.until-total;
+  for(const b of bots()){
+    if(!S.meet||S.phase!=='meeting'||S.meet.fase!=='vote')return;
+    const p=P(S,b.id);if(p.dead||(p.id in m.votes))continue;
+    const mm=BOT.mem[p.id]||(BOT.mem[p.id]={});
+    if(mm.voto!==m.n){mm.voto=m.n;mm.votoAt=Math.min(ini+entre(2500,Math.max(3000,total*.7))*v,m.until-1500)}
+    if(ya||now>=mm.votoAt)botAccion(p.id,'vote',{target:botElige(p,m)});
+  }
+}
+function botsRepara(now,v){
+  const s=S.sab;if(!s){BOT.rep=null;return}
+  const key=s.kind+'|'+s.rooms.join()+'|'+S.sabCd,cr=S.players.filter(x=>esBot(x)&&x.role==='crew'&&!x.dead);
+  if(!BOT.rep||BOT.rep.key!==key){
+    const plan=[];
+    if(s.kind==='gas'){ /* dos bots distintos, casi a la vez, para que se pueda resolver */
+      if(cr.length&&Math.random()<.75){
+        const o=barajar(cr.slice()),at=now+Math.min(entre(6000,18000)*v,30000);
+        plan.push({id:o[0].id,at,panel:0});if(o[1])plan.push({id:o[1].id,at:at+entre(800,2500),panel:1});
+      }
+    }else cr.forEach(b=>{if(Math.random()<.55)plan.push({id:b.id,at:now+entre(5000,20000)*v,panel:0})});
+    BOT.rep={key,plan};
+  }
+  const rep=BOT.rep;
+  if(s.kind==='gas'){ /* si una persona repara un panel, un bot ayuda en el otro */
+    const fs=[0,1].filter(i=>s.fix[i]);
+    if(fs.length===1&&!rep.ayuda){
+      const f=s.fix[fs[0]],ayu=cr.find(x=>x.id!==f.pid);
+      if(ayu&&!esBot(P(S,f.pid))){rep.ayuda=true;rep.plan.push({id:ayu.id,at:now+entre(1000,4000),panel:1-fs[0]})}
+    }else if(!fs.length)rep.ayuda=false;
+  }
+  for(const it of rep.plan){
+    if(it.hecho||now<it.at)continue;it.hecho=true;
+    const p=P(S,it.id);if(!p||p.dead||!S.sab)continue;
+    botAccion(it.id,'fix',{panel:it.panel});
+  }
+}
+function botsJuego(now,v){
+  botsRepara(now,v);
+  for(const b of bots()){
+    if(S.phase!=='play')return;
+    const p=P(S,b.id),mm=BOT.mem[p.id]||(BOT.mem[p.id]={});
+    if(p.role==='crew'){
+      if(!mm.tarea)mm.tarea=now+entre(20000,50000)*v;
+      if(now>=mm.tarea){
+        mm.tarea=now+entre(20000,50000)*v;
+        const ciego=!p.dead&&S.sab&&(S.sab.kind==='coms'||S.sab.kind==='luces'); /* sin ver el móvil no hay tareas */
+        const pend=ciego?[]:(p.tasks||[]).filter(t=>t.done<t.steps.length&&!cerrada(t.steps[t.done].room));
+        if(pend.length){const t=elige(pend);botAccion(p.id,'task',{tid:t.id,step:t.done})}
+      }
+      const cad=!p.dead&&S.phase==='play'&&S.players.find(x=>x.body);
+      if(cad){
+        if(mm.repDe!==cad.id){mm.repDe=cad.id;mm.rep=Math.random()<.7?now+entre(4000,18000)*v:0}
+        if(mm.rep&&now>=mm.rep){mm.rep=0;botAccion(p.id,'report',{target:cad.id})}
+      }
+    }else if(p.role==='imp'&&!p.dead){
+      if(now>=p.kcd){
+        if(!mm.mata)mm.mata=now+entre(3000,15000)*v;
+        if(now>=mm.mata){
+          mm.mata=0;
+          const vic=S.players.filter(x=>!x.dead&&x.role!=='imp');
+          if(vic.length&&Math.random()<.7)botAccion(p.id,'kill',{target:elige(vic).id});
+        }
+      }
+      if(S.phase==='play'&&now>=S.sabCd){
+        if(!mm.sab)mm.sab=now+entre(8000,35000)*v;
+        if(now>=mm.sab){
+          mm.sab=0;
+          if(Math.random()<.45){const k=elige(S.sab?['door']:['gas','luces','coms','door']);botAccion(p.id,'sab',k==='door'?{kind:k,room:elige(salas(S)).id}:{kind:k})}
+        }
+      }
+    }
+  }
+}
+function botsTick(){
+  if(!enPruebas())return;
+  if(BOT.gid!==S.gid)BOT={gid:S.gid,mem:{},rep:null};
+  const now=ahora(),v=velBots();
+  if(S.phase==='play')botsJuego(now,v);
+  else if(S.phase==='meeting')botsVotan(now,v,false);
+}
+setInterval(botsTick,500);
+/* atajos: forzar cosas sin esperar. Siguen pasando por el reducer (acción 'atajo' + acciones normales de los bots) */
+let ATJ='menu';
+const impVivo=()=>S.players.find(x=>x.role==='imp'&&!x.dead&&(esBot(x)||x.id===ME.pid));
+function atajoMata(id){
+  const k=S.players.find(x=>esBot(x)&&x.role==='imp'&&!x.dead),v=P(S,id);
+  if(!k||!v||S.phase!=='play')return;
+  accion('atajo',{k:'kcd',target:k.id});botAccion(k.id,'kill',{target:id});
+  toast(v.dead?`${k.name} ha matado a ${v.name}`:'No se ha podido matar');
+}
+function atajoSab(kind,room){
+  const q=impVivo();if(S.phase!=='play')return;
+  if(!q){toast('No hay ningún impostor vivo que pueda sabotear');return}
+  accion('atajo',{k:'sabCd',limpia:kind!=='door'});
+  const d=kind==='door'?{kind,room}:{kind};
+  if(esBot(q))botAccion(q.id,'sab',d);else accion('sab',d);
+  toast(`${q.name} sabotea: ${SABS[kind].n}`);
+}
+function atajoVotar(){
+  if(S.phase!=='meeting'||!S.meet||S.meet.fase!=='vote')return;
+  botsVotan(ahora(),1,true); /* los bots que faltan votan ya, con sus reglas de siempre */
+  if(S.phase==='meeting'&&S.meet&&S.meet.fase==='vote')accion('atajo',{k:'resolver'});
+}
+function atajoTareas(){
+  if(S.phase!=='play')return;
+  for(const b of bots())if(b.role==='crew')for(const t of b.tasks||[])for(let i=0;i<9&&S.phase==='play'&&t.done<t.steps.length;i++)botAccion(b.id,'task',{tid:t.id,step:t.done});
+  const p=mine();if(S.phase==='play')toast(p&&p.role==='crew'?'Tareas de los bots hechas. Faltan las tuyas para que gane la tripulación':'Tareas de los bots hechas');
+}
+function vAtajos(){
+  if(!S||!S.pruebas)return '';
+  const jug=S.phase==='play',m=S.meet,k=S.players.find(x=>esBot(x)&&x.role==='imp'&&!x.dead),yo=ME.pid;
+  let h=`<h2>Atajos</h2><p class="tenue">Modo pruebas: fuerzan cosas sin esperar. Las acciones de los bots pasan por las reglas de siempre.</p>`;
+  const bs=bots();
+  if(bs.length)h+=`<p class="tenue" style="font-size:14px">${bs.map(b=>`${esc(b.name)}: ${b.role==='imp'?'impostor':'tripulante'}${b.dead?' (muerto)':''}`).join(' · ')}</p>`;
+  if(ATJ==='puerta'){
+    return h+`<h3 style="margin:18px 0 4px;font-size:22px">¿Qué sala se cierra?</h3><div class="rejilla">${salas(S).map(r=>`<button class="gente-b" data-a="atajoPuertaA" data-r="${r.id}">${esc(r.name)}</button>`).join('')}</div><button class="b-link" data-a="atajoVolver">Volver</button>`;
+  }
+  const opc=(a,t,ok,d='',x='')=>`<button class="opc" data-a="${a}" ${x} ${ok?'':'disabled'}><b>${t}</b>${d?`<small>${d}</small>`:''}</button>`;
+  h+=`<h3 style="margin:18px 0 4px;font-size:22px">Reunión</h3>`;
+  h+=opc('atajoReunion','Convocar una reunión ya',jug);
+  h+=opc('atajoDebate','Saltar el debate',S.phase==='meeting'&&!!m&&m.fase==='disc');
+  h+=opc('atajoVotar','Terminar la votación',S.phase==='meeting'&&!!m&&m.fase==='vote','Los bots que falten votan ya');
+  h+=`<h3 style="margin:18px 0 4px;font-size:22px">Que un bot impostor mate a…</h3>`;
+  if(!k)h+=`<p class="tenue">No hay ningún bot impostor vivo.</p>`;
+  else{
+    const vic=S.players.filter(x=>!x.dead&&x.role!=='imp');
+    h+=`<p class="tenue" style="font-size:14px">Mata ${esc(k.name)}, sin esperar su enfriamiento.</p><div class="rejilla">${vic.map(x=>`<button class="gente-b" data-a="atajoMata" data-p="${x.id}" ${jug?'':'disabled'}>${dot(x)}${esc(x.name)}${x.id===yo?' (tú)':''}</button>`).join('')}</div>`;
+  }
+  h+=`<h3 style="margin:18px 0 4px;font-size:22px">Lanzar un sabotaje ya</h3>`;
+  h+=Object.entries(SABS).map(([q,s])=>opc('atajoSab',s.n,jug&&!!impVivo(),'',`data-k="${q}"`)).join('');
+  h+=`<h3 style="margin:18px 0 4px;font-size:22px">Tareas</h3>`;
+  h+=opc('atajoTareas','Completar todas las tareas de los bots',jug&&bs.some(b=>b.role==='crew'));
+  return h;
 }
 
 /* ============ red de la partida ============ */
@@ -939,18 +1145,19 @@ function recibeEstado(st){
 }
 function recibeAccion(a){
   if(!soyHost()||!a||!a.id||HECHAS.has(a.id))return;
-  aplicar(a);
+  if(String(a.pid).startsWith('bot-'))return; /* los bots solo los genera el propio anfitrión; nadie puede hacerse pasar por uno */
+  aplicar(a,false);
 }
-function aplicar(a){
+function aplicar(a,local){
   HECHAS.add(a.id);
-  const pub=reducir(S,a,ahora());
+  const pub=reducir(S,a,ahora(),!!local);
   if(a.t==='ping'||pub===false)return;
   S.ackd=[...(S.ackd||[]).slice(-90),a.id];
   publicarEstado(true);eventos();pinta();
 }
 function accion(t,data={}){
   const a={id:uid(12),pid:ME.pid,t,...data};
-  if(soyHost()){aplicar(a);return}
+  if(soyHost()){aplicar(a,true);return}
   PEND.set(a.id,{a,n:0});enviar('a',a);
 }
 setInterval(()=>{
@@ -962,7 +1169,7 @@ setInterval(()=>{if(soyHost())publicarEstado(false)},4000);
 setInterval(()=>{ /* si el anfitrión desaparece, otro coge el mando */
   if(!S||soyHost()||!NET.key||!mine())return;
   const stale=ahora()-S.hb;if(stale<15000)return;
-  const cand=S.players.filter(p=>p.id!==S.hostId&&ahora()-(p.seen||0)<60000).map(p=>p.id).sort();
+  const cand=S.players.filter(p=>!p.bot&&p.id!==S.hostId&&ahora()-(p.seen||0)<60000).map(p=>p.id).sort();
   let r=cand.indexOf(ME.pid);if(r<0)r=cand.length;
   if(stale>15000+r*8000){S.hostId=ME.pid;S.v+=10;HECHAS=new Set(S.ackd||[]);publicarEstado(true);toast('El anfitrión se ha desconectado: ahora llevas tú la partida');pinta()}
 },1000);
@@ -1112,11 +1319,23 @@ function paso(label,k,fmt){
   const v=S.cfg[k],[a,b]=LIM[k];
   return `<div class="paso"><span>${label}</span><div class="ctl"><button data-a="baja" data-k="${k}" ${v<=a?'disabled':''} aria-label="Menos">−</button><b>${fmt?fmt(v):v}</b><button data-a="sube" data-k="${k}" ${v>=b?'disabled':''} aria-label="Más">+</button></div></div>`;
 }
+function vPruebas(){
+  const nb=S.players.filter(esBot).length,pr=S.pr||{rol:'azar',vel:'normal'};
+  const chips=(a,lista,cur)=>`<div class="chips">${lista.map(([k,t])=>`<button class="chip ${cur===k?'on':''}" data-a="${a}" data-v="${k}">${t}</button>`).join('')}</div>`;
+  return `<section class="bloque prueba"><h2>Pruebas <span class="bot-tag">solo tú lo ves</span></h2>
+  <p class="tenue">Juega solo con bots, que viven en este navegador. Estas partidas no cuentan para tus estadísticas.</p>
+  <p class="lbl">${nb} ${nb===1?'bot':'bots'} en la sala</p>
+  <div class="pr-fila"><button data-a="botMas" ${S.players.length>=15?'disabled':''}>Añadir bot</button><button data-a="botQuita" ${nb?'':'disabled'}>Quitar bots</button></div>
+  <p class="lbl">Mi papel en la próxima partida</p>${chips('prRol',[['azar','Aleatorio'],['crew','Tripulante'],['imp','Impostor']],pr.rol)}
+  <p class="lbl">Velocidad de los bots</p>${chips('prVel',[['lenta','Lenta'],['normal','Normal'],['rapida','Rápida']],pr.vel)}
+  <p class="tenue pie">El walkie solo funciona entre personas: los bots no hablan ni escuchan.</p></section>`;
+}
 function vLobby(){
   const host=soyHost(),c=S.cfg,ps=S.players,on=salas(S),V=VENUES[c.venue],mx=maxImp(ps.length);
   let h=`<section class="codigo"><p class="lbl">Código de la partida</p><div class="cod-grande">${[...ME.code].map(ch=>`<span>${ch}</span>`).join('')}</div>
   <button class="b-sec" data-a="compartir">Compartir enlace</button></section>
-  <section class="bloque"><h2>${ps.length} a bordo</h2><ul class="gente">${ps.map(p=>`<li>${dot(p)}<span>${esc(p.name)}</span>${p.id===S.hostId?'<em>anfitrión</em>':''}${p.id===ME.pid?'<em>tú</em>':''}${host&&p.id!==ME.pid?`<button class="b-mini" data-a="kick" data-p="${p.id}">Quitar</button>`:''}</li>`).join('')}</ul></section>`;
+  <section class="bloque"><h2>${ps.length} a bordo</h2><ul class="gente">${ps.map(p=>`<li>${dot(p)}<span>${esc(p.name)}</span>${bt(p)}${p.id===S.hostId?'<em>anfitrión</em>':''}${p.id===ME.pid?'<em>tú</em>':''}${host&&p.id!==ME.pid?`<button class="b-mini" data-a="kick" data-p="${p.id}">Quitar</button>`:''}</li>`).join('')}</ul></section>`;
+  if(host&&PRUEBAS&&S.pruebas)h+=vPruebas();
   if(host){
     h+=`<section class="bloque o"><h2>Dónde jugáis</h2><div class="sitios">${Object.entries(VENUES).map(([k,v])=>`<button class="sitio ${c.venue===k?'on':''}" data-a="venue" data-v="${k}"><b>${v.i} ${v.n}</b><small>${v.h}</small></button>`).join('')}</div></section>
     <section class="bloque o"><h2>Salas</h2><p class="tenue">${on.length} en juego. Toca una para quitarla o ponerla.</p>
@@ -1211,13 +1430,13 @@ function vReunion(){
   const vivos=S.players.filter(x=>!x.dead);
   if(m.fase==='disc'){
     h+=`<div class="fase"><span>Debate</span><b data-until="${m.until}"></b></div><p class="tenue">Hablad. La votación se abre cuando acabe el tiempo.</p>
-    <div class="votos">${S.players.map(x=>`<div class="voto ${x.dead?'muerto':''}">${dot(x)}${esc(x.name)}</div>`).join('')}</div>`;
+    <div class="votos">${S.players.map(x=>`<div class="voto ${x.dead?'muerto':''}">${dot(x)}${esc(x.name)}${bt(x)}</div>`).join('')}</div>`;
   }else if(m.fase==='vote'){
     const nv=Object.keys(m.votes).length;
     h+=`<div class="fase"><span>Votación</span><b data-until="${m.until}"></b></div><p class="tenue">${nv} de ${vivos.length} han votado.</p>`;
     if(p.dead)h+=`<p>Los fantasmas no votan.</p>`;
     else if(p.id in m.votes){const v=m.votes[p.id];h+=`<p class="dondes">Has votado ${v==='skip'?'saltar':'a <b>'+esc(nombreDe(v))+'</b>'}. Espera al resto.</p>`}
-    else h+=`<div class="votos">${S.players.map(x=>x.dead?`<div class="voto muerto">${dot(x)}${esc(x.name)}</div>`:`<button class="voto" data-a="votar" data-p="${x.id}">${dot(x,40)}${esc(x.name)}</button>`).join('')}<button class="salta" data-a="votar" data-p="skip">Saltar voto</button></div>`;
+    else h+=`<div class="votos">${S.players.map(x=>x.dead?`<div class="voto muerto">${dot(x)}${esc(x.name)}</div>`:`<button class="voto" data-a="votar" data-p="${x.id}">${dot(x,40)}${esc(x.name)}${bt(x)}</button>`).join('')}<button class="salta" data-a="votar" data-p="skip">Saltar voto</button></div>`;
   }else if(m.res){
     const r=m.res,out=r.out?P(S,r.out):null;
     h+=`<div class="fase"><span>Resultado</span></div>`;
@@ -1247,7 +1466,7 @@ function vFin(){
   let h=`<div class="ov"><div class="ov-franja"></div>${pose(e.w==='imp'?'tresq':e.w?'feliz':'frente',150,(e.w==='imp'?'rojo ':'')+(e.w?'hop':''),e.w==='imp'&&imps[0]?imps[0]:mine())}${e.w?`<h1 class="fin-w ${e.w}">${e.w==='imp'?'Ganan los impostores':'Gana la tripulación'}</h1>`:'<h1>Partida terminada</h1>'}
   <p class="sub">${esc(e.why||'')}</p>
   ${imps.length?`<p class="dondes">${imps.length>1?'Los impostores eran':'El impostor era'} <b>${imps.map(x=>esc(x.name)).join(' y ')}</b>.</p>`:''}
-  <ul class="gente roles">${S.players.map(x=>`<li>${dot(x)}<span class="${x.role==='imp'?'imp':''}">${esc(x.name)}</span><em>${x.role==='imp'?'impostor':'tripulante'}${x.ejected?', expulsado':x.dead?', muerto':''}</em></li>`).join('')}</ul>
+  <ul class="gente roles">${S.players.map(x=>`<li>${dot(x)}<span class="${x.role==='imp'?'imp':''}">${esc(x.name)}</span>${bt(x)}<em>${x.role==='imp'?'impostor':'tripulante'}${x.ejected?', expulsado':x.dead?', muerto':''}</em></li>`).join('')}</ul>
   <details class="reglas"><summary>Qué pasó</summary>${(S.log||[]).map(l=>`<p class="log">${mmss(l.t-(S.t0||l.t))} ${esc(l.txt)}</p>`).join('')}</details>`;
   h+=soyHost()?`<button class="b-baliza b-ancho" data-a="aLobby">Otra partida con los mismos</button>`:`<p class="tenue">El anfitrión puede empezar otra partida con el mismo grupo.</p>`;
   return h+`<p><button class="b-link" data-a="salir">Salir</button></p></div>`;
@@ -1278,6 +1497,7 @@ function pinta(){
   const app=$('#app'),bar=$('#bar'),over=$('#over');
   setHTML(app,h);setHTML(bar,b);bar.hidden=!b;setHTML(over,o);over.hidden=!o;
   $('#wkFab').classList.toggle('solo',!b);
+  const pf=$('#prFab');if(pf){const q=mine();pf.hidden=!(enPruebas()&&q&&(S.phase==='play'||S.phase==='meeting'));pf.classList.toggle('solo',!b)}
   if(SHEET&&SHEET.juego){const p=mine();if(!S||S.phase!=='play'||!p||(p.dead&&p.body))cerrarSheet()}
   if(SHEET&&SHEET.refresh){const el=$('#shVivo');if(el)setHTML(el,SHEET.refresh())}
   WK.pinta();relojes();aplicaFiguras();
@@ -1321,7 +1541,7 @@ function vMas(){
   if(MODO.m==='matar'){
     const vic=S.players.filter(x=>!x.dead&&x.role!=='imp');
     h=`<h2>¿A quién?</h2><p class="tenue">Tócale el hombro sin que nadie te vea y elige su nombre.</p>
-    <div class="rejilla">${vic.map(x=>`<button class="gente-b" data-a="matarA" data-p="${x.id}">${dot(x)}${esc(x.name)}</button>`).join('')}</div><button class="b-link" data-a="volverMenu">Volver</button>`;
+    <div class="rejilla">${vic.map(x=>`<button class="gente-b" data-a="matarA" data-p="${x.id}">${dot(x)}${esc(x.name)}${bt(x)}</button>`).join('')}</div><button class="b-link" data-a="volverMenu">Volver</button>`;
   }else if(MODO.m==='conf'){
     const v=P(S,MODO.p);
     h=`<h2>Matar a ${esc(v?v.name:'?')}</h2><p class="tenue">Su móvil vibrará y tendrá que tumbarse donde está.</p>
@@ -1592,12 +1812,14 @@ const WK={
 };
 
 /* ============ acciones de la interfaz ============ */
+const qsExtra=()=>[location.search.includes('broker=')?'broker='+encodeURIComponent(BROKERS.join(',')):'',PRUEBAS?'pruebas=1':''].filter(Boolean);
 async function entrar(code,name,crear){
   ME={code,pid:pidPara(code),name};LS.set('imp.pid.'+code,ME.pid);LS.set('imp.ultima',code);
   JOIN_SENT=false;PEND.clear();OPT.clear();PREV=null;OFF=0;OFFS=[];S=null;BUSCA_T=Date.now();HECHAS=new Set();
   if(crear){S=nuevaPartida(ME.pid,name,PERFIL&&PERFIL.look)}
   else{const g=LS.get('imp.st.'+code);if(g&&g.hostId===ME.pid)S=g}
-  if(new URLSearchParams(location.search).get('c')!==code){try{history.replaceState(null,'','?c='+code+(location.search.includes('broker=')?'&broker='+encodeURIComponent(BROKERS.join(',')):''))}catch(e){}}
+  if(S&&S.hostId===ME.pid&&PRUEBAS&&S.phase==='lobby'&&!S.pruebas){S.pruebas=true;S.pr={rol:'azar',vel:'normal'}}
+  if(new URLSearchParams(location.search).get('c')!==code){try{history.replaceState(null,'','?c='+code+qsExtra().map(x=>'&'+x).join(''))}catch(e){}}
   pinta();await netStart(code);
   if(soyHost()){HECHAS=new Set(S.ackd||[]);publicarEstado(true)}
   despierto();pinta();
@@ -1607,7 +1829,7 @@ function salir(){
   const code=ME.code,cons=NET.cons;setTimeout(()=>{if(NET.cons===cons)netStop()},600);
   ME={code:null,pid:null,name:ME.name};S=null;VISTA='menu';PEND.clear();cerrarSheet();WK.cerrar();LS.del('imp.ultima');
   if(code)LS.del('imp.st.'+code);
-  try{history.replaceState(null,'',location.pathname+(location.search.includes('broker=')?'?broker='+encodeURIComponent(BROKERS.join(',')):''))}catch(e){}
+  try{const x=qsExtra();history.replaceState(null,'',location.pathname+(x.length?'?'+x.join('&'):''))}catch(e){}
   pinta();
 }
 function cambiaCfg(fn){if(!soyHost())return;const c=JSON.parse(JSON.stringify(S.cfg));fn(c);accion('cfg',{cfg:c})}
@@ -1678,7 +1900,7 @@ const ACT={
   tarea(d){hojaTarea(d.t)},
   empezarJuego(){if(!SHEET)return;const {tid,step,game}=SHEET;(JUEGOS[game]||JUEGOS.hold)($('#juego'),()=>tareaHecha(tid,step))},
   reportar(){const ot=S.players.filter(x=>x.id!==ME.pid);
-    abrirSheet(`<h2>¿De quién es el cuerpo?</h2><p class="tenue">Solo si lo tienes delante. Sonará en todos los móviles.</p><div class="rejilla">${ot.map(x=>`<button class="gente-b" data-a="reportarA" data-p="${x.id}">${dot(x)}${esc(x.name)}</button>`).join('')}</div>`)},
+    abrirSheet(`<h2>¿De quién es el cuerpo?</h2><p class="tenue">Solo si lo tienes delante. Sonará en todos los móviles.</p><div class="rejilla">${ot.map(x=>`<button class="gente-b" data-a="reportarA" data-p="${x.id}">${dot(x)}${esc(x.name)}${bt(x)}</button>`).join('')}</div>`)},
   reportarA(d){accion('report',{target:d.p});cerrarSheet()},
   emergencia(){const p=mine();abrirSheet(`<h2>Reunión de emergencia</h2><p class="tenue">Todos tendrán que ir al punto de reunión. Te ${p.emerg===1?'queda 1':'quedan '+p.emerg}.</p><button class="b-alarma b-ancho" data-a="emergOk">Convocar</button>`)},
   emergOk(){accion('emerg');cerrarSheet()},
@@ -1699,7 +1921,21 @@ const ACT={
   aLobby(){accion('lobby')},
   soy(d){ME.pid=d.p;LS.set('imp.pid.'+ME.code,d.p);pinta()},
   cerrarSheet(){cerrarSheet()},
-  wkPlay(d){const v=WK.voces[+d.i];if(v)WK.reproduce(v)}
+  wkPlay(d){const v=WK.voces[+d.i];if(v)WK.reproduce(v)},
+  /* modo pruebas: cada acción comprueba que de verdad lo es */
+  botMas(){botAnade()},
+  botQuita(){botsQuita()},
+  prRol(d){if(enPruebas())accion('pruebas',{rol:d.v})},
+  prVel(d){if(enPruebas())accion('pruebas',{vel:d.v})},
+  atajos(){if(!enPruebas())return;ATJ='menu';abrirSheet('<div id="shVivo"></div>',{refresh:vAtajos});setHTML($('#shVivo'),vAtajos())},
+  atajoVolver(){ATJ='menu'},
+  atajoReunion(){if(enPruebas()&&S.phase==='play'){accion('atajo',{k:'reunion'});cerrarSheet()}},
+  atajoDebate(){if(enPruebas())accion('atajo',{k:'debate'})},
+  atajoVotar(){if(enPruebas())atajoVotar()},
+  atajoMata(d){if(enPruebas())atajoMata(d.p)},
+  atajoSab(d){if(!enPruebas())return;if(d.k==='door'){ATJ='puerta';return}atajoSab(d.k)},
+  atajoPuertaA(d){if(enPruebas()){atajoSab('door',d.r);ATJ='menu'}},
+  atajoTareas(){if(enPruebas())atajoTareas()}
 };
 document.addEventListener('click',e=>{
   const b=e.target.closest('[data-a]');if(!b||b.disabled)return;
@@ -1714,6 +1950,7 @@ document.addEventListener('keydown',e=>{if(e.key!=='Enter')return;if(e.target.id
 document.addEventListener('pointerdown',()=>{WK.ctx()},{once:true});
 
 WK.init();
+if(PRUEBAS){const f=document.createElement('button');f.id='prFab';f.hidden=true;f.textContent='⚡ Atajos';f.dataset.a='atajos';document.body.appendChild(f)}
 (function arranque(){
   const q=(new URLSearchParams(location.search).get('c')||'').toUpperCase();
   const ult=LS.get('imp.ultima');

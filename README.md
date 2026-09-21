@@ -41,6 +41,20 @@ al repositorio (`.gitignore`).
 
 Las partidas y el walkie viajan por MQTT cifrado a través de brokers públicos; no hay servidor propio.
 
+## Modo pruebas (jugar solo con bots)
+
+Abre la web con `?pruebas=1` (por ejemplo `https://javivalmich.github.io/Punto-Ciego/?pruebas=1`). Sin ese parámetro
+no existe nada de esto: ni panel, ni botón, ni código activo.
+
+- **Sala de espera** (solo el anfitrión): panel *Pruebas* para añadir o quitar bots, elegir tu papel en la próxima
+  partida (aleatorio, tripulante, impostor) y la velocidad de los bots (lenta, normal, rápida).
+- **Durante la partida**: botón discreto *⚡ Atajos* para convocar una reunión ya, saltar el debate, terminar la votación,
+  hacer que un bot impostor mate a alguien (incluido tú), lanzar cualquier sabotaje o completar las tareas de los bots.
+- Los bots viven en el navegador del anfitrión: generan acciones con ids `bot-1`, `bot-2`… y se aplican con el mismo
+  reducer que las de los jugadores reales. Si el anfitrión se desconecta, se paran.
+- Las partidas con bots **no** cuentan para las estadísticas de Supabase, y el walkie solo funciona entre personas.
+- El enlace de *Compartir* no lleva `pruebas=1`, y las acciones que llegan por la red con id de bot se descartan.
+
 ## Cómo se publica (GitHub Pages)
 
 1. Sube el repositorio a GitHub (rama `main`).
