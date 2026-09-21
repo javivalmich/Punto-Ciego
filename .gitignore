@@ -1,0 +1,23 @@
+# Dependencias
+node_modules/
+
+# Secretos y variables de entorno (nunca subir claves)
+.env
+.env.*
+*.pem
+
+# Supabase CLI (estado local)
+supabase/.temp/
+supabase/.branches/
+
+# Sistema y editores
+.DS_Store
+Thumbs.db
+desktop.ini
+.vscode/
+.idea/
+
+# Pruebas locales
+*.log
+test-results/
+playwright-report/

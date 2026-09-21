@@ -277,6 +277,14 @@ ul.tareas{list-style:none;margin:6px 0;padding:0;display:grid;gap:8px}
 .swatches{display:flex;flex-wrap:wrap;gap:8px}
 .sw{width:40px;height:40px;min-height:0;padding:0;border-radius:50%;background:var(--c);border:2px solid var(--remache);font-size:18px;color:var(--tiza)}
 .sw.on{border-color:var(--tiza);box-shadow:0 0 0 3px var(--acero),0 0 0 5px var(--baliza)}
+.pestanas{display:grid;grid-template-columns:1fr 1fr;gap:0;margin:18px 0 6px;border:1px solid var(--remache);border-radius:12px;overflow:hidden}
+.pestanas button{border:0;border-radius:0;background:transparent;color:var(--niebla)}
+.pestanas button.on{background:var(--tiza);color:var(--acero)}
+.aviso-ok{color:var(--ok);font-size:15px}
+.stats{display:flex;gap:18px;flex-wrap:wrap;color:var(--niebla);font-size:15px;margin:14px 0 0}
+.stats b{color:var(--tiza);font-size:22px;margin-right:4px}
+.sep{margin:0 4px}
+.pie{font-size:13.5px}
 </style>
 </head>
 <body>
@@ -498,9 +506,85 @@ const BLANCO=7;
 const LOOK0={hood:BLANCO,cloth:0,pat:0,glove:0,eye:0};
 function limpiaLook(l){l=l||{};const o={};const r=(v,n,d)=>Number.isInteger(v)&&v>=0&&v<n?v:d;
   o.hood=r(l.hood,COLORES.length,BLANCO);o.cloth=r(l.cloth,ROPA.length,0);o.pat=r(l.pat,ESTAMPADOS.length,0);o.glove=r(l.glove,GUANTES.length,0);o.eye=r(l.eye,OJOS.length,0);return o}
-let PERFIL=LS.get('pc.perfil');
-if(!PERFIL&&LS.get('imp.nombre'))PERFIL={name:LS.get('imp.nombre'),look:{...LOOK0}};
-if(PERFIL)PERFIL.look=limpiaLook(PERFIL.look);
+/* ================================================================
+   CUENTAS CON SUPABASE
+   Pega aquí la URL de tu proyecto y la clave publicable
+   (Supabase > Project Settings > API Keys > Publishable key).
+   Si las dejas vacías, el perfil se guarda solo en cada móvil.
+   ================================================================ */
+const SUPA={
+  url:'',   // ejemplo: 'https://abcdefghijklm.supabase.co'
+  key:''    // ejemplo: 'sb_publishable_xxxxxxxxxxxxxxxx'
+};
+const QS=new URLSearchParams(location.search);
+const EN_LOCAL=/^(localhost|127\.0\.0\.1)$/.test(location.hostname);
+if(EN_LOCAL&&QS.get('supa')){SUPA.url=QS.get('supa');SUPA.key=QS.get('supakey')||''}
+const SB_LIB=(EN_LOCAL&&QS.get('sblib'))||'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.116.0/dist/umd/supabase.js';
+const CUENTAS=!!(SUPA.url&&SUPA.key);
+let SB=null,USER=null,SB_ESTADO=CUENTAS?'cargando':'off',PERFIL_CARGANDO=false,GUARDANDO=false,PEND_ENTRAR=null;
+let ACCESO={modo:'entrar',email:'',pw:'',err:'',msg:'',busy:false};
+let PERFIL=null;
+if(!CUENTAS){
+  PERFIL=LS.get('pc.perfil');
+  if(!PERFIL&&LS.get('imp.nombre'))PERFIL={name:LS.get('imp.nombre'),look:{...LOOK0}};
+  if(PERFIL)PERFIL.look=limpiaLook(PERFIL.look);
+}
+function cargaScript(src){return new Promise((ok,ko)=>{const e=document.createElement('script');e.src=src;e.onload=ok;e.onerror=()=>ko(new Error('no carga '+src));document.head.appendChild(e)})}
+async function iniciaCuentas(){
+  try{
+    await cargaScript(SB_LIB);
+    SB=window.supabase.createClient(SUPA.url,SUPA.key,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}});
+    SB.auth.onAuthStateChange((ev,ses)=>{setTimeout(()=>trasSesion(ev,ses),0)});
+    const {data}=await SB.auth.getSession();
+    await trasSesion('INICIO',data.session);
+    SB_ESTADO='listo';
+  }catch(e){console.warn('cuentas',e);SB_ESTADO='error'}
+  pinta();
+}
+let SES_ID='';
+async function trasSesion(ev,ses){
+  if(ev==='PASSWORD_RECOVERY'){VISTA='nuevaClave'}
+  const u=ses&&ses.user?ses.user:null;
+  const id=u?u.id:'';
+  if(id===SES_ID&&ev!=='INICIO'&&ev!=='USER_UPDATED'){USER=u;return}
+  SES_ID=id;USER=u;
+  if(!USER){PERFIL=null;pinta();return}
+  await cargaPerfil();
+  if(ev==='SIGNED_IN'&&(VISTA==='acceso'||VISTA==='portada'))VISTA='menu';
+  ACCESO={modo:'entrar',email:'',pw:'',err:'',msg:'',busy:false};
+  pinta();
+}
+async function cargaPerfil(){
+  if(!USER)return;PERFIL_CARGANDO=true;pinta();
+  const cache=LS.get('pc.perfil.'+USER.id);
+  try{
+    const {data,error}=await SB.from('profiles').select('username,look,partidas,victorias,como_impostor').eq('id',USER.id).maybeSingle();
+    if(error)throw error;
+    PERFIL=data?{name:data.username,look:limpiaLook(data.look),stats:{p:data.partidas|0,v:data.victorias|0,i:data.como_impostor|0}}:null;
+    if(PERFIL)LS.set('pc.perfil.'+USER.id,PERFIL);
+  }catch(e){console.warn('perfil',e);PERFIL=cache?{...cache,look:limpiaLook(cache.look)}:null;if(cache)toast('Sin conexión con las cuentas: uso tu último perfil guardado')}
+  PERFIL_CARGANDO=false;
+  if(PEND_ENTRAR&&PERFIL){const c=PEND_ENTRAR;PEND_ENTRAR=null;entrar(c,PERFIL.name,false)}
+}
+function errorCuenta(e){
+  const m=((e&&(e.code||''))+' '+(e&&e.message||'')).toLowerCase();
+  if(m.includes('invalid')&&m.includes('credential'))return 'Correo o contraseña incorrectos.';
+  if(m.includes('already')&&m.includes('regist'))return 'Ya hay una cuenta con ese correo. Entra con ella.';
+  if(m.includes('weak')||m.includes('at least'))return 'La contraseña tiene que tener al menos 6 caracteres.';
+  if(m.includes('not confirmed'))return 'Tienes que confirmar el correo antes de entrar. Mira tu bandeja de entrada.';
+  if(m.includes('not authorized'))return 'Supabase no puede enviar correos a esa dirección. Hay que desactivar la confirmación de correo en el proyecto.';
+  if(m.includes('rate')||m.includes('too many')||m.includes('security purposes'))return 'Demasiados intentos seguidos. Espera un minuto y vuelve a probar.';
+  if(m.includes('invalid')&&m.includes('email'))return 'Ese correo no parece válido.';
+  if(m.includes('fetch')||m.includes('network'))return 'No hay conexión con el servidor de cuentas.';
+  return (e&&e.message)||'Algo ha fallado. Prueba otra vez.';
+}
+async function sumarPartida(){
+  if(!CUENTAS||!USER||!S||!S.end||!S.end.w)return;
+  const p=mine();if(!p||!p.role)return;
+  const k='pc.contada.'+S.gid;if(LS.get(k))return;LS.set(k,1);
+  const imp=p.role==='imp',gano=(S.end.w==='imp')===imp;
+  try{const {error}=await SB.rpc('sumar_partida',{gano,impostor:imp});if(error)throw error;await cargaPerfil();pinta()}catch(e){console.warn('estadísticas',e)}
+}
 const hexRGB=h=>[1,3,5].map(i=>parseInt(h.slice(i,i+2),16));
 const BASE={};let BASE_OK=false;const FIG=new Map();let FIG_T=0;
 let FIG_FALLO=false;
@@ -568,6 +652,7 @@ function mira(){ /* retícula del logo: tres cuartos claros y uno rojo */
 const nombreDe=id=>{const p=S&&P(S,id);return p?p.name:'Alguien'};
 
 function pidPara(code){
+  if(CUENTAS&&USER)return USER.id;
   let g=LS.get('imp.pid');if(!g){g=uid(10);LS.set('imp.pid',g)}
   return LS.get('imp.pid.'+code)||g;
 }
@@ -837,7 +922,7 @@ function eventos(){
   if(S.phase==='meeting'&&pr.mn!==PREV.mn){SON.reunion();vibra([300,120,300,120,300]);cerrarSheet();if(WK.abierto)WK.cerrar()}
   if(PREV.sab&&PREV.sab!==pr.sab&&p&&p.role!=='imp'){SON.sabotaje();vibra([500,200,500])}
   if(p&&PREV.dead&&!pr.dead&&S.phase==='play'){SON.muerte();vibra(900);cerrarSheet()}
-  if(S.phase==='end'&&pr.phase!=='end'){SON.fin();cerrarSheet()}
+  if(S.phase==='end'&&pr.phase!=='end'){SON.fin();cerrarSheet();sumarPartida()}
   if(S.notice&&S.notice.pid===ME.pid&&PREV.notice!==pr.notice)toast(S.notice.txt);
 }
 let WL=null;
@@ -875,7 +960,7 @@ function vEditor(){
   const nuevo=!PERFIL,l=EDIT.look;
   const fila=(t,k,lista,sw)=>`<div class="ed-fila"><p class="lbl">${t}: <b>${esc(sw(l[k]).n)}</b></p><div class="swatches">${lista.map((_,i)=>{const x=sw(i);return `<button class="sw ${l[k]===i?'on':''}" data-a="look" data-k="${k}" data-v="${i}" aria-label="${esc(x.n)}" style="--c:${x.c}">${x.t||''}</button>`}).join('')}</div></div>`;
   return `<section class="bloque"><h2>${nuevo?'Crea tu personaje':'Tu personaje'}</h2>
-  <p class="tenue">${nuevo?'Así te verán los demás en las partidas. Se guarda en este móvil.':'Los cambios se verán en tu próxima partida.'}</p>
+  <p class="tenue">${nuevo?`Así te verán los demás en las partidas. ${CUENTAS?'Se guarda en tu cuenta.':'Se guarda en este móvil.'}`:'Los cambios se verán en tu próxima partida.'}</p>
   ${FIG_FALLO?'<p class="motivo">Este navegador no deja pintar el personaje, así que lo verás con los colores de serie. Tu elección se guarda igual y los demás la verán en sus móviles.</p>':''}
   <div class="ed-pegado"><div class="ed-vista">${mira()}<img class="pose" ${figura(GIRO,l)} width="170" alt="Vista previa de tu personaje"></div>
   <div class="giros">${[['frente','Frente'],['tresq','Tres cuartos'],['lado','Lado'],['espalda','Espalda'],['feliz','Saludando']].map(([k,n])=>`<button class="chip ${GIRO===k?'on':''}" data-a="giro" data-k="${k}">${n}</button>`).join('')}</div></div>
@@ -886,22 +971,50 @@ function vEditor(){
   ${fila('Estampado','pat',ESTAMPADOS,i=>({n:ESTAMPADOS[i],c:'#222226',t:['—','≡','▦','◍'][i]}))}
   ${fila('Guantes','glove',GUANTES,i=>({n:GUANTES[i][0],c:GUANTES[i][1]||'#F1ECE3'}))}
   ${fila('Ojos','eye',OJOS,i=>({n:OJOS[i][0],c:OJOS[i][1]||'#F1ECE3'}))}
-  <div class="bloque"><button class="b-baliza b-ancho" data-a="guardarPerfil">${nuevo?'Guardar y continuar':'Guardar cambios'}</button>
-  ${nuevo?`<button class="b-link" data-a="aPortada">Volver</button>`:`<button class="b-link" data-a="aMenu">Cancelar</button>`}</div></section>`;
+  <div class="bloque"><button class="b-baliza b-ancho" data-a="guardarPerfil" ${GUARDANDO?'disabled':''}>${GUARDANDO?'Guardando…':nuevo?'Guardar y continuar':'Guardar cambios'}</button>
+  ${nuevo?(CUENTAS&&USER?`<button class="b-link" data-a="salirCuenta">Cerrar sesión</button>`:`<button class="b-link" data-a="aPortada">Volver</button>`):`<button class="b-link" data-a="aMenu">Cancelar</button>`}</div></section>`;
 }
+function vAcceso(){
+  const a=ACCESO,crear=a.modo==='crear';
+  return `<section class="bloque"><div class="pf-fig" style="margin:0 auto">${mira()}<img class="pose" src="${IMG.movil}" width="150" alt=""></div>
+  <div class="pestanas"><button class="${crear?'':'on'}" data-a="modoAcceso" data-m="entrar">Entrar</button><button class="${crear?'on':''}" data-a="modoAcceso" data-m="crear">Crear cuenta</button></div>
+  <p class="tenue">${crear?'Con tu cuenta tu personaje y tus partidas te siguen a cualquier móvil.':'Entra con el correo y la contraseña de tu cuenta.'}</p>
+  <p><label class="lbl" for="em">Correo</label><input id="em" type="email" autocomplete="email" inputmode="email" value="${esc(a.email)}" placeholder="tu@correo.com"></p>
+  <p><label class="lbl" for="pw">Contraseña</label><input id="pw" type="password" autocomplete="${crear?'new-password':'current-password'}" value="${esc(a.pw)}" placeholder="${crear?'Mínimo 6 caracteres':''}"></p>
+  ${a.err?`<p class="motivo" role="alert">${esc(a.err)}</p>`:''}${a.msg?`<p class="aviso-ok" role="status">${esc(a.msg)}</p>`:''}
+  <button class="b-baliza b-ancho" data-a="${crear?'crearCuenta':'entrarCuenta'}" ${a.busy?'disabled':''}>${a.busy?'Un momento…':crear?'Crear cuenta':'Entrar'}</button>
+  ${crear?'':`<p><button class="b-link" data-a="olvido">He olvidado la contraseña</button></p>`}
+  <p><button class="b-link" data-a="aPortada">Volver</button></p></section>`;
+}
+function vNuevaClave(){
+  return `<section class="bloque"><h2>Nueva contraseña</h2><p class="tenue">Escribe la contraseña que quieres usar a partir de ahora.</p>
+  <p><label class="lbl" for="pw">Contraseña nueva</label><input id="pw" type="password" autocomplete="new-password" placeholder="Mínimo 6 caracteres"></p>
+  ${ACCESO.err?`<p class="motivo">${esc(ACCESO.err)}</p>`:''}
+  <button class="b-baliza b-ancho" data-a="nuevaClave" ${ACCESO.busy?'disabled':''}>Guardar contraseña</button></section>`;
+}
+function vEsperaCuentas(txt){return `<section class="bloque" style="text-align:center">${pose('camina',110)}<h2>${txt}</h2></section>`}
 function vHome(){
   if(VISTA==='portada')return vPortada();
+  if(VISTA==='nuevaClave')return vNuevaClave();
+  if(CUENTAS){
+    if(SB_ESTADO==='cargando')return vEsperaCuentas('Conectando con las cuentas…');
+    if(SB_ESTADO==='error')return `<section class="bloque"><h2>No se puede conectar con las cuentas</h2><p class="tenue">Comprueba la conexión a internet y vuelve a intentarlo.</p><button class="b-baliza b-ancho" data-a="reintentarCuentas">Reintentar</button><p><button class="b-link" data-a="aPortada">Volver</button></p></section>`;
+    if(!USER)return vAcceso();
+    if(PERFIL_CARGANDO&&!PERFIL)return vEsperaCuentas('Cargando tu personaje…');
+  }
   if(!PERFIL||VISTA==='editor'){if(!EDIT)EDIT={name:PERFIL?PERFIL.name:'',look:{...(PERFIL?PERFIL.look:LOOK0)}};return vEditor()}
   const ult=LS.get('imp.ultima');
   const q=(new URLSearchParams(location.search).get('c')||'').toUpperCase().slice(0,5);
   return `<section class="perfil"><div class="pf-fig">${mira()}<img class="pose" ${figura('feliz',PERFIL.look)} width="150" alt=""></div>
   <div><p class="lbl">Jugador</p><h2>${esc(PERFIL.name)}</h2><button class="b-sec b-peq" data-a="editar">Editar personaje</button></div></section>
+  ${CUENTAS&&PERFIL.stats?`<p class="stats"><span><b>${PERFIL.stats.p}</b> ${PERFIL.stats.p===1?'partida':'partidas'}</span><span><b>${PERFIL.stats.v}</b> ${PERFIL.stats.v===1?'victoria':'victorias'}</span><span><b>${PERFIL.stats.i}</b> de impostor</span></p>`:''}
   ${q?'':`<div class="bloque"><button class="b-baliza b-ancho" data-a="crear">Crear partida</button></div>`}
   <div class="bloque ${q?'':'o'}"><label class="lbl" for="cod">${q?'Código de la partida':'¿Te han pasado un código?'}</label>
   <div class="fila"><input id="cod" class="in-cod" maxlength="5" value="${esc(q)}" placeholder="ABCDE" autocapitalize="characters" autocomplete="off" spellcheck="false"><button class="${q?'b-baliza':''}" data-a="unirme">Unirme</button></div></div>
   ${q?`<div class="bloque"><button class="b-link" data-a="crear">Crear una partida nueva</button></div>`:''}
   ${ult?`<div class="bloque"><button class="b-link" data-a="volver" data-c="${esc(ult)}">Volver a la partida ${esc(ult)}</button></div>`:''}
-  <p><button class="b-link" data-a="aPortada">Pantalla de inicio</button></p>`;
+  <p><button class="b-link" data-a="aPortada">Pantalla de inicio</button>${CUENTAS&&USER?` <span class="tenue sep">·</span> <button class="b-link" data-a="salirCuenta">Cerrar sesión</button>`:''}</p>
+  <p class="tenue pie">${CUENTAS&&USER?`Sesión iniciada con ${esc(USER.email||'')}.`:'Tu perfil se guarda solo en este móvil.'}</p>`;
 }
 function vBuscando(){
   const lento=Date.now()-BUSCA_T>7000;
@@ -1089,6 +1202,7 @@ function pinta(){
   if(SHEET&&SHEET.juego){const p=mine();if(!S||S.phase!=='play'||!p||(p.dead&&p.body))cerrarSheet()}
   if(SHEET&&SHEET.refresh){const el=$('#shVivo');if(el)setHTML(el,SHEET.refresh())}
   WK.pinta();relojes();aplicaFiguras();
+  if(S&&S.phase==='end'&&CUENTAS&&USER)sumarPartida();
 }
 function relojes(){const t=ahora();document.querySelectorAll('[data-until]').forEach(e=>{const s=mmss(+e.dataset.until-t);if(e.textContent!==s)e.textContent=s})}
 setInterval(pinta,250);
@@ -1419,14 +1533,48 @@ function salir(){
 }
 function cambiaCfg(fn){if(!soyHost())return;const c=JSON.parse(JSON.stringify(S.cfg));fn(c);accion('cfg',{cfg:c})}
 const ACT={
-  jugar(){WK.ctx();VISTA=PERFIL?'menu':'editor';EDIT=null;scrollTo(0,0)},
+  jugar(){WK.ctx();VISTA=CUENTAS&&!USER?'acceso':PERFIL?'menu':'editor';EDIT=null;scrollTo(0,0)},
+  modoAcceso(d){ACCESO.modo=d.m;ACCESO.err='';ACCESO.msg=''},
+  async entrarCuenta(){
+    const a=ACCESO;a.err='';a.msg='';if(!a.email||!a.pw){a.err='Escribe el correo y la contraseña.';return}
+    a.busy=true;pinta();const {error}=await SB.auth.signInWithPassword({email:a.email.trim(),password:a.pw});
+    a.busy=false;if(error)a.err=errorCuenta(error);else VISTA='menu';pinta()},
+  async crearCuenta(){
+    const a=ACCESO;a.err='';a.msg='';if(!a.email||!a.pw){a.err='Escribe el correo y una contraseña.';return}
+    if(a.pw.length<6){a.err='La contraseña tiene que tener al menos 6 caracteres.';return}
+    a.busy=true;pinta();
+    const {data,error}=await SB.auth.signUp({email:a.email.trim(),password:a.pw,options:{emailRedirectTo:location.origin+location.pathname}});
+    a.busy=false;
+    if(error)a.err=errorCuenta(error);
+    else if(!data.session){a.msg='Cuenta creada. Te hemos mandado un correo para confirmarla; ábrelo y vuelve aquí para entrar.';a.modo='entrar';a.pw=''}
+    else VISTA='editor';
+    pinta()},
+  async olvido(){
+    const a=ACCESO;a.err='';a.msg='';if(!a.email){a.err='Escribe primero tu correo.';return}
+    a.busy=true;pinta();const {error}=await SB.auth.resetPasswordForEmail(a.email.trim(),{redirectTo:location.origin+location.pathname});
+    a.busy=false;if(error)a.err=errorCuenta(error);else a.msg='Si hay una cuenta con ese correo, te llegará un enlace para poner una contraseña nueva.';pinta()},
+  async nuevaClave(){
+    const pw=(($('#pw')||{}).value||'');ACCESO.err='';if(pw.length<6){ACCESO.err='Mínimo 6 caracteres.';return}
+    ACCESO.busy=true;pinta();const {error}=await SB.auth.updateUser({password:pw});ACCESO.busy=false;
+    if(error)ACCESO.err=errorCuenta(error);else{toast('Contraseña cambiada');VISTA='menu'}pinta()},
+  async salirCuenta(){if(SB)await SB.auth.signOut();USER=null;PERFIL=null;SES_ID='';EDIT=null;VISTA='portada';pinta()},
+  reintentarCuentas(){SB_ESTADO='cargando';SB?SB.auth.getSession().then(r=>trasSesion('INICIO',r.data.session)).then(()=>{SB_ESTADO='listo';pinta()},()=>{SB_ESTADO='error';pinta()}):iniciaCuentas()},
   aPortada(){VISTA='portada';EDIT=null;scrollTo(0,0)},
   aMenu(){VISTA='menu';EDIT=null;scrollTo(0,0)},
   editar(){VISTA='editor';EDIT=null;GIRO='frente';scrollTo(0,0)},
   giro(d){GIRO=d.k},
   look(d){if(!EDIT)return;const i=$('#nom');if(i)EDIT.name=i.value;EDIT.look[d.k]=+d.v;$('#app')._h=''},
-  guardarPerfil(){const n=(($('#nom')||{}).value||'').trim().slice(0,16);if(!n){toast('Escribe un nombre de jugador');$('#nom').focus();return}
-    PERFIL={name:n,look:limpiaLook(EDIT.look)};LS.set('pc.perfil',PERFIL);LS.set('imp.nombre',n);EDIT=null;VISTA='menu';scrollTo(0,0);toast('Personaje guardado')},
+  async guardarPerfil(){const n=(($('#nom')||{}).value||'').trim().slice(0,16);if(!n){toast('Escribe un nombre de jugador');$('#nom').focus();return}
+    const look=limpiaLook(EDIT.look);
+    if(CUENTAS){
+      if(!USER){VISTA='acceso';return}
+      GUARDANDO=true;pinta();
+      const {error}=await SB.from('profiles').upsert({id:USER.id,username:n,look,updated_at:new Date().toISOString()});
+      GUARDANDO=false;
+      if(error){toast(error.code==='23505'?'Ese nombre ya lo usa otra persona. Elige otro.':errorCuenta(error));pinta();return}
+      PERFIL={stats:{p:0,v:0,i:0},...(PERFIL||{}),name:n,look};LS.set('pc.perfil.'+USER.id,PERFIL);
+    }else{PERFIL={name:n,look};LS.set('pc.perfil',PERFIL);LS.set('imp.nombre',n)}
+    EDIT=null;VISTA='menu';scrollTo(0,0);toast('Personaje guardado');pinta()},
   crear(){if(!PERFIL){VISTA='editor';return}entrar(codigoNuevo(),PERFIL.name,true)},
   unirme(){if(!PERFIL){VISTA='editor';return}const n=PERFIL.name,c=(($('#cod')||{}).value||'').trim().toUpperCase();
     if(c.length!==5){toast('El código tiene 5 letras');$('#cod').focus();return}entrar(c,n,false)},
@@ -1473,10 +1621,12 @@ const ACT={
 document.addEventListener('click',e=>{
   const b=e.target.closest('[data-a]');if(!b||b.disabled)return;
   if(EDIT&&$('#nom'))EDIT.name=$('#nom').value;
+  if($('#em'))ACCESO.email=$('#em').value;if($('#pw')&&VISTA!=='nuevaClave')ACCESO.pw=$('#pw').value;
   const f=ACT[b.dataset.a];if(f){e.preventDefault();f(b.dataset,b);pinta()}
 });
 document.addEventListener('change',e=>{const s=e.target.closest('[data-cfg]');if(s)cambiaCfg(c=>{c[s.dataset.cfg]=s.value})});
-document.addEventListener('keydown',e=>{if(e.key!=='Enter')return;if(e.target.id==='cod'){ACT.unirme();pinta()}if(e.target.id==='nuevaSala')ACT.addSala()});
+document.addEventListener('keydown',e=>{if(e.key!=='Enter')return;if(e.target.id==='cod'){ACT.unirme();pinta()}
+  if(e.target.id==='pw'||e.target.id==='em'){const b=document.querySelector('[data-a=entrarCuenta],[data-a=crearCuenta],[data-a=nuevaClave]');if(b&&!b.disabled)b.click()}if(e.target.id==='nuevaSala')ACT.addSala()});
 document.addEventListener('pointerdown',()=>{WK.ctx()},{once:true});
 
 WK.init();
@@ -1484,6 +1634,7 @@ WK.init();
   const q=(new URLSearchParams(location.search).get('c')||'').toUpperCase();
   const ult=LS.get('imp.ultima');
   precargaFiguras();
+  if(CUENTAS){if(q&&q===ult)PEND_ENTRAR=q;pinta();iniciaCuentas();return}
   if(q&&q===ult&&PERFIL){entrar(q,PERFIL.name,false);return}
   pinta();
 })();
