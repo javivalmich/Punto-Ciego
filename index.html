@@ -281,6 +281,13 @@ ul.tareas{list-style:none;margin:6px 0;padding:0;display:grid;gap:8px}
 .pestanas button{border:0;border-radius:0;background:transparent;color:var(--niebla)}
 .pestanas button.on{background:var(--tiza);color:var(--acero)}
 .aviso-ok{color:var(--ok);font-size:15px}
+.clave{position:relative;display:block}
+.clave input{padding-right:84px}
+.clave .ver{position:absolute;right:2px;top:50%;transform:translateY(-50%);width:auto;min-height:44px;padding:0 14px;background:none;border:0;color:var(--niebla);font-size:14px;font-weight:500;text-decoration:underline;text-underline-offset:3px}
+.b-google{display:flex;align-items:center;justify-content:center;gap:10px;background:var(--casco);color:var(--tiza)}
+.b-google svg{flex:0 0 auto}
+.o-sep{display:flex;align-items:center;gap:12px;color:var(--niebla);font-size:14px;margin:14px 0 4px}
+.o-sep::before,.o-sep::after{content:'';flex:1;height:1px;background:var(--remache)}
 .stats{display:flex;gap:18px;flex-wrap:wrap;color:var(--niebla);font-size:15px;margin:14px 0 0}
 .stats b{color:var(--tiza);font-size:22px;margin-right:4px}
 .sep{margin:0 4px}
@@ -524,6 +531,7 @@ const CUENTAS=!!(SUPA.url&&SUPA.key);
 let SB=null,USER=null,SB_ESTADO=CUENTAS?'cargando':'off',PERFIL_CARGANDO=false,GUARDANDO=false,PEND_ENTRAR=null;
 let ACCESO={modo:'entrar',email:'',pw:'',err:'',msg:'',busy:false};
 let PERFIL=null;
+let GOOGLE=false; /* se activa solo si el proveedor Google está habilitado en Supabase */
 if(!CUENTAS){
   PERFIL=LS.get('pc.perfil');
   if(!PERFIL&&LS.get('imp.nombre'))PERFIL={name:LS.get('imp.nombre'),look:{...LOOK0}};
@@ -534,6 +542,7 @@ async function iniciaCuentas(){
   try{
     await cargaScript(SB_LIB);
     SB=window.supabase.createClient(SUPA.url,SUPA.key,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}});
+    fetch(SUPA.url+'/auth/v1/settings',{headers:{apikey:SUPA.key}}).then(r=>r.json()).then(j=>{if(j&&j.external&&j.external.google){GOOGLE=true;pinta()}}).catch(()=>{});
     SB.auth.onAuthStateChange((ev,ses)=>{setTimeout(()=>trasSesion(ev,ses),0)});
     const {data}=await SB.auth.getSession();
     await trasSesion('INICIO',data.session);
@@ -974,13 +983,19 @@ function vEditor(){
   <div class="bloque"><button class="b-baliza b-ancho" data-a="guardarPerfil" ${GUARDANDO?'disabled':''}>${GUARDANDO?'Guardando…':nuevo?'Guardar y continuar':'Guardar cambios'}</button>
   ${nuevo?(CUENTAS&&USER?`<button class="b-link" data-a="salirCuenta">Cerrar sesión</button>`:`<button class="b-link" data-a="aPortada">Volver</button>`):`<button class="b-link" data-a="aMenu">Cancelar</button>`}</div></section>`;
 }
+const G_LOGO='<svg width="18" height="18" viewBox="0 0 48 48" aria-hidden="true"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>';
+function campoClave(auto,valor,ph){
+  const ver=!!ACCESO.ver;
+  return `<span class="clave"><input id="pw" type="${ver?'text':'password'}" autocomplete="${auto}" value="${esc(valor)}" placeholder="${ph}"${ver?' autocapitalize="off" autocorrect="off" spellcheck="false"':''}><button type="button" class="ver" data-a="verClave" aria-pressed="${ver}" aria-label="${ver?'Ocultar contraseña':'Mostrar contraseña'}">${ver?'Ocultar':'Ver'}</button></span>`;
+}
 function vAcceso(){
   const a=ACCESO,crear=a.modo==='crear';
   return `<section class="bloque"><div class="pf-fig" style="margin:0 auto">${mira()}<img class="pose" src="${IMG.movil}" width="150" alt=""></div>
   <div class="pestanas"><button class="${crear?'':'on'}" data-a="modoAcceso" data-m="entrar">Entrar</button><button class="${crear?'on':''}" data-a="modoAcceso" data-m="crear">Crear cuenta</button></div>
+  ${GOOGLE?`<button class="b-google b-ancho" data-a="google" ${a.busy?'disabled':''}>${G_LOGO}<span>${crear?'Registrarme con Google':'Entrar con Google'}</span></button><div class="o-sep" aria-hidden="true">o con tu correo</div>`:''}
   <p class="tenue">${crear?'Con tu cuenta tu personaje y tus partidas te siguen a cualquier móvil.':'Entra con el correo y la contraseña de tu cuenta.'}</p>
   <p><label class="lbl" for="em">Correo</label><input id="em" type="email" autocomplete="email" inputmode="email" value="${esc(a.email)}" placeholder="tu@correo.com"></p>
-  <p><label class="lbl" for="pw">Contraseña</label><input id="pw" type="password" autocomplete="${crear?'new-password':'current-password'}" value="${esc(a.pw)}" placeholder="${crear?'Mínimo 6 caracteres':''}"></p>
+  <p><label class="lbl" for="pw">Contraseña</label>${campoClave(crear?'new-password':'current-password',a.pw,crear?'Mínimo 6 caracteres':'')}</p>
   ${a.err?`<p class="motivo" role="alert">${esc(a.err)}</p>`:''}${a.msg?`<p class="aviso-ok" role="status">${esc(a.msg)}</p>`:''}
   <button class="b-baliza b-ancho" data-a="${crear?'crearCuenta':'entrarCuenta'}" ${a.busy?'disabled':''}>${a.busy?'Un momento…':crear?'Crear cuenta':'Entrar'}</button>
   ${crear?'':`<p><button class="b-link" data-a="olvido">He olvidado la contraseña</button></p>`}
@@ -988,7 +1003,7 @@ function vAcceso(){
 }
 function vNuevaClave(){
   return `<section class="bloque"><h2>Nueva contraseña</h2><p class="tenue">Escribe la contraseña que quieres usar a partir de ahora.</p>
-  <p><label class="lbl" for="pw">Contraseña nueva</label><input id="pw" type="password" autocomplete="new-password" placeholder="Mínimo 6 caracteres"></p>
+  <p><label class="lbl" for="pw">Contraseña nueva</label>${campoClave('new-password',ACCESO.pw,'Mínimo 6 caracteres')}</p>
   ${ACCESO.err?`<p class="motivo">${esc(ACCESO.err)}</p>`:''}
   <button class="b-baliza b-ancho" data-a="nuevaClave" ${ACCESO.busy?'disabled':''}>Guardar contraseña</button></section>`;
 }
@@ -1535,6 +1550,11 @@ function cambiaCfg(fn){if(!soyHost())return;const c=JSON.parse(JSON.stringify(S.
 const ACT={
   jugar(){WK.ctx();VISTA=CUENTAS&&!USER?'acceso':PERFIL?'menu':'editor';EDIT=null;scrollTo(0,0)},
   modoAcceso(d){ACCESO.modo=d.m;ACCESO.err='';ACCESO.msg=''},
+  verClave(){ACCESO.ver=!ACCESO.ver},
+  async google(){
+    const a=ACCESO;a.err='';a.msg='';a.busy=true;pinta();
+    const {error}=await SB.auth.signInWithOAuth({provider:'google',options:{redirectTo:location.origin+location.pathname}});
+    if(error){a.busy=false;a.err=errorCuenta(error);pinta()}},
   async entrarCuenta(){
     const a=ACCESO;a.err='';a.msg='';if(!a.email||!a.pw){a.err='Escribe el correo y la contraseña.';return}
     a.busy=true;pinta();const {error}=await SB.auth.signInWithPassword({email:a.email.trim(),password:a.pw});
@@ -1556,7 +1576,7 @@ const ACT={
   async nuevaClave(){
     const pw=(($('#pw')||{}).value||'');ACCESO.err='';if(pw.length<6){ACCESO.err='Mínimo 6 caracteres.';return}
     ACCESO.busy=true;pinta();const {error}=await SB.auth.updateUser({password:pw});ACCESO.busy=false;
-    if(error)ACCESO.err=errorCuenta(error);else{toast('Contraseña cambiada');VISTA='menu'}pinta()},
+    if(error)ACCESO.err=errorCuenta(error);else{toast('Contraseña cambiada');VISTA='menu';ACCESO.pw='';ACCESO.ver=false}pinta()},
   async salirCuenta(){if(SB)await SB.auth.signOut();USER=null;PERFIL=null;SES_ID='';EDIT=null;VISTA='portada';pinta()},
   reintentarCuentas(){SB_ESTADO='cargando';SB?SB.auth.getSession().then(r=>trasSesion('INICIO',r.data.session)).then(()=>{SB_ESTADO='listo';pinta()},()=>{SB_ESTADO='error';pinta()}):iniciaCuentas()},
   aPortada(){VISTA='portada';EDIT=null;scrollTo(0,0)},
@@ -1621,9 +1641,10 @@ const ACT={
 document.addEventListener('click',e=>{
   const b=e.target.closest('[data-a]');if(!b||b.disabled)return;
   if(EDIT&&$('#nom'))EDIT.name=$('#nom').value;
-  if($('#em'))ACCESO.email=$('#em').value;if($('#pw')&&VISTA!=='nuevaClave')ACCESO.pw=$('#pw').value;
+  if($('#em'))ACCESO.email=$('#em').value;if($('#pw'))ACCESO.pw=$('#pw').value;
   const f=ACT[b.dataset.a];if(f){e.preventDefault();f(b.dataset,b);pinta()}
 });
+addEventListener('pageshow',e=>{if(e.persisted&&ACCESO.busy){ACCESO.busy=false;pinta()}}); /* volver atrás desde Google */
 document.addEventListener('change',e=>{const s=e.target.closest('[data-cfg]');if(s)cambiaCfg(c=>{c[s.dataset.cfg]=s.value})});
 document.addEventListener('keydown',e=>{if(e.key!=='Enter')return;if(e.target.id==='cod'){ACT.unirme();pinta()}
   if(e.target.id==='pw'||e.target.id==='em'){const b=document.querySelector('[data-a=entrarCuenta],[data-a=crearCuenta],[data-a=nuevaClave]');if(b&&!b.disabled)b.click()}if(e.target.id==='nuevaSala')ACT.addSala()});
