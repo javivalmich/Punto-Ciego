@@ -523,6 +523,7 @@ const ahora=()=>Date.now()+OFF;
 let HECHAS=new Set();
 const PEND=new Map();
 const OPT=new Set();
+const optK=(tid,step)=>S.gid+'|'+tid+'|'+step;   /* clave ligada a la partida: los ids de tarea (t0, t1…) se repiten en cada una */
 let JOIN_SENT=false,BUSCA_T=0,HOST_PAUSA=0,ROLVIS=0,REVELA=false,SHEET=null,MODO={m:'menu'},PREV=null;
 
 const mine=()=>S&&ME.pid?S.players.find(p=>p.id===ME.pid):null;
@@ -624,13 +625,16 @@ function errorCuenta(e){
   if(m.includes('fetch')||m.includes('network'))return 'No hay conexión con el servidor de cuentas.';
   return (e&&e.message)||'Algo ha fallado. Prueba otra vez.';
 }
+let SUMA_NO_ANTES=0;
 async function sumarPartida(){
-  if(!CUENTAS||!USER||!S||!S.end||!S.end.w)return;
+  if(!CUENTAS||!USER||!S||!S.end||!S.end.w||Date.now()<SUMA_NO_ANTES)return;
   if(S.players.some(x=>x.bot))return; /* las partidas con bots no cuentan */
   const p=mine();if(!p||!p.role)return;
   const k='pc.contada.'+S.gid;if(LS.get(k))return;LS.set(k,1);
   const imp=p.role==='imp',gano=(S.end.w==='imp')===imp;
-  try{const {error}=await SB.rpc('sumar_partida',{gano,impostor:imp});if(error)throw error;await cargaPerfil();pinta()}catch(e){console.warn('estadísticas',e)}
+  let contada=false;
+  try{const {error}=await SB.rpc('sumar_partida',{gano,impostor:imp});if(error)throw error;contada=true}catch(e){console.warn('estadísticas',e);LS.del(k);SUMA_NO_ANTES=Date.now()+20000}
+  if(contada){try{await cargaPerfil();pinta()}catch(e){console.warn('perfil',e)}}
 }
 const hexRGB=h=>[1,3,5].map(i=>parseInt(h.slice(i,i+2),16));
 /* ============ personaje ============
@@ -822,6 +826,7 @@ function resolver(st,now){
 /* local: la acción la ha generado este mismo navegador (el anfitrión o sus bots); las que llegan por la red nunca lo son */
 function reducir(st,a,now,local){
   const p=P(st,a.pid),esHost=a.pid===st.hostId;
+  if(a.gid&&st.gid&&a.gid!==st.gid&&a.t!=='join'&&a.t!=='ping')return true;   /* acción de otra partida (reenvío tardío): se ignora */
   switch(a.t){
   case 'ping':if(p)p.seen=now;return false;
   case 'join':{
@@ -1138,7 +1143,7 @@ function recibeEstado(st){
     OFFS.push(st.hb-Date.now());if(OFFS.length>12)OFFS.shift();OFF=Math.max(...OFFS);
   }
   for(const id of PEND.keys())if((S.ackd||[]).includes(id))PEND.delete(id);
-  for(const k of [...OPT]){const [tid,step]=k.split(':');const t=mine()&&(mine().tasks||[]).find(x=>x.id===tid);if(!t||t.done>+step)OPT.delete(k)}
+  for(const k of [...OPT]){const [g,tid,step]=k.split('|');const t=g===S.gid&&mine()&&(mine().tasks||[]).find(x=>x.id===tid);if(!t||t.done>+step)OPT.delete(k)}
   if(!mine()&&S.phase==='lobby'&&!JOIN_SENT&&ME.name){JOIN_SENT=true;accion('join',{name:ME.name,look:PERFIL?PERFIL.look:LOOK0})}
   LS.set('imp.st.'+ME.code,S);
   eventos();pinta();
@@ -1156,7 +1161,7 @@ function aplicar(a,local){
   publicarEstado(true);eventos();pinta();
 }
 function accion(t,data={}){
-  const a={id:uid(12),pid:ME.pid,t,...data};
+  const a={id:uid(12),pid:ME.pid,gid:S&&S.gid,t,...data};
   if(soyHost()){aplicar(a,true);return}
   PEND.set(a.id,{a,n:0});enviar('a',a);
 }
@@ -1192,7 +1197,11 @@ const SON={
 function eventos(){
   if(!S||!ME.pid)return;const p=mine(),pr=PREV;
   PREV={phase:S.phase,mn:S.meet?S.meet.n:0,sab:S.sab?S.sab.kind+S.sab.rooms.join():'',dead:!!(p&&p.dead),gid:S.gid,notice:S.notice?S.notice.t:0};
-  if(pr&&pr.gid!==S.gid&&S.phase!=='lobby'){if(WK.abierto)WK.cerrar();cerrarSheet()}
+  if(pr&&pr.gid!==S.gid){ /* partida nueva: nada del estado local de la anterior sigue vivo */
+    OPT.clear();REVELA=false;ROLVIS=0;cerrarSheet();
+    for(const [id,q] of PEND)if(q.a.t!=='join')PEND.delete(id);   /* reenvíos pendientes de la partida anterior (el join sí se conserva) */
+    if(S.phase!=='lobby'&&WK.abierto)WK.cerrar();
+  }
   if(!pr||pr.gid!==S.gid)return;
   if(S.phase==='meeting'&&pr.mn!==PREV.mn){SON.reunion();vibra([300,120,300,120,300]);cerrarSheet();if(WK.abierto)WK.cerrar()}
   if(PREV.sab&&PREV.sab!==pr.sab&&p&&p.role!=='imp'){SON.sabotaje();vibra([500,200,500])}
@@ -1366,7 +1375,7 @@ function vLobby(){
 }
 function hechoLocal(p,t){
   if(p.role==='imp'){const f=LS.get('imp.fake.'+S.gid,{});return Math.min(f[t.id]||0,t.steps.length)}
-  let d=t.done;while(d<t.steps.length&&OPT.has(t.id+':'+d))d++;return d;
+  let d=t.done;while(d<t.steps.length&&OPT.has(optK(t.id,d)))d++;return d;
 }
 function vRol(p){
   const ver=Date.now()<ROLVIS,imp=p.role==='imp';
@@ -1520,7 +1529,7 @@ function hojaTarea(tid){
 function tareaHecha(tid,step){
   const p=mine();if(!p||!S)return;SON.tarea();vibra(60);
   if(p.role==='imp'){const f=LS.get('imp.fake.'+S.gid,{});f[tid]=Math.max(f[tid]||0,step+1);LS.set('imp.fake.'+S.gid,f)}
-  else{OPT.add(tid+':'+step);accion('task',{tid,step})}
+  else{OPT.add(optK(tid,step));accion('task',{tid,step})}
   $('#juego').innerHTML='<p class="hecho-ok">Hecho</p>';
   setTimeout(()=>{if(SHEET&&SHEET.tid===tid)cerrarSheet()},800);pinta();
 }
