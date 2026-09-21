@@ -45,6 +45,7 @@ img[data-pend]{visibility:hidden}
 .v3d canvas:focus-visible{outline:2px solid var(--baliza);outline-offset:2px;border-radius:12px}
 @keyframes flota{0%,100%{transform:translateY(0)}50%{transform:translateY(-5px)}}
 @keyframes hop{0%,100%{transform:translateY(0) scale(1,1)}12%{transform:translateY(0) scale(1.05,.94)}45%{transform:translateY(-16px) scale(.98,1.03)}}
+  .listos{margin:.5em 0}.ok-listo{margin-left:6px;color:#63C283;font-weight:800}
 .pose.espectro{animation:flota 2.6s ease-in-out infinite}
 .pose.espectro:not([data-d3]){opacity:.65}
 .pose.hop{animation:hop .85s ease-in-out infinite;transform-origin:50% 100%}
@@ -523,6 +524,7 @@ const ahora=()=>Date.now()+OFF;
 let HECHAS=new Set();
 const PEND=new Map();
 const OPT=new Set();
+const optK=(tid,step)=>S.gid+'|'+tid+'|'+step;   /* clave ligada a la partida: los ids de tarea (t0, t1…) se repiten en cada una */
 let JOIN_SENT=false,BUSCA_T=0,HOST_PAUSA=0,ROLVIS=0,REVELA=false,SHEET=null,MODO={m:'menu'},PREV=null;
 
 const mine=()=>S&&ME.pid?S.players.find(p=>p.id===ME.pid):null;
@@ -624,13 +626,16 @@ function errorCuenta(e){
   if(m.includes('fetch')||m.includes('network'))return 'No hay conexión con el servidor de cuentas.';
   return (e&&e.message)||'Algo ha fallado. Prueba otra vez.';
 }
+let SUMA_NO_ANTES=0;
 async function sumarPartida(){
-  if(!CUENTAS||!USER||!S||!S.end||!S.end.w)return;
+  if(!CUENTAS||!USER||!S||!S.end||!S.end.w||Date.now()<SUMA_NO_ANTES)return;
   if(S.players.some(x=>x.bot))return; /* las partidas con bots no cuentan */
   const p=mine();if(!p||!p.role)return;
   const k='pc.contada.'+S.gid;if(LS.get(k))return;LS.set(k,1);
   const imp=p.role==='imp',gano=(S.end.w==='imp')===imp;
-  try{const {error}=await SB.rpc('sumar_partida',{gano,impostor:imp});if(error)throw error;await cargaPerfil();pinta()}catch(e){console.warn('estadísticas',e)}
+  let contada=false;
+  try{const {error}=await SB.rpc('sumar_partida',{gano,impostor:imp});if(error)throw error;contada=true}catch(e){console.warn('estadísticas',e);LS.del(k);SUMA_NO_ANTES=Date.now()+20000}
+  if(contada){try{await cargaPerfil();pinta()}catch(e){console.warn('perfil',e)}}
 }
 const hexRGB=h=>[1,3,5].map(i=>parseInt(h.slice(i,i+2),16));
 /* ============ personaje ============
@@ -806,11 +811,17 @@ function ganador(st,now){
 }
 function reunion(st,now,by,body){
   st.phase='meeting';
-  st.meet={n:(st.meet?st.meet.n:0)+1,by,body,fase:st.cfg.disc?'disc':'vote',until:now+(st.cfg.disc||st.cfg.vote)*1000,votes:{},res:null};
+  st.meet={n:(st.meet?st.meet.n:0)+1,by,body,fase:st.cfg.disc?'disc':'vote',until:now+(st.cfg.disc||st.cfg.vote)*1000,votes:{},listos:{},res:null};
   st.players.forEach(p=>{p.body=false});st.sab=null;st.locks=[];
   st.log.push({t:now,txt:body?`${nombreDe2(st,by)} encontró el cuerpo de ${nombreDe2(st,body)}`:`${nombreDe2(st,by)} convocó una reunión`});
 }
 const nombreDe2=(st,id)=>{const p=P(st,id);return p?p.name:'?'};
+/* Saltar el debate: los vivos marcan «Listo para votar» (si lo hacen todos se pasa a votar) o el anfitrión pasa a votar cuando quiere */
+const todosListos=st=>{const m=st.meet,v=st.players.filter(x=>!x.dead);return !!(m&&m.listos&&v.length&&v.every(x=>m.listos[x.id]))};
+function pasaAVotar(st,now,por){
+  const m=st.meet;m.fase='vote';m.until=now+st.cfg.vote*1000;   /* la votación empieza con su tiempo completo */
+  st.log.push({t:now,txt:por==='host'?'El anfitrión pasó a la votación':'Todos estaban listos: se pasó a votar'});
+}
 function resolver(st,now){
   const m=st.meet,cuenta={};Object.values(m.votes).forEach(v=>cuenta[v]=(cuenta[v]||0)+1);
   let max=0,top=[];for(const [k,v] of Object.entries(cuenta)){if(v>max){max=v;top=[k]}else if(v===max)top.push(k)}
@@ -822,6 +833,7 @@ function resolver(st,now){
 /* local: la acción la ha generado este mismo navegador (el anfitrión o sus bots); las que llegan por la red nunca lo son */
 function reducir(st,a,now,local){
   const p=P(st,a.pid),esHost=a.pid===st.hostId;
+  if(a.gid&&st.gid&&a.gid!==st.gid&&a.t!=='join'&&a.t!=='ping')return true;   /* acción de otra partida (reenvío tardío): se ignora */
   switch(a.t){
   case 'ping':if(p)p.seen=now;return false;
   case 'join':{
@@ -868,6 +880,19 @@ function reducir(st,a,now,local){
     if(st.phase!=='play'||!p||p.dead||!(p.emerg>0))return true;
     if(st.sab&&st.sab.crit){st.notice={pid:p.id,t:now,txt:'No se puede convocar con la fuga de gas activa'};return true}
     p.emerg--;reunion(st,now,p.id,null);return true;
+  case 'listo':{
+    const m=st.meet;
+    if(st.phase!=='meeting'||!m||m.fase!=='disc'||!p||p.dead)return true;      /* solo en el debate y solo los vivos */
+    if(a.n!==undefined&&a.n!==m.n)return true;                                   /* acción tardía de otra reunión */
+    const l=m.listos||(m.listos={});if(l[p.id])return true;                      /* repetida */
+    l[p.id]=true;if(todosListos(st))pasaAVotar(st,now,'todos');return true;
+  }
+  case 'pasaVotar':{
+    const m=st.meet;
+    if(st.phase!=='meeting'||!m||m.fase!=='disc'||!esHost)return true;           /* solo el anfitrión actual, solo en el debate */
+    if(a.n!==undefined&&a.n!==m.n)return true;
+    pasaAVotar(st,now,'host');return true;
+  }
   case 'vote':{
     const m=st.meet;if(st.phase!=='meeting'||!m||m.fase!=='vote'||!p||p.dead||(p.id in m.votes))return true;
     const tg=a.target==='skip'?'skip':(P(st,a.target)&&!P(st,a.target).dead?a.target:null);if(!tg)return true;
@@ -931,6 +956,7 @@ function tick(st,now){
   }else if(st.phase==='meeting'&&st.meet){
     const m=st.meet;
     if(m.fase==='disc'&&now>=m.until){m.fase='vote';m.until=now+st.cfg.vote*1000;ch=true}
+    else if(m.fase==='disc'&&todosListos(st)){pasaAVotar(st,now,'todos');ch=true}
     else if(m.fase==='vote'&&now>=m.until){resolver(st,now);ch=true}
     else if(m.fase==='res'&&now>=m.until){
       st.phase='play';st.players.forEach(p=>{if(p.role==='imp')p.kcd=now+st.cfg.killCd*1000});
@@ -985,6 +1011,16 @@ function botsVotan(now,v,ya){
     const mm=BOT.mem[p.id]||(BOT.mem[p.id]={});
     if(mm.voto!==m.n){mm.voto=m.n;mm.votoAt=Math.min(ini+entre(2500,Math.max(3000,total*.7))*v,m.until-1500)}
     if(ya||now>=mm.votoAt)botAccion(p.id,'vote',{target:botElige(p,m)});
+  }
+}
+function botsListos(now,v){
+  const m=S.meet;if(!m||m.fase!=='disc')return;
+  for(const b of bots()){
+    if(!S.meet||S.phase!=='meeting'||S.meet.fase!=='disc')return;
+    const p=P(S,b.id);if(!p||p.dead||(S.meet.listos&&S.meet.listos[p.id]))continue;
+    const mm=BOT.mem[p.id]||(BOT.mem[p.id]={});
+    if(mm.listo!==m.n){mm.listo=m.n;mm.listoAt=now+entre(4000,15000)*v}
+    if(now>=mm.listoAt)botAccion(p.id,'listo',{n:m.n});
   }
 }
 function botsRepara(now,v){
@@ -1056,7 +1092,7 @@ function botsTick(){
   if(BOT.gid!==S.gid)BOT={gid:S.gid,mem:{},rep:null};
   const now=ahora(),v=velBots();
   if(S.phase==='play')botsJuego(now,v);
-  else if(S.phase==='meeting')botsVotan(now,v,false);
+  else if(S.phase==='meeting'){botsListos(now,v);botsVotan(now,v,false)}
 }
 setInterval(botsTick,500);
 /* atajos: forzar cosas sin esperar. Siguen pasando por el reducer (acción 'atajo' + acciones normales de los bots) */
@@ -1138,7 +1174,7 @@ function recibeEstado(st){
     OFFS.push(st.hb-Date.now());if(OFFS.length>12)OFFS.shift();OFF=Math.max(...OFFS);
   }
   for(const id of PEND.keys())if((S.ackd||[]).includes(id))PEND.delete(id);
-  for(const k of [...OPT]){const [tid,step]=k.split(':');const t=mine()&&(mine().tasks||[]).find(x=>x.id===tid);if(!t||t.done>+step)OPT.delete(k)}
+  for(const k of [...OPT]){const [g,tid,step]=k.split('|');const t=g===S.gid&&mine()&&(mine().tasks||[]).find(x=>x.id===tid);if(!t||t.done>+step)OPT.delete(k)}
   if(!mine()&&S.phase==='lobby'&&!JOIN_SENT&&ME.name){JOIN_SENT=true;accion('join',{name:ME.name,look:PERFIL?PERFIL.look:LOOK0})}
   LS.set('imp.st.'+ME.code,S);
   eventos();pinta();
@@ -1156,7 +1192,7 @@ function aplicar(a,local){
   publicarEstado(true);eventos();pinta();
 }
 function accion(t,data={}){
-  const a={id:uid(12),pid:ME.pid,t,...data};
+  const a={id:uid(12),pid:ME.pid,gid:S&&S.gid,t,...data};
   if(soyHost()){aplicar(a,true);return}
   PEND.set(a.id,{a,n:0});enviar('a',a);
 }
@@ -1187,14 +1223,20 @@ const SON={
   sabotaje:()=>tono([[230,.32,'sawtooth',.12],[170,.32,'sawtooth',.12],[230,.32,'sawtooth',.12],[170,.4,'sawtooth',.12]]),
   muerte:()=>tono([[150,.45,'sine',.35],[80,.7,'sine',.35]]),
   tarea:()=>tono([[660,.08,'triangle',.15],[990,.16,'triangle',.15]]),
-  fin:()=>tono([[523,.14,'triangle',.18],[659,.14,'triangle',.18],[784,.34,'triangle',.18]])
+  fin:()=>tono([[523,.14,'triangle',.18],[659,.14,'triangle',.18],[784,.34,'triangle',.18]]),
+  votar:()=>tono([[660,.12,'triangle',.18],[880,.12,'triangle',.18],[1100,.24,'triangle',.18]])
 };
 function eventos(){
   if(!S||!ME.pid)return;const p=mine(),pr=PREV;
-  PREV={phase:S.phase,mn:S.meet?S.meet.n:0,sab:S.sab?S.sab.kind+S.sab.rooms.join():'',dead:!!(p&&p.dead),gid:S.gid,notice:S.notice?S.notice.t:0};
-  if(pr&&pr.gid!==S.gid&&S.phase!=='lobby'){if(WK.abierto)WK.cerrar();cerrarSheet()}
+  PREV={phase:S.phase,mn:S.meet?S.meet.n:0,mf:S.meet?S.meet.fase:'',sab:S.sab?S.sab.kind+S.sab.rooms.join():'',dead:!!(p&&p.dead),gid:S.gid,notice:S.notice?S.notice.t:0};
+  if(pr&&pr.gid!==S.gid){ /* partida nueva: nada del estado local de la anterior sigue vivo */
+    OPT.clear();REVELA=false;ROLVIS=0;cerrarSheet();
+    for(const [id,q] of PEND)if(q.a.t!=='join')PEND.delete(id);   /* reenvíos pendientes de la partida anterior (el join sí se conserva) */
+    if(S.phase!=='lobby'&&WK.abierto)WK.cerrar();
+  }
   if(!pr||pr.gid!==S.gid)return;
   if(S.phase==='meeting'&&pr.mn!==PREV.mn){SON.reunion();vibra([300,120,300,120,300]);cerrarSheet();if(WK.abierto)WK.cerrar()}
+  if(S.phase==='meeting'&&pr.mn===PREV.mn&&pr.mf==='disc'&&PREV.mf==='vote'){SON.votar();vibra([200,100,200]);cerrarSheet()}   /* de debate a votación, en todos los móviles a la vez */
   if(PREV.sab&&PREV.sab!==pr.sab&&p&&p.role!=='imp'){SON.sabotaje();vibra([500,200,500])}
   if(p&&PREV.dead&&!pr.dead&&S.phase==='play'){SON.muerte();vibra(900);cerrarSheet()}
   if(S.phase==='end'&&pr.phase!=='end'){SON.fin();cerrarSheet();sumarPartida()}
@@ -1219,7 +1261,7 @@ document.addEventListener('focusout',()=>setTimeout(pinta,50));
 const REGLAS=`<p>Todos sois tripulantes menos uno o varios impostores. Nadie sabe quién es quién.</p>
 <p>La tripulación gana si termina todas sus tareas o si expulsa a los impostores. Cada tarea está en una sala real: vas, haces lo que dice y completas la prueba del móvil.</p>
 <p>El impostor finge tareas. Para matar, toca a alguien en el hombro sin que nadie lo vea y lo confirma en su móvil. El muerto se tumba en silencio donde está.</p>
-<p>Quien encuentre un cuerpo pulsa Reportar: suena en todos los móviles y os juntáis en el punto de reunión. Debate, votación, y el más votado queda fuera.</p>
+<p>Quien encuentre un cuerpo pulsa Reportar: suena en todos los móviles y os juntáis en el punto de reunión. Debate, votación, y el más votado queda fuera. Si en el debate todos los vivos pulsan «Listo para votar» se vota sin esperar, y el anfitrión puede pasar a votar cuando quiera.</p>
 <p>El impostor también sabotea: fuga de gas (dos personas reparan a la vez en dos salas antes de 60 s), luces fuera, comunicaciones caídas o una sala cerrada.</p>
 <p>Los muertos son fantasmas: siguen haciendo tareas y tienen su propio canal de walkie, pero no votan ni hablan en las reuniones.</p>
 <p>Los impostores ganan si igualan en número a la tripulación o si nadie para la fuga a tiempo.</p>`;
@@ -1366,7 +1408,7 @@ function vLobby(){
 }
 function hechoLocal(p,t){
   if(p.role==='imp'){const f=LS.get('imp.fake.'+S.gid,{});return Math.min(f[t.id]||0,t.steps.length)}
-  let d=t.done;while(d<t.steps.length&&OPT.has(t.id+':'+d))d++;return d;
+  let d=t.done;while(d<t.steps.length&&OPT.has(optK(t.id,d)))d++;return d;
 }
 function vRol(p){
   const ver=Date.now()<ROLVIS,imp=p.role==='imp';
@@ -1429,8 +1471,12 @@ function vReunion(){
   <p class="dondes">Todos a <b>${esc(mr.name)}</b>. Los muertos pueden levantarse y venir, pero en silencio.</p>`;
   const vivos=S.players.filter(x=>!x.dead);
   if(m.fase==='disc'){
-    h+=`<div class="fase"><span>Debate</span><b data-until="${m.until}"></b></div><p class="tenue">Hablad. La votación se abre cuando acabe el tiempo.</p>
-    <div class="votos">${S.players.map(x=>`<div class="voto ${x.dead?'muerto':''}">${dot(x)}${esc(x.name)}${bt(x)}</div>`).join('')}</div>`;
+    const l=m.listos||{},nl=vivos.filter(x=>l[x.id]).length,yo=p&&!p.dead;
+    h+=`<div class="fase"><span>Debate</span><b data-until="${m.until}"></b></div><p class="tenue">Hablad. La votación se abre cuando acabe el tiempo o cuando todos estéis listos.</p>
+    <p class="listos" role="status"><b>${nl} de ${vivos.length}</b> listos</p>`;
+    if(yo)h+=l[p.id]?`<button class="b-sec b-ancho" disabled>Listo ✓ · esperando al resto</button>`:`<button class="b-baliza b-ancho" data-a="listoVotar">Listo para votar</button>`;
+    if(soyHost())h+=`<button class="b-sec b-ancho" style="margin-top:8px" data-a="pasarVotar">Pasar a votar</button>`;
+    h+=`<div class="votos" style="margin-top:14px">${S.players.map(x=>`<div class="voto ${x.dead?'muerto':''}">${dot(x)}${esc(x.name)}${bt(x)}${!x.dead&&l[x.id]?'<span class="ok-listo" title="Listo">✓</span>':''}</div>`).join('')}</div>`;
   }else if(m.fase==='vote'){
     const nv=Object.keys(m.votes).length;
     h+=`<div class="fase"><span>Votación</span><b data-until="${m.until}"></b></div><p class="tenue">${nv} de ${vivos.length} han votado.</p>`;
@@ -1520,7 +1566,7 @@ function hojaTarea(tid){
 function tareaHecha(tid,step){
   const p=mine();if(!p||!S)return;SON.tarea();vibra(60);
   if(p.role==='imp'){const f=LS.get('imp.fake.'+S.gid,{});f[tid]=Math.max(f[tid]||0,step+1);LS.set('imp.fake.'+S.gid,f)}
-  else{OPT.add(tid+':'+step);accion('task',{tid,step})}
+  else{OPT.add(optK(tid,step));accion('task',{tid,step})}
   $('#juego').innerHTML='<p class="hecho-ok">Hecho</p>';
   setTimeout(()=>{if(SHEET&&SHEET.tid===tid)cerrarSheet()},800);pinta();
 }
@@ -1904,6 +1950,10 @@ const ACT={
   reportarA(d){accion('report',{target:d.p});cerrarSheet()},
   emergencia(){const p=mine();abrirSheet(`<h2>Reunión de emergencia</h2><p class="tenue">Todos tendrán que ir al punto de reunión. Te ${p.emerg===1?'queda 1':'quedan '+p.emerg}.</p><button class="b-alarma b-ancho" data-a="emergOk">Convocar</button>`)},
   emergOk(){accion('emerg');cerrarSheet()},
+  listoVotar(){const m=S&&S.meet;if(S&&S.phase==='meeting'&&m&&m.fase==='disc')accion('listo',{n:m.n})},
+  pasarVotar(){const m=S&&S.meet;if(!soyHost()||!S||S.phase!=='meeting'||!m||m.fase!=='disc')return;
+    abrirSheet(`<h2>¿Pasar a votar ya?</h2><p class="tenue">Se termina el debate para todos y empieza la votación con su tiempo completo.</p><button class="b-baliza b-ancho" data-a="pasarVotarOk" data-n="${m.n}">Sí, pasar a votar</button><button class="b-link" data-a="cerrarSheet">Cancelar</button>`)},
+  pasarVotarOk(d){cerrarSheet();const m=S&&S.meet;if(soyHost()&&S.phase==='meeting'&&m&&m.fase==='disc')accion('pasaVotar',{n:+d.n||m.n})},
   menu(){hojaMas()},
   matar(){MODO={m:'matar'}},
   matarA(d){MODO={m:'conf',p:d.p}},
