@@ -9,7 +9,7 @@
          PJ.aplica() (monta/actualiza los <canvas data-v>) · PJ.config({...})                          */
 (function(G){
 'use strict';
-const PJ={estado:'sin',onCambio:null,cfg:{antialias:true,bin:'assets/personaje.bin?v=2'}};
+const PJ={estado:'sin',onCambio:null,cfg:{antialias:true,bin:'assets/personaje.bin?v=3'}};
 G.PJ=PJ;
 
 /* ---------- shaders ---------- */

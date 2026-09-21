@@ -331,12 +331,12 @@ ul.tareas{list-style:none;margin:6px 0;padding:0;display:grid;gap:8px}
 <div id="toast"></div>
 <noscript>Esta web necesita JavaScript.</noscript>
 
-<script src="assets/personaje3d.js?v=2"></script>
+<script src="assets/personaje3d.js?v=3"></script>
 <script>
 'use strict';
 const POSE_K=['frente','tresq','lado','espalda','movil','camina','corre','salta','sentado','agachado','feliz','cabeza'];
 /* Imágenes de serie (look por defecto) y máscaras del respaldo: son archivos, se piden solo cuando se muestran. */
-const IMG={logo:'assets/logo.webp'};POSE_K.forEach(k=>IMG[k]='assets/img/'+k+'.webp?v=2');
+const IMG={logo:'assets/logo.webp'};POSE_K.forEach(k=>IMG[k]='assets/img/'+k+'.webp?v=3');
 /* ============ utilidades ============ */
 const $=s=>document.querySelector(s);
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -389,8 +389,8 @@ const TAREAS={
  comun:[['Coge un folleto y déjalo en su sitio','wires'],['Mira el plano de evacuación','calib'],['Siéntate diez segundos','hold']],
  generica:[['Recorre la sala en círculo','hold'],['Toca las cuatro esquinas de la sala','order'],['Enciende y apaga la luz','simon'],['Busca el objeto más raro y señálalo','code'],['Toca el marco de la puerta','calib'],['Pasa tu tarjeta por el lector','swipe'],['Conecta los cables','wires']]
 };
-const LAB={};POSE_K.forEach(k=>LAB[k]='assets/img/m_'+k+'.png?v=2');
-const REF={"frente": [29.3, 221.2, 39.8, 242.6, 194.7, 27.1, 0], "tresq": [27.1, 229.1, 38.2, 237.2, 196.1, 27.1, 0], "lado": [28.2, 236.3, 41.0, 226.9, 192.9, 32.4, 38.3], "espalda": [26.6, 229.2, 0, 0, 177.8, 28.2, 32.0], "movil": [27.1, 227.3, 39.6, 239.2, 195.5, 26.7, 0], "camina": [27.5, 233.6, 43.9, 235.5, 195.3, 29.4, 33.8], "corre": [27.0, 234.0, 50.2, 231.6, 191.0, 30.2, 32.2], "salta": [27.6, 221.3, 42.0, 239.5, 193.1, 26.9, 0], "sentado": [26.8, 230.2, 39.1, 239.5, 202.2, 26.7, 0], "agachado": [26.5, 231.4, 39.1, 238.8, 203.2, 26.7, 0], "feliz": [27.7, 225.5, 41.6, 240.2, 194.8, 26.9, 0], "cabeza": [26.4, 227.9, 39.5, 239.9, 0, 0, 0]};
+const LAB={};POSE_K.forEach(k=>LAB[k]='assets/img/m_'+k+'.png?v=3');
+const REF={"frente": [29.5, 218.2, 39.8, 242.6, 194.7, 27.1, 0], "tresq": [27.4, 226.0, 38.2, 237.2, 196.1, 27.1, 0], "lado": [28.5, 234.2, 41.0, 226.9, 192.9, 32.4, 38.3], "espalda": [26.6, 229.2, 0, 0, 177.8, 28.2, 32.0], "movil": [27.3, 224.1, 39.6, 239.2, 195.5, 26.7, 0], "camina": [27.8, 230.9, 43.9, 235.5, 195.3, 29.4, 33.8], "corre": [27.3, 231.3, 50.2, 231.6, 191.0, 30.2, 32.2], "salta": [27.9, 218.1, 42.0, 239.5, 193.1, 26.9, 0], "sentado": [27.0, 227.6, 39.1, 239.5, 202.2, 26.7, 0], "agachado": [26.7, 229.1, 39.1, 238.8, 203.2, 26.7, 0], "feliz": [27.8, 222.2, 41.6, 240.2, 194.8, 26.9, 0], "cabeza": [26.7, 225.0, 39.5, 239.9, 0, 0, 0]};
 const LIM={imp:[1,3,1],tasks:[2,8,1],killCd:[10,90,5],disc:[0,180,15],vote:[15,120,15],emerg:[0,3,1]};
 const SABS={
  gas:{n:'Fuga de gas',d:'Dos personas tienen que reparar a la vez en dos salas. Si en 60 s no lo consiguen, ganáis.'},
