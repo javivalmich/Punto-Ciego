@@ -21,3 +21,6 @@ desktop.ini
 *.log
 test-results/
 playwright-report/
+
+# Material de origen pesado (modelo 3D original, vídeo): no se sube. GitHub rechaza archivos de más de 100 MB
+fuentes/
