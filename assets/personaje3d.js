@@ -9,18 +9,18 @@
          PJ.aplica() (monta/actualiza los <canvas data-v>) · PJ.config({...})                          */
 (function(G){
 'use strict';
-const PJ={estado:'sin',onCambio:null,cfg:{antialias:true,bin:'assets/personaje.bin'}};
+const PJ={estado:'sin',onCambio:null,cfg:{antialias:true,bin:'assets/personaje.bin?v=2'}};
 G.PJ=PJ;
 
 /* ---------- shaders ---------- */
 const VS=`
 attribute vec4 aP;   // posición ACTUAL (hoy = reposo; con esqueleto será la malla deformada)
-attribute vec4 aR;   // posición en REPOSO (zonas y estampados)
+attribute vec4 aR;   // posición en REPOSO (zonas y estampados); w = campo de la unión capucha/cuello
 attribute vec4 aN;   // normal (xyz) y oclusión ambiental (w)
 uniform mat4 uMV; uniform mat4 uProj; uniform mat3 uNM; uniform vec3 uExt;
-varying vec3 vN; varying vec3 vR; varying vec3 vNo; varying float vAO; varying vec3 vV;
+varying vec3 vN; varying vec3 vR; varying vec3 vNo; varying float vAO; varying vec3 vV; varying float vS;
 void main(){
-  vec3 p=aP.xyz*uExt; vR=aR.xyz*uExt;
+  vec3 p=aP.xyz*uExt; vR=aR.xyz*uExt; vS=aR.w;   // aR.w: distancia con signo a la unión capucha/cuello, horneada en reposo
   vec3 n=aN.xyz*2.0-1.0;
   vN=uNM*n; vNo=n; vAO=aN.w;
   vec4 v=uMV*vec4(p,1.0); vV=v.xyz;
@@ -32,8 +32,8 @@ precision highp float;
 #else
 precision mediump float;
 #endif
-varying vec3 vN; varying vec3 vR; varying vec3 vNo; varying float vAO; varying vec3 vV;
-uniform vec3 uCloth,uHood,uFace,uEye,uGlove,uRimC; uniform float uPat,uW,uGray,uAlpha,uRimK,uMask; uniform mat3 uNM;
+varying vec3 vN; varying vec3 vR; varying vec3 vNo; varying float vAO; varying vec3 vV; varying float vS;
+uniform vec3 uCloth,uPants,uPack,uHood,uFace,uEye,uGlove,uRimC; uniform float uPat,uW,uGray,uAlpha,uRimK,uMask; uniform mat3 uNM;
 vec3 lin(vec3 c){return pow(c,vec3(2.2));}
 float hash(vec3 p){p=fract(p*0.3183099+vec3(.1,.2,.3));p*=17.0;return fract(p.x*p.y*p.z*(p.x+p.y+p.z));}
 float vnoise(vec3 x){vec3 i=floor(x),f=fract(x);f=f*f*(3.0-2.0*f);
@@ -43,23 +43,26 @@ void main(){
   vec3 n=normalize(vN); vec3 V=normalize(-vV);
   float w=uW; vec3 P=vR;
   // zonas por píxel a partir de la posición en reposo
-  float qL=length(vec2(P.x/0.44,(P.y-0.43)/0.35)); float sdH=max(P.y-0.27,min((1.0-qL)*0.36,P.z-0.1));
+  float qL=length(vec2(P.x/0.44,(P.y-0.43)/0.35)); float sdH=max(vS,min((1.0-qL)*0.36,P.z-0.1));   // cúpula (línea de unión horneada) + reborde que rodea la cara
   float qF=length(vec2(P.x/0.385,(P.y-0.43)/0.315)); float sdF=min((1.0-qF)*0.33,(P.z-0.05));
   float ex=abs(P.x)-0.194; float sdE=(1.0-length(vec2(ex/0.052,(P.y-0.355)/0.112)))*0.055; if(P.z<0.2)sdE=-1.0;
   vec2 gp=vec2(abs(P.x)-0.455,P.y+0.545); float sdG=min((1.0-length(vec3(gp.x/0.10,gp.y/0.115,(P.z-0.03)/0.14)))*0.11,-0.455-P.y);
+  float sdPn=-0.575-P.y;                                                          // pantalón y zapatillas: por debajo del borde de la sudadera
+  float sdPk=min(min(-0.30-P.z,0.44-abs(P.x)),min(P.y+0.56,0.02-P.y));               // mochila: bloque en la espalda
+  float mPn=smoothstep(-w,w,sdPn), mPk=smoothstep(-w,w,sdPk);
   float mH=smoothstep(-w,w,sdH), mF=smoothstep(-w,w,sdF), mE=smoothstep(-w,w,sdE), mG=smoothstep(-w,w,sdG);
-  if(uMask>0.5){ float l=1.0; if(sdH>0.0)l=2.0; if(sdF>0.0)l=3.0; if(sdG>0.0)l=5.0; if(sdE>0.0)l=4.0; gl_FragColor=vec4(vec3(l*50.0/255.0),1.0); return; }
+  if(uMask>0.5){ float l=1.0; if(sdPn>0.0)l=6.0; if(sdPk>0.0)l=7.0; if(sdH>0.0)l=2.0; if(sdF>0.0)l=3.0; if(sdG>0.0)l=5.0; if(sdE>0.0)l=4.0; gl_FragColor=vec4(vec3(l*30.0/255.0),1.0); return; }
   // la cara es una esfera lisa: su normal exacta evita reflejos rotos por el ruido de la malla
   n=normalize(mix(n,normalize(uNM*normalize(P-vec3(0.0,0.44,-0.017))),mF));
-  vec3 cloth=uCloth; float tint=1.0;
+  float tint=1.0;
   if(uPat>0.5){
     if(uPat<1.5){ float s=floor(P.y*26.0); tint=mod(s,2.0)<0.5?1.0:0.6; }
     else if(uPat<2.5){ vec3 a=abs(vNo); vec2 uv=(a.z>=a.x&&a.z>=a.y)?P.xy:((a.x>=a.y)?P.zy:P.xz); vec2 c=floor(uv*19.0); tint=mod(c.x+c.y,2.0)<0.5?1.0:0.62; }
     else { float q=vnoise(P*7.0)*0.65+vnoise(P*15.0+7.0)*0.35; tint=q>0.62?0.5:(q>0.42?0.8:1.04); }
   }
-  cloth*=tint;
   float grain=vnoise(P*260.0)*0.5+vnoise(P*95.0)*0.5; float gr=0.94+0.12*grain;
-  vec3 alb=cloth;
+  vec3 alb=uCloth*tint;
+  alb=mix(alb,uPants*tint,mPn); alb=mix(alb,uPack*tint,mPk);
   alb=mix(alb,uHood,mH); alb=mix(alb,uFace,mF); alb=mix(alb,uEye,mE); alb=mix(alb,uGlove,mG);
   float isFace=mF*(1.0-mE), isEye=mE, isGlove=mG*(1.0-mF), isHood=mH*(1.0-mF);
   vec3 Lk=normalize(vec3(-0.55,0.75,0.65)), Lf=normalize(vec3(0.85,0.15,0.45)), Lr=normalize(vec3(0.2,0.35,-1.0));
@@ -108,7 +111,7 @@ function creaGL(){
   const pr=gl.createProgram();gl.attachShader(pr,sh(gl.VERTEX_SHADER,VS));gl.attachShader(pr,sh(gl.FRAGMENT_SHADER,FS));gl.linkProgram(pr);
   if(!gl.getProgramParameter(pr,gl.LINK_STATUS))throw new Error(gl.getProgramInfoLog(pr));
   GL.prog=pr;gl.useProgram(pr);
-  GL.U={};['uMV','uProj','uNM','uExt','uCloth','uHood','uFace','uEye','uGlove','uRimC','uPat','uW','uGray','uAlpha','uRimK','uMask'].forEach(k=>GL.U[k]=gl.getUniformLocation(pr,k));
+  GL.U={};['uMV','uProj','uNM','uExt','uCloth','uPants','uPack','uHood','uFace','uEye','uGlove','uRimC','uPat','uW','uGray','uAlpha','uRimK','uMask'].forEach(k=>GL.U[k]=gl.getUniformLocation(pr,k));
   GL.A={aP:gl.getAttribLocation(pr,'aP'),aR:gl.getAttribLocation(pr,'aR'),aN:gl.getAttribLocation(pr,'aN')};
   if(GL.buf)subeMalla();   // al restaurar el contexto la malla ya está descargada
 }
@@ -174,8 +177,9 @@ function dibuja(w,h,p,c,look){
   gl.uniformMatrix4fv(U.uMV,false,MV);gl.uniformMatrix4fv(U.uProj,false,persp(fov,asp,0.5,30));gl.uniformMatrix3fv(U.uNM,false,NM);
   gl.uniform3fv(U.uExt,GL.ext);
   const L=look||{};
-  const cl=L.cloth?hex(L.cloth):(L.pat?[0.26,0.26,0.28]:[0.075,0.075,0.085]);
-  gl.uniform3fv(U.uCloth,cl);gl.uniform3fv(U.uHood,hex(L.hood,[0.95,0.93,0.89]));gl.uniform3fv(U.uFace,[0.03,0.03,0.04]);
+  const tela=c=>c?hex(c):(L.pat?[0.26,0.26,0.28]:[0.075,0.075,0.085]);   // negro liso; con estampado, un gris para que se note
+  const cl=tela(L.cloth);
+  gl.uniform3fv(U.uCloth,cl);gl.uniform3fv(U.uPants,L.pants===undefined?cl:tela(L.pants));gl.uniform3fv(U.uPack,L.pack===undefined?cl:tela(L.pack));gl.uniform3fv(U.uHood,hex(L.hood,[0.95,0.93,0.89]));gl.uniform3fv(U.uFace,[0.03,0.03,0.04]);
   gl.uniform3fv(U.uEye,hex(L.eye,[0.98,0.98,0.97]));gl.uniform3fv(U.uGlove,hex(L.glove,[0.93,0.92,0.9]));
   gl.uniform1f(U.uPat,L.pat|0);gl.uniform1f(U.uW,1.1*2*dist*Math.tan(fov/2)/h*(PJ.mascara?0.001:1));
   gl.uniform1f(U.uGray,p.gray||0);gl.uniform1f(U.uAlpha,p.alpha==null?1:p.alpha);gl.uniform1f(U.uMask,PJ.mascara?1:0);
@@ -225,6 +229,12 @@ PJ.avatar=function(vista,look,est,anchoCss){
     return GL.cv.toDataURL('image/png');
   }catch(e){fallaDibujo(e);return null}
 };
+/* Render libre con una vista a medida ({ar,p,c}); útil para pruebas y herramientas. */
+PJ.render=function(V,look,est,w){
+  if(PJ.estado!=='listo')return null;
+  const h=Math.round(w/V.ar);
+  try{return dibuja(w,h,estadoP(est,V.p),V.c,look)?GL.cv.toDataURL('image/png'):null}catch(e){return null}
+};
 PJ.tamano=(vista,anchoCss)=>{const V=VISTAS[vista];if(!V)return null;const w=cubo(Math.round((anchoCss||150)*2));return {w,h:Math.round(w/V.ar)}};
 
 /* ---------- animaciones (todas del cuerpo entero) ---------- */
@@ -273,7 +283,7 @@ const CAM={reposo:{zoom:.95},giro:{zoom:.92,vy:.08},salto:{zoom:.9,vy:.08},muert
 /* ---------- vistas vivas (<canvas data-v>) ---------- */
 const vistas=new Map();
 let raf=0,ult=0,cola=false;
-function parseLook(s){const a=(s||'').split('|');const f=x=>x?'#'+x:null;return {hood:f(a[0]),cloth:f(a[1]),glove:f(a[2]),eye:f(a[3]),pat:+a[4]||0}}
+function parseLook(s){const a=(s||'').split('|');const f=x=>x?'#'+x:null;return {hood:f(a[0]),cloth:f(a[1]),glove:f(a[2]),eye:f(a[3]),pat:+a[4]||0,pants:a.length>5?f(a[5]):undefined,pack:a.length>6?f(a[6]):undefined}}
 function visible(el){const r=el.getBoundingClientRect();return r.width>0&&r.height>0&&r.bottom>0&&r.top<(G.innerHeight||1e4)&&r.right>0&&r.left<(G.innerWidth||1e4)}
 function pintaVista(v,ahora){
   const el=v.el;if(!el||!el.isConnected)return false;
@@ -299,6 +309,12 @@ function tick(ts){
   for(const [n,v] of vistas){
     if(!v.el||!v.el.isConnected){vistas.delete(n);continue}
     if(!visible(v.el))continue;
+    // giro automático hacia un ángulo (p. ej. al editar la mochila se enseña la espalda)
+    if(v.obj!=null&&!v.arrastra){
+      const d=((v.obj-v.yaw+Math.PI)%(2*Math.PI)+2*Math.PI)%(2*Math.PI)-Math.PI;
+      if(RM.matches||Math.abs(d)<.02){v.yaw+=d;v.obj=null}else v.yaw+=d*Math.min(1,Math.min(.05,(ts-ult)/1000||.016)*7);
+      v.sucio=true;anima=true;
+    }
     // inercia tras soltar
     if(!v.arrastra&&Math.abs(v.vel)>.02){v.yaw+=v.vel*Math.min(.05,(ts-ult)/1000||.016);v.vel*=.94;v.sucio=true;anima=true}
     const suave=(v.anim==='reposo'||v.anim==='fantasma')&&!v.arrastra&&Math.abs(v.vel)<.02&&!v.sucio;
@@ -312,6 +328,13 @@ function tick(ts){
 }
 function arranca(){if(raf||G.document.hidden||!vistas.size||PJ.estado!=='listo')return;ult=performance.now();raf=requestAnimationFrame(tick)}
 PJ.arranca=arranca;
+/* Gira la vista viva `nombre` hasta `yaw` (rad). Con yaw=null vuelve al ángulo de antes si fue un giro automático. */
+PJ.giraA=function(nombre,yaw){
+  const v=vistas.get(nombre);if(!v)return;
+  if(yaw!=null){if(!v.auto){v.antes=v.yaw;v.auto=true}v.obj=yaw}
+  else if(v.auto){v.obj=v.antes==null?.35:v.antes;v.auto=false}
+  arranca();
+};
 G.document&&G.document.addEventListener('visibilitychange',()=>{if(G.document.hidden){if(raf)cancelAnimationFrame(raf);raf=0}else arranca()});
 if(RM.addEventListener)RM.addEventListener('change',()=>{for(const v of vistas.values()){v.t0=performance.now();v.sucio=true}arranca()});
 
@@ -337,7 +360,7 @@ PJ.aplica=function(){
 };
 function enlaza(el,v){
   let x0=0,id=-1,tprev=0;
-  el.addEventListener('pointerdown',e=>{id=e.pointerId;x0=e.clientX;v.arrastra=true;v.vel=0;tprev=e.timeStamp;try{el.setPointerCapture(id)}catch(_){}arranca()});
+  el.addEventListener('pointerdown',e=>{id=e.pointerId;x0=e.clientX;v.arrastra=true;v.vel=0;v.obj=null;tprev=e.timeStamp;try{el.setPointerCapture(id)}catch(_){}arranca()});
   el.addEventListener('pointermove',e=>{if(e.pointerId!==id||!v.arrastra)return;const dx=e.clientX-x0;x0=e.clientX;v.yaw+=dx*.011;v.sucio=true;const dt=Math.max(1,e.timeStamp-tprev);tprev=e.timeStamp;v.vel=Math.max(-14,Math.min(14,dx*.011/(dt/1000)));arranca()});
   const fin=e=>{if(e.pointerId!==id)return;v.arrastra=false;id=-1;if(RM.matches)v.vel=0;arranca()};
   el.addEventListener('pointerup',fin);el.addEventListener('pointercancel',fin);

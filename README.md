@@ -16,9 +16,11 @@ dependencias (`assets/personaje3d.js`, un único contexto WebGL para toda la app
 - `assets/personaje.bin`: la malla (26 k triángulos, ~300 KB). Solo se descarga al llegar al menú.
 - `assets/img/*.webp` y `assets/img/m_*.png`: imágenes del look de serie y sus máscaras. Son el
   respaldo si el navegador no tiene WebGL (se recolorean en 2D) y el marcador mientras carga.
-- Los colores de capucha, sudadera, estampado, guantes y ojos se aplican en el shader; las zonas
+- Los colores de capucha, sudadera, pantalón, mochila, estampado, guantes y ojos se aplican en el shader; las zonas
   se calculan con la posición en reposo de cada vértice, así que seguirán valiendo cuando la malla
-  se deforme con un esqueleto.
+  se deforme con un esqueleto. La unión capucha/cuello es una línea curva calculada sobre la malla y horneada
+  en el canal `w` de la posición en reposo. Pantalón y mochila valen 0 = «como la sudadera» (así los looks
+  guardados antes de existir esos campos se ven igual).
 - Menú, editor (se gira arrastrando), revelado, reunión y muerte son vistas vivas con animación.
   Los avatares de listas y votaciones son imágenes (`data:` URL) generadas con el mismo modelo.
   El bucle de dibujo solo corre si hay un 3D visible y la pestaña está activa, y respeta
