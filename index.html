@@ -331,12 +331,12 @@ ul.tareas{list-style:none;margin:6px 0;padding:0;display:grid;gap:8px}
 <div id="toast"></div>
 <noscript>Esta web necesita JavaScript.</noscript>
 
-<script src="assets/personaje3d.js?v=3"></script>
+<script src="assets/personaje3d.js?v=4"></script>
 <script>
 'use strict';
 const POSE_K=['frente','tresq','lado','espalda','movil','camina','corre','salta','sentado','agachado','feliz','cabeza'];
 /* Imágenes de serie (look por defecto) y máscaras del respaldo: son archivos, se piden solo cuando se muestran. */
-const IMG={logo:'assets/logo.webp'};POSE_K.forEach(k=>IMG[k]='assets/img/'+k+'.webp?v=3');
+const IMG={logo:'assets/logo.webp'};POSE_K.forEach(k=>IMG[k]='assets/img/'+k+'.webp?v=4');
 /* ============ utilidades ============ */
 const $=s=>document.querySelector(s);
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -389,8 +389,8 @@ const TAREAS={
  comun:[['Coge un folleto y déjalo en su sitio','wires'],['Mira el plano de evacuación','calib'],['Siéntate diez segundos','hold']],
  generica:[['Recorre la sala en círculo','hold'],['Toca las cuatro esquinas de la sala','order'],['Enciende y apaga la luz','simon'],['Busca el objeto más raro y señálalo','code'],['Toca el marco de la puerta','calib'],['Pasa tu tarjeta por el lector','swipe'],['Conecta los cables','wires']]
 };
-const LAB={};POSE_K.forEach(k=>LAB[k]='assets/img/m_'+k+'.png?v=3');
-const REF={"frente": [29.5, 218.2, 39.8, 242.6, 194.7, 27.1, 0], "tresq": [27.4, 226.0, 38.2, 237.2, 196.1, 27.1, 0], "lado": [28.5, 234.2, 41.0, 226.9, 192.9, 32.4, 38.3], "espalda": [26.6, 229.2, 0, 0, 177.8, 28.2, 32.0], "movil": [27.3, 224.1, 39.6, 239.2, 195.5, 26.7, 0], "camina": [27.8, 230.9, 43.9, 235.5, 195.3, 29.4, 33.8], "corre": [27.3, 231.3, 50.2, 231.6, 191.0, 30.2, 32.2], "salta": [27.9, 218.1, 42.0, 239.5, 193.1, 26.9, 0], "sentado": [27.0, 227.6, 39.1, 239.5, 202.2, 26.7, 0], "agachado": [26.7, 229.1, 39.1, 238.8, 203.2, 26.7, 0], "feliz": [27.8, 222.2, 41.6, 240.2, 194.8, 26.9, 0], "cabeza": [26.7, 225.0, 39.5, 239.9, 0, 0, 0]};
+const LAB={};POSE_K.forEach(k=>LAB[k]='assets/img/m_'+k+'.png?v=4');
+const REF={"frente": [29.7, 223.2, 38.4, 242.6, 194.7, 23.3, 26.4, 30.8], "tresq": [27.5, 229.2, 37.1, 237.2, 196.1, 21.7, 24.9, 31.7], "lado": [28.5, 236.5, 37.2, 226.9, 192.9, 27.0, 34.2, 36.1], "espalda": [26.3, 229.2, 0, 0, 177.8, 25.5, 31.5, 32.1], "movil": [27.5, 227.9, 38.4, 239.2, 195.5, 21.8, 24.8, 31.1], "camina": [28.0, 234.0, 41.7, 235.5, 195.3, 22.8, 29.1, 34.6], "corre": [27.5, 234.3, 47.2, 231.6, 191.0, 23.0, 28.9, 34.8], "salta": [28.0, 222.4, 40.7, 239.5, 193.1, 22.3, 25.3, 31.4], "sentado": [27.1, 230.4, 38.1, 239.5, 202.2, 21.8, 24.8, 30.9], "agachado": [26.8, 231.3, 38.1, 238.8, 203.2, 21.6, 24.7, 30.9], "feliz": [28.0, 226.3, 40.2, 240.2, 194.8, 22.4, 25.4, 31.2], "cabeza": [26.8, 228.6, 38.8, 239.9, 0, 0, 25.1, 0]};
 const LIM={imp:[1,3,1],tasks:[2,8,1],killCd:[10,90,5],disc:[0,180,15],vote:[15,120,15],emerg:[0,3,1]};
 const SABS={
  gas:{n:'Fuga de gas',d:'Dos personas tienen que reparar a la vez en dos salas. Si en 60 s no lo consiguen, ganáis.'},
@@ -532,9 +532,15 @@ const BLANCO=7;
    1..n = las mismas telas que ROPA. */
 const PIEZAS=[['Como la sudadera',null],...ROPA];
 const colorPieza=(i,cloth)=>i===0?ROPA[cloth][1]:ROPA[i-1][1];
-const LOOK0={hood:BLANCO,cloth:0,pat:0,glove:0,eye:0,pants:0,pack:0};
+/* Estampado del pantalón: 0 = como el de la sudadera (lo que hacía antes), 1..4 = Lisa, Rayas, Cuadros, Camuflaje.
+   Zapatillas: 0 = del color del pantalón, 1..n = telas de ROPA. Mochila y zapatillas son siempre lisas. */
+const ESTAMPADOS_P=['Como la sudadera',...ESTAMPADOS];
+const ZAPATOS=[['Como el pantalón',null],...ROPA];
+const patPantalon=l=>l.pantsPat===0?l.pat:l.pantsPat-1;
+const colorZapato=l=>l.shoes===0?colorPieza(l.pants,l.cloth):ROPA[l.shoes-1][1];
+const LOOK0={hood:BLANCO,cloth:0,pat:0,glove:0,eye:0,pants:0,pack:0,pantsPat:0,shoes:0};
 function limpiaLook(l){l=l||{};const o={};const r=(v,n,d)=>Number.isInteger(v)&&v>=0&&v<n?v:d;
-  o.hood=r(l.hood,COLORES.length,BLANCO);o.cloth=r(l.cloth,ROPA.length,0);o.pat=r(l.pat,ESTAMPADOS.length,0);o.glove=r(l.glove,GUANTES.length,0);o.eye=r(l.eye,OJOS.length,0);o.pants=r(l.pants,PIEZAS.length,0);o.pack=r(l.pack,PIEZAS.length,0);return o}
+  o.hood=r(l.hood,COLORES.length,BLANCO);o.cloth=r(l.cloth,ROPA.length,0);o.pat=r(l.pat,ESTAMPADOS.length,0);o.glove=r(l.glove,GUANTES.length,0);o.eye=r(l.eye,OJOS.length,0);o.pants=r(l.pants,PIEZAS.length,0);o.pack=r(l.pack,PIEZAS.length,0);o.pantsPat=r(l.pantsPat,ESTAMPADOS_P.length,0);o.shoes=r(l.shoes,ZAPATOS.length,0);return o}
 /* ================================================================
    CUENTAS CON SUPABASE
    Pega aquí la URL de tu proyecto y la clave publicable
@@ -648,19 +654,19 @@ function pintaFigura(k,look,hood){
   const c=document.createElement('canvas');c.width=B.w;c.height=B.h;const x=c.getContext('2d');const out=x.createImageData(B.w,B.h),d=out.data,src=B.px,L=B.L;
   const cH=hood===BLANCO?null:hexRGB(COLORES[hood][1]),cR=ROPA[look.cloth][1]?hexRGB(ROPA[look.cloth][1]):null,
     cG=GUANTES[look.glove][1]?hexRGB(GUANTES[look.glove][1]):null,cE=OJOS[look.eye][1]?hexRGB(OJOS[look.eye][1]):null,pat=look.pat,
-    hx=h=>h?hexRGB(h):null,cP=hx(colorPieza(look.pants,look.cloth)),cK=hx(colorPieza(look.pack,look.cloth));
+    hx=h=>h?hexRGB(h):null,cP=hx(colorPieza(look.pants,look.cloth)),cK=hx(colorPieza(look.pack,look.cloth)),cZ=hx(colorZapato(look)),patP=patPantalon(look);
   const claro=(col,l,r,o)=>{const t=Math.min(1.25,l/r);for(let j=0;j<3;j++){let v=col[j]*t;if(l>r)v+=(255-v)*Math.min(1,(l-r)/(256-r))*.55;d[o+j]=v}};
   for(let i=0,n=L.length;i<n;i++){
     const o=i*4,lb=L[i],r=src[o],g=src[o+1],b=src[o+2],l=(r+g+b)/3;d[o+3]=src[o+3];
     if(lb===2&&cH)claro(cH,l,ref[1],o);
     else if(lb===4&&cE)claro(cE,l,ref[3]||240,o);
     else if(lb===5&&cG)claro(cG,l,ref[4]||180,o);
-    else if((lb===1||lb===6||lb===7)&&((lb===6?cP:lb===7?cK:cR)||pat)){
-      const cT=lb===6?cP:lb===7?cK:cR,rf=ref[lb===6?5:lb===7?6:0]||ref[0];
+    else if((lb===1||lb===6||lb===7||lb===8)&&((lb===6?cP:lb===7?cK:lb===8?cZ:cR)||(lb===1?pat:lb===6?patP:0))){
+      const cT=lb===6?cP:lb===7?cK:lb===8?cZ:cR,pl=lb===1?pat:lb===6?patP:0,rf=ref[lb===6?5:lb===7?6:lb===8?7:0]||ref[0];
       const X=(i%B.w)/esc2,Y=Math.floor(i/B.w)/esc2;let f=1;
-      if(pat===1)f=Math.floor(Y/5)%2?.62:1;
-      else if(pat===2)f=(Math.floor(X/7)+Math.floor(Y/7))%2?.6:1;
-      else if(pat===3){const q=Math.sin(X*.23+Math.sin(Y*.15)*2.2)+Math.sin(Y*.19+Math.sin(X*.12)*2.4);f=q>.9?.5:q>-.4?.8:1.05}
+      if(pl===1)f=Math.floor(Y/5)%2?.62:1;
+      else if(pl===2)f=(Math.floor(X/7)+Math.floor(Y/7))%2?.6:1;
+      else if(pl===3){const q=Math.sin(X*.23+Math.sin(Y*.15)*2.2)+Math.sin(Y*.19+Math.sin(X*.12)*2.4);f=q>.9?.5:q>-.4?.8:1.05}
       const base=cT||[62,62,66],t=Math.max(.25,Math.min(2.4,l/rf))*(cT?.5:.42)*f;
       for(let j=0;j<3;j++)d[o+j]=base[j]*t;
     }else{d[o]=r;d[o+1]=g;d[o+2]=b}
@@ -668,8 +674,8 @@ function pintaFigura(k,look,hood){
   x.putImageData(out,0,0);return c;
 }
 
-const hexLook=(look,hood)=>({hood:COLORES[hood][1],cloth:ROPA[look.cloth][1],pants:colorPieza(look.pants,look.cloth),pack:colorPieza(look.pack,look.cloth),glove:GUANTES[look.glove][1],eye:OJOS[look.eye][1],pat:look.pat});
-const esDefecto=(look,hood,est)=>hood===BLANCO&&!look.cloth&&!look.pat&&!look.glove&&!look.eye&&!look.pants&&!look.pack&&!est;
+const hexLook=(look,hood)=>({hood:COLORES[hood][1],cloth:ROPA[look.cloth][1],pants:colorPieza(look.pants,look.cloth),pack:colorPieza(look.pack,look.cloth),patP:patPantalon(look),shoes:colorZapato(look),glove:GUANTES[look.glove][1],eye:OJOS[look.eye][1],pat:look.pat});
+const esDefecto=(look,hood,est)=>hood===BLANCO&&!look.cloth&&!look.pat&&!look.glove&&!look.eye&&!look.pants&&!look.pack&&!look.pantsPat&&!look.shoes&&!est;
 /* Devuelve los atributos del <img>. La imagen buena (data: URL, nunca blob:) se pone luego directamente en el
    elemento (aplicaFiguras), sin meter el dibujo en el HTML. Mientras el 3D carga, el <img> se oculta (data-pend)
    para no enseñar un momento el look de serie. */
@@ -678,7 +684,7 @@ function figura(k,look,hood,w,est){
   const base=`src="${IMG[k]}" data-k="${k}"`;
   if(esDefecto(look,hood,est))return base;
   if(PJ.estado==='sin')PJ.usa();
-  const key=[k,hood,look.cloth,look.pat,look.glove,look.eye,look.pants,look.pack,est||'',w||''].join('.');
+  const key=[k,hood,look.cloth,look.pat,look.glove,look.eye,look.pants,look.pack,look.pantsPat,look.shoes,est||'',w||''].join('.');
   if(!FIG.has(key)){
     let url=null,d3=false;
     if(PJ.estado==='listo'){url=PJ.avatar(k,hexLook(look,hood),est,w);d3=true}
@@ -703,7 +709,7 @@ function vivo(nombre,o){
   const look=limpiaLook(o.look);let hood=o.hood===undefined?look.hood:o.hood;if(!COLORES[hood])hood=BLANCO;
   const w=o.w,h=o.h,est=o.est||'',ph=o.ph||'tresq',alt=esc(o.alt||'');
   if(PJ.estado==='fallo'){const ww=Math.min(Math.round(w*.85),Math.round(h*.65)),cl=est==='rojo'?'rojo':(est==='gris'||o.anim==='muerte')?'gris':'';return `<img class="pose ${cl}" ${figura(ph,look,hood)} width="${ww}" height="${altoDe(ph,ww)}" alt="${alt}">`}
-  const lk=[COLORES[hood][1],ROPA[look.cloth][1]||'',GUANTES[look.glove][1]||'',OJOS[look.eye][1]||''].map(x=>x.replace('#','')).join('|')+'|'+look.pat+'|'+(colorPieza(look.pants,look.cloth)||'').replace('#','')+'|'+(colorPieza(look.pack,look.cloth)||'').replace('#','');
+  const lk=[COLORES[hood][1],ROPA[look.cloth][1]||'',GUANTES[look.glove][1]||'',OJOS[look.eye][1]||''].map(x=>x.replace('#','')).join('|')+'|'+look.pat+'|'+(colorPieza(look.pants,look.cloth)||'').replace('#','')+'|'+(colorPieza(look.pack,look.cloth)||'').replace('#','')+'|'+patPantalon(look)+'|'+(colorZapato(look)||'').replace('#','');
   return `<div class="v3d" role="img" aria-label="${alt}" style="width:${w}px;height:${h}px">${esDefecto(look,hood,est)?`<img class="ph" src="${IMG[ph]}" alt="">`:''}<canvas data-v="${nombre}" data-w="${w}" data-h="${h}" data-lk="${lk}" data-anim="${o.anim||'reposo'}" data-est="${est}" data-k="${esc(o.k||'')}"${o.drag?' data-drag="1" tabindex="0"':''}${o.yaw!=null?` data-yaw="${o.yaw}"`:''}></canvas></div>`;
 }
 
@@ -1019,7 +1025,7 @@ function vPortada(){
   <details class="reglas"><summary>Cómo se juega</summary>${REGLAS}</details></section>`;
 }
 function vEditor(){
-  const nuevo=!PERFIL,l=EDIT.look;
+  const nuevo=!PERFIL,l=limpiaLook(EDIT.look);
   const fila=(t,k,lista,sw)=>`<div class="ed-fila"><p class="lbl">${t}: <b>${esc(sw(l[k]).n)}</b></p><div class="swatches">${lista.map((_,i)=>{const x=sw(i);return `<button class="sw ${l[k]===i?'on':''}" data-a="look" data-k="${k}" data-v="${i}" aria-label="${esc(x.n)}" style="--c:${x.c}">${x.t||''}</button>`}).join('')}</div></div>`;
   return `<section class="bloque"><h2>${nuevo?'Crea tu personaje':'Tu personaje'}</h2>
   <p class="tenue">${nuevo?`Así te verán los demás en las partidas. ${CUENTAS?'Se guarda en tu cuenta.':'Se guarda en este móvil.'}`:'Los cambios se verán en tu próxima partida.'}</p>
@@ -1030,10 +1036,12 @@ function vEditor(){
   ${fila('Capucha','hood',COLORES,i=>({n:COLORES[i][0],c:COLORES[i][1]}))}
   <p class="tenue" style="font-size:14px;margin-top:-4px">La capucha es tu color en la partida. Si alguien ya lo tiene, te tocará otro.</p>
   ${fila('Sudadera','cloth',ROPA,i=>({n:ROPA[i][0],c:ROPA[i][1]||'#141416'}))}
-  ${fila('Estampado','pat',ESTAMPADOS,i=>({n:ESTAMPADOS[i],c:'#222226',t:['—','≡','▦','◍'][i]}))}
-  <p class="tenue" style="font-size:14px;margin:-4px 0 0">El estampado se aplica a la sudadera, al pantalón y a la mochila.</p>
+  ${fila('Estampado de la sudadera','pat',ESTAMPADOS,i=>({n:ESTAMPADOS[i],c:'#222226',t:['—','≡','▦','◍'][i]}))}
   ${fila('Pantalón','pants',PIEZAS,i=>i?{n:PIEZAS[i][0],c:PIEZAS[i][1]||'#141416'}:{n:PIEZAS[0][0],c:ROPA[l.cloth][1]||'#141416',t:'='})}
+  ${fila('Estampado del pantalón','pantsPat',ESTAMPADOS_P,i=>i?{n:ESTAMPADOS[i-1],c:'#222226',t:['—','≡','▦','◍'][i-1]}:{n:ESTAMPADOS_P[0],c:'#222226',t:'='})}
+  ${fila('Zapatillas','shoes',ZAPATOS,i=>i?{n:ZAPATOS[i][0],c:ZAPATOS[i][1]||'#141416'}:{n:ZAPATOS[0][0],c:colorPieza(l.pants,l.cloth)||'#141416',t:'='})}
   ${fila('Mochila','pack',PIEZAS,i=>i?{n:PIEZAS[i][0],c:PIEZAS[i][1]||'#141416'}:{n:PIEZAS[0][0],c:ROPA[l.cloth][1]||'#141416',t:'='})}
+  <p class="tenue" style="font-size:14px;margin:-4px 0 0">La mochila (con sus asas) y las zapatillas son siempre lisas.</p>
   ${fila('Guantes','glove',GUANTES,i=>({n:GUANTES[i][0],c:GUANTES[i][1]||'#F1ECE3'}))}
   ${fila('Ojos','eye',OJOS,i=>({n:OJOS[i][0],c:OJOS[i][1]||'#F1ECE3'}))}
   <div class="bloque"><button class="b-baliza b-ancho" data-a="guardarPerfil" ${GUARDANDO?'disabled':''}>${GUARDANDO?'Guardando…':nuevo?'Guardar y continuar':'Guardar cambios'}</button>
@@ -1073,7 +1081,7 @@ function vHome(){
     if(!USER)return vAcceso();
     if(PERFIL_CARGANDO&&!PERFIL)return vEsperaCuentas('Cargando tu personaje…');
   }
-  if(!PERFIL||VISTA==='editor'){if(!EDIT)EDIT={name:PERFIL?PERFIL.name:'',look:{...(PERFIL?PERFIL.look:LOOK0)}};return vEditor()}
+  if(!PERFIL||VISTA==='editor'){if(!EDIT)EDIT={name:PERFIL?PERFIL.name:'',look:{...limpiaLook(PERFIL?PERFIL.look:LOOK0)}};return vEditor()}
   const ult=LS.get('imp.ultima');
   const q=(new URLSearchParams(location.search).get('c')||'').toUpperCase().slice(0,5);
   return `<section class="perfil"><div class="pf-fig">${mira()}${vivo('menu',{look:PERFIL.look,anim:'reposo',w:118,h:154,drag:true,yaw:.35,alt:'Tu personaje'})}</div>
