@@ -462,7 +462,7 @@ const REF={"frente": [29.9, 225.0, 18.8, 241.1, 210.7, 22.8, 27.7, 31.0], "tresq
 const LIM={imp:[1,3,1],tasks:[2,8,1],largas:[0,3,1],killCd:[10,90,5],disc:[0,180,15],vote:[15,120,15],emerg:[0,3,1]};
 const SABS={
  gas:{n:'Fuga de gas',d:'Dos personas tienen que reparar a la vez en dos salas. Si en 60 s no lo consiguen, ganáis.'},
- luces:{n:'Luces fuera',d:'La tripulación viva no ve su móvil hasta que alguien repare en una sala. Si queréis, apagad las luces de verdad.'},
+ luces:{n:'Luces fuera',d:'Los Ciegos vivos no ven su móvil hasta que alguien repare en una sala. Si queréis, apagad las luces de verdad.'},
  coms:{n:'Comunicaciones',d:'Desaparecen las tareas y se corta el walkie de los vivos hasta que alguien repare.'},
  door:{n:'Cerrar una sala',d:'Nadie entra ni sale de esa sala durante 20 s.'}
 };
@@ -930,9 +930,9 @@ function ganador(st,now){
   if(st.phase!=='play')return false;
   const vivos=st.players.filter(p=>!p.dead),imps=vivos.filter(p=>p.role==='imp').length,crew=vivos.length-imps;
   let w=null,why='';
-  if(imps===0){w='crew';why='Todos los impostores han sido expulsados'}
-  else if(imps>=crew){w='imp';why='Los impostores ya son tantos como la tripulación'}
-  else{const {hechas,total}=progreso(st);if(total&&hechas>=total){w='crew';why='La tripulación ha terminado todas las tareas'}}
+  if(imps===0){w='crew';why='Todos los Puntos han sido expulsados'}
+  else if(imps>=crew){w='imp';why='Los Puntos ya son tantos como los Ciegos'}
+  else{const {hechas,total}=progreso(st);if(total&&hechas>=total){w='crew';why='Los Ciegos han terminado todas las tareas'}}
   if(w){st.phase='end';st.end={w,why,t:now};st.sab=null;st.locks=[];return true}
   return false;
 }
@@ -954,7 +954,7 @@ function resolver(st,now){
   let max=0,top=[];for(const [k,v] of Object.entries(cuenta)){if(v>max){max=v;top=[k]}else if(v===max)top.push(k)}
   const out=top.length===1&&top[0]!=='skip'?top[0]:null;
   m.fase='res';m.until=now+9000;m.res={out,empate:top.length>1,cuenta,imp:false,quedan:0};
-  if(out){const p=P(st,out);if(p){p.dead=true;p.ejected=true;p.body=false;m.res.imp=p.role==='imp';st.log.push({t:now,txt:`Expulsado: ${p.name}${p.role==='imp'?' (impostor)':''}`})}}
+  if(out){const p=P(st,out);if(p){p.dead=true;p.ejected=true;p.body=false;m.res.imp=p.role==='imp';st.log.push({t:now,txt:`Expulsado: ${p.name}${p.role==='imp'?' (Punto)':''}`})}}
   m.res.quedan=st.players.filter(x=>!x.dead&&x.role==='imp').length;
 }
 /* local: la acción la ha generado este mismo navegador (el anfitrión o sus bots); las que llegan por la red nunca lo son */
@@ -1234,7 +1234,7 @@ function atajoMata(id){
 }
 function atajoSab(kind,room){
   const q=impVivo();if(S.phase!=='play')return;
-  if(!q){toast('No hay ningún impostor vivo que pueda sabotear');return}
+  if(!q){toast('No hay ningún Punto vivo que pueda sabotear');return}
   accion('atajo',{k:'sabCd',limpia:kind!=='door'});
   const d=kind==='door'?{kind,room}:{kind};
   if(esBot(q))botAccion(q.id,'sab',d);else accion('sab',d);
@@ -1248,14 +1248,14 @@ function atajoVotar(){
 function atajoTareas(){
   if(S.phase!=='play')return;
   for(const b of bots())if(b.role==='crew')for(const t of b.tasks||[])for(let i=0;i<9&&S.phase==='play'&&t.done<t.steps.length;i++)botAccion(b.id,'task',{tid:t.id,step:t.done});
-  const p=mine();if(S.phase==='play')toast(p&&p.role==='crew'?'Tareas de los bots hechas. Faltan las tuyas para que gane la tripulación':'Tareas de los bots hechas');
+  const p=mine();if(S.phase==='play')toast(p&&p.role==='crew'?'Tareas de los bots hechas. Faltan las tuyas para que ganen los Ciegos':'Tareas de los bots hechas');
 }
 function vAtajos(){
   if(!S||!S.pruebas)return '';
   const jug=S.phase==='play',m=S.meet,k=S.players.find(x=>esBot(x)&&x.role==='imp'&&!x.dead),yo=ME.pid;
   let h=`<h2>Atajos</h2><p class="tenue">Modo pruebas: fuerzan cosas sin esperar. Las acciones de los bots pasan por las reglas de siempre.</p>`;
   const bs=bots();
-  if(bs.length)h+=`<p class="tenue" style="font-size:14px">${bs.map(b=>`${esc(b.name)}: ${b.role==='imp'?'impostor':'tripulante'}${b.dead?' (muerto)':''}`).join(' · ')}</p>`;
+  if(bs.length)h+=`<p class="tenue" style="font-size:14px">${bs.map(b=>`${esc(b.name)}: ${b.role==='imp'?'Punto':'Ciego'}${b.dead?' (muerto)':''}`).join(' · ')}</p>`;
   if(ATJ==='puerta'){
     return h+`<h3 style="margin:18px 0 4px;font-size:22px">¿Qué sala se cierra?</h3><div class="rejilla">${salas(S).map(r=>`<button class="gente-b" data-a="atajoPuertaA" data-r="${r.id}">${esc(r.name)}</button>`).join('')}</div><button class="b-link" data-a="atajoVolver">Volver</button>`;
   }
@@ -1264,8 +1264,8 @@ function vAtajos(){
   h+=opc('atajoReunion','Convocar una reunión ya',jug);
   h+=opc('atajoDebate','Saltar el debate',S.phase==='meeting'&&!!m&&m.fase==='disc');
   h+=opc('atajoVotar','Terminar la votación',S.phase==='meeting'&&!!m&&m.fase==='vote','Los bots que falten votan ya');
-  h+=`<h3 style="margin:18px 0 4px;font-size:22px">Que un bot impostor mate a…</h3>`;
-  if(!k)h+=`<p class="tenue">No hay ningún bot impostor vivo.</p>`;
+  h+=`<h3 style="margin:18px 0 4px;font-size:22px">Que un bot Punto mate a…</h3>`;
+  if(!k)h+=`<p class="tenue">No hay ningún bot Punto vivo.</p>`;
   else{
     const vic=S.players.filter(x=>!x.dead&&x.role!=='imp');
     h+=`<p class="tenue" style="font-size:14px">Mata ${esc(k.name)}, sin esperar su enfriamiento.</p><div class="rejilla">${vic.map(x=>`<button class="gente-b" data-a="atajoMata" data-p="${x.id}" ${jug?'':'disabled'}>${dot(x)}${esc(x.name)}${x.id===yo?' (tú)':''}</button>`).join('')}</div>`;
@@ -1386,13 +1386,13 @@ function setHTML(el,h){
   el._h=h;el.innerHTML=h;el._pend=false;
 }
 document.addEventListener('focusout',()=>setTimeout(pinta,50));
-const REGLAS=`<p>Todos sois tripulantes menos uno o varios impostores. Nadie sabe quién es quién.</p>
-<p>La tripulación gana si termina todas sus tareas o si expulsa a los impostores. Cada tarea está en una sala real: vas, haces lo que dice y completas la prueba del móvil.</p>
-<p>El impostor finge tareas. Para matar, toca a alguien en el hombro sin que nadie lo vea y lo confirma en su móvil. El muerto se tumba en silencio donde está.</p>
+const REGLAS=`<p>Todos sois Ciegos menos uno o varios Puntos. Nadie sabe quién es quién.</p>
+<p>Los Ciegos ganan si terminan todas sus tareas o si expulsan a los Puntos. Cada tarea está en una sala real: vas, haces lo que dice y completas la prueba del móvil.</p>
+<p>El Punto finge tareas. Para matar, toca a alguien en el hombro sin que nadie lo vea y lo confirma en su móvil. El muerto se tumba en silencio donde está.</p>
 <p>Quien encuentre un cuerpo pulsa Reportar: suena en todos los móviles y os juntáis en el punto de reunión. Debate, votación, y el más votado queda fuera. Si en el debate todos los vivos pulsan «Listo para votar» se vota sin esperar, y el anfitrión puede pasar a votar cuando quiera.</p>
-<p>El impostor también sabotea: fuga de gas (dos personas reparan a la vez en dos salas antes de 60 s), luces fuera, comunicaciones caídas o una sala cerrada.</p>
+<p>El Punto también sabotea: fuga de gas (dos personas reparan a la vez en dos salas antes de 60 s), luces fuera, comunicaciones caídas o una sala cerrada.</p>
 <p>Los muertos son fantasmas: siguen haciendo tareas y tienen su propio canal de walkie, pero no votan ni hablan en las reuniones.</p>
-<p>Los impostores ganan si igualan en número a la tripulación o si nadie para la fuga a tiempo.</p>`;
+<p>Los Puntos ganan si igualan en número a los Ciegos o si nadie para la fuga a tiempo.</p>`;
 
 let VISTA='portada',EDIT=null;
 function vPortada(){
@@ -1463,7 +1463,7 @@ function vHome(){
   const q=(new URLSearchParams(location.search).get('c')||'').toUpperCase().slice(0,5);
   return `<section class="perfil"><div class="pf-fig">${mira()}${vivo('menu',{look:PERFIL.look,anim:'reposo',w:118,h:154,drag:true,yaw:.35,alt:'Tu personaje'})}</div>
   <div><p class="lbl">Jugador</p><h2>${esc(PERFIL.name)}</h2><button class="b-sec b-peq" data-a="editar">Editar personaje</button></div></section>
-  ${CUENTAS&&PERFIL.stats?`<p class="stats"><span><b>${PERFIL.stats.p}</b> ${PERFIL.stats.p===1?'partida':'partidas'}</span><span><b>${PERFIL.stats.v}</b> ${PERFIL.stats.v===1?'victoria':'victorias'}</span><span><b>${PERFIL.stats.i}</b> de impostor</span></p>`:''}
+  ${CUENTAS&&PERFIL.stats?`<p class="stats"><span><b>${PERFIL.stats.p}</b> ${PERFIL.stats.p===1?'partida':'partidas'}</span><span><b>${PERFIL.stats.v}</b> ${PERFIL.stats.v===1?'victoria':'victorias'}</span><span><b>${PERFIL.stats.i}</b> de Punto</span></p>`:''}
   ${q?'':`<div class="bloque"><button class="b-baliza b-ancho" data-a="crear">Crear partida</button></div>`}
   <div class="bloque ${q?'':'o'}"><label class="lbl" for="cod">${q?'Código de la partida':'¿Te han pasado un código?'}</label>
   <div class="fila"><input id="cod" class="in-cod" maxlength="5" value="${esc(q)}" placeholder="ABCDE" autocapitalize="characters" autocomplete="off" spellcheck="false"><button class="${q?'b-baliza':''}" data-a="unirme">Unirme</button></div></div>
@@ -1497,7 +1497,7 @@ function vPruebas(){
   <p class="tenue">Juega solo con bots, que viven en este navegador. Estas partidas no cuentan para tus estadísticas.</p>
   <p class="lbl">${nb} ${nb===1?'bot':'bots'} en la sala</p>
   <div class="pr-fila"><button data-a="botMas" ${S.players.length>=15?'disabled':''}>Añadir bot</button><button data-a="botQuita" ${nb?'':'disabled'}>Quitar bots</button></div>
-  <p class="lbl">Mi papel en la próxima partida</p>${chips('prRol',[['azar','Aleatorio'],['crew','Tripulante'],['imp','Impostor']],pr.rol)}
+  <p class="lbl">Mi papel en la próxima partida</p>${chips('prRol',[['azar','Aleatorio'],['crew','Ciego'],['imp','Punto']],pr.rol)}
   <p class="lbl">Velocidad de los bots</p>${chips('prVel',[['lenta','Lenta'],['normal','Normal'],['rapida','Rápida']],pr.vel)}
   <p class="tenue pie">El walkie solo funciona entre personas: los bots no hablan ni escuchan.</p></section>`;
 }
@@ -1514,7 +1514,7 @@ function vLobby(){
     <div class="add"><input id="nuevaSala" maxlength="24" placeholder="Añadir otra sala" autocomplete="off"><select id="nuevoTipo" aria-label="Tipo de sala">${Object.entries(TIPOS).map(([k,v])=>`<option value="${k}" ${k==='generica'?'selected':''}>${v}</option>`).join('')}</select><button data-a="addSala">Añadir</button></div>
     <p style="margin-top:14px"><label class="lbl" for="meetSel">Punto de reunión</label><select id="meetSel" data-cfg="meet">${on.map(r=>`<option value="${r.id}" ${c.meet===r.id?'selected':''}>${esc(r.name)}</option>`).join('')}</select></p></section>
     <section class="bloque o"><h2>Reglas</h2>
-    ${paso('Impostores','imp',v=>Math.min(v,mx)===v?v:`${Math.min(v,mx)}`)}
+    ${paso('Puntos','imp',v=>Math.min(v,mx)===v?v:`${Math.min(v,mx)}`)}
     ${c.imp>mx?`<p class="motivo">Con ${ps.length} personas solo puede haber ${mx}.</p>`:''}
     ${paso('Tareas por persona','tasks')}
     ${paso('Tareas largas por persona','largas')}
@@ -1524,7 +1524,7 @@ function vLobby(){
     ${paso('Tiempo de debate','disc',v=>v?v+' s':'nada')}
     ${paso('Tiempo de votación','vote',v=>v+' s')}
     ${paso('Reuniones de emergencia','emerg')}
-    <div class="paso"><span>Decir si el expulsado era impostor</span><button class="tog ${c.confirm?'on':''}" data-a="tog" data-k="confirm">${c.confirm?'Sí':'No'}</button></div>
+    <div class="paso"><span>Decir si el expulsado era Punto</span><button class="tog ${c.confirm?'on':''}" data-a="tog" data-k="confirm">${c.confirm?'Sí':'No'}</button></div>
     <div class="paso"><span>Walkie para los vivos durante la ronda</span><button class="tog ${c.walkie?'on':''}" data-a="tog" data-k="walkie">${c.walkie?'Sí':'No'}</button></div>
     </section>`;
     const motivo=ps.length<4?'Hacen falta al menos 4 personas.':on.length<2?'Pon al menos 2 salas.':'';
@@ -1532,7 +1532,7 @@ function vLobby(){
   }else{
     const ho=P(S,S.hostId);
     h+=`<section class="bloque o"><h2>La partida</h2><p>${V.i} ${esc(V.n)}. ${on.length} salas: ${on.map(r=>esc(r.name)).join(', ')}.</p>
-    <p>${Math.min(c.imp,mx)} ${Math.min(c.imp,mx)>1?'impostores':'impostor'}, ${c.tasks} tareas por persona, reunión en ${esc((sala(c.meet)||{}).name||'')}.</p>
+    <p>${Math.min(c.imp,mx)} ${Math.min(c.imp,mx)>1?'Puntos':'Punto'}, ${c.tasks} tareas por persona, reunión en ${esc((sala(c.meet)||{}).name||'')}.</p>
     <div class="espera">${pose('movil',92,'',mine())}<p class="tenue">Esperando a que ${esc(ho?ho.name:'el anfitrión')} empiece.</p></div></section>`;
   }
   h+=`<details class="reglas"><summary>Cómo se juega</summary>${REGLAS}</details><button class="b-link" data-a="salir">Salir de la partida</button>`;
@@ -1546,7 +1546,7 @@ function vRol(p){
   const ver=Date.now()<ROLVIS,imp=p.role==='imp';
   if(!ver)return `<button class="rol-b" data-a="verPapel">Ver mi papel</button>`;
   const socios=S.players.filter(x=>x.role==='imp'&&x.id!==p.id);
-  return `<button class="rol-b ver ${imp?'imp':''}" data-a="verPapel"><b>${imp?'Impostor':'Tripulante'}</b><br>${imp?(socios.length?'Con '+socios.map(x=>esc(x.name)).join(' y ')+'. ':'')+'Tus tareas son de mentira.':'Haz tus tareas y descubre al impostor.'}</button>`;
+  return `<button class="rol-b ver ${imp?'imp':''}" data-a="verPapel"><b>${imp?'Punto':'Ciego'}</b><br>${imp?(socios.length?'Con '+socios.map(x=>esc(x.name)).join(' y ')+'. ':'')+'Tus tareas son de mentira.':'Haz tus tareas y descubre al Punto.'}</button>`;
 }
 function vAlertas(p){
   let h='';const t=ahora();
@@ -1567,9 +1567,9 @@ function vAlertas(p){
 }
 function vJuego(){
   const p=mine();const {hechas,total}=progreso(S);const pct=total?Math.round(hechas/total*100):0;
-  let h=`<section class="barra-t"><div class="bt-cab"><span>Tareas de la tripulación</span><b>${pct}%</b></div><div class="bt"><i style="width:${pct}%"></i></div></section>`;
+  let h=`<section class="barra-t"><div class="bt-cab"><span>Tareas de los Ciegos</span><b>${pct}%</b></div><div class="bt"><i style="width:${pct}%"></i></div></section>`;
   h+=vRol(p);
-  if(p.dead&&!p.body)h+=`<p class="fantasma">${pose('espalda',54,'espectro',p)}<span>${p.ejected?'Te han expulsado. ':''}Eres un fantasma. ${p.role==='imp'?'Aún puedes sabotear.':'Sigue haciendo tareas: cuentan para la tripulación.'} En las reuniones no puedes hablar ni votar.</span></p>`;
+  if(p.dead&&!p.body)h+=`<p class="fantasma">${pose('espalda',54,'espectro',p)}<span>${p.ejected?'Te han expulsado. ':''}Eres un fantasma. ${p.role==='imp'?'Aún puedes sabotear.':'Sigue haciendo tareas: cuentan para los Ciegos.'} En las reuniones no puedes hablar ni votar.</span></p>`;
   h+=vAlertas(p);
   const coms=S.sab&&S.sab.kind==='coms'&&!p.dead;
   if(coms)h+=`<div class="coms">Comunicaciones caídas. No ves tus tareas hasta que alguien las repare.</div>`;
@@ -1621,7 +1621,7 @@ function vReunion(){
     const r=m.res,out=r.out?P(S,r.out):null;
     h+=`<div class="fase"><span>Resultado</span></div>`;
     if(out){h+=`<h2 style="font-size:34px;margin-top:10px">${esc(out.name)} ha sido expulsado.</h2>`;
-      if(S.cfg.confirm)h+=`<p class="sub">${r.imp?'Era un impostor.':'No era un impostor.'} ${r.quedan?`Queda${r.quedan>1?'n':''} ${r.quedan} impostor${r.quedan>1?'es':''}.`:''}</p>`}
+      if(S.cfg.confirm)h+=`<p class="sub">${r.imp?'Era un Punto.':'No era un Punto.'} ${r.quedan?`Queda${r.quedan>1?'n':''} ${r.quedan} Punto${r.quedan>1?'s':''}.`:''}</p>`}
     else h+=`<h2 style="font-size:34px;margin-top:10px">${r.empate?'Empate: nadie sale.':'Nadie ha sido expulsado.'}</h2>`;
     h+=`<div class="votos">${Object.entries(r.cuenta).sort((a,b)=>b[1]-a[1]).map(([k,n])=>`<div class="voto">${k==='skip'?'Saltar':dot(P(S,k)||{color:0})+esc(nombreDe(k))}<span class="n">${n}</span></div>`).join('')}</div>`;
   }
@@ -1636,17 +1636,17 @@ function vRevela(){
   const p=mine(),imp=p.role==='imp',socios=S.players.filter(x=>x.role==='imp'&&x.id!==p.id);
   let h=`<div class="ov"><h2>La partida ha empezado</h2><p class="tenue">Que nadie vea tu pantalla.</p>`;
   if(!REVELA)h+=`<button class="revela tapa" data-a="revelar"><div class="mira-caja">${mira()}${vivo('revela',{look:p.look,hood:p.color,anim:'reposo',k:'tapa',yaw:3.14,w:130,h:170,ph:'espalda',alt:'Tu personaje, de espaldas'})}</div><span>Toca para ver tu papel</span></button>`;
-  else h+=`<div class="revela ${imp?'imp':''}">${vivo('revela',{look:p.look,hood:p.color,anim:'giro',est:imp?'rojo':'',k:imp?'imp':'crew',w:170,h:220,ph:imp?'tresq':'feliz',alt:imp?'Eres impostor':'Eres tripulante'})}<h1>${imp?'Impostor':'Tripulante'}</h1>
-    <p>${imp?`Mata sin que te vean y sabotea. Tus tareas son de mentira: hazlas para disimular.${socios.length?' Tu compañero: '+socios.map(x=>esc(x.name)).join(' y ')+'.':''}`:'Haz tus tareas, no vayas solo y descubre quién es el impostor.'}</p></div>
+  else h+=`<div class="revela ${imp?'imp':''}">${vivo('revela',{look:p.look,hood:p.color,anim:'giro',est:imp?'rojo':'',k:imp?'imp':'crew',w:170,h:220,ph:imp?'tresq':'feliz',alt:imp?'Eres Punto':'Eres Ciego'})}<h1>${imp?'Punto':'Ciego'}</h1>
+    <p>${imp?`Mata sin que te vean y sabotea. Tus tareas son de mentira: hazlas para disimular.${socios.length?' Tu compañero: '+socios.map(x=>esc(x.name)).join(' y ')+'.':''}`:'Haz tus tareas, no vayas solo y descubre quién es el Punto.'}</p></div>
     <button class="b-baliza b-ancho" style="margin-top:16px" data-a="entendido">Entendido</button>`;
   return h+'</div>';
 }
 function vFin(){
   const e=S.end||{};const imps=S.players.filter(x=>x.role==='imp');
-  let h=`<div class="ov"><div class="ov-franja"></div>${pose(e.w==='imp'?'tresq':e.w?'feliz':'frente',150,(e.w==='imp'?'rojo ':'')+(e.w?'hop':''),e.w==='imp'&&imps[0]?imps[0]:mine())}${e.w?`<h1 class="fin-w ${e.w}">${e.w==='imp'?'Ganan los impostores':'Gana la tripulación'}</h1>`:'<h1>Partida terminada</h1>'}
+  let h=`<div class="ov"><div class="ov-franja"></div>${pose(e.w==='imp'?'tresq':e.w?'feliz':'frente',150,(e.w==='imp'?'rojo ':'')+(e.w?'hop':''),e.w==='imp'&&imps[0]?imps[0]:mine())}${e.w?`<h1 class="fin-w ${e.w}">${e.w==='imp'?(imps.length>1?'Ganan los Puntos':'Gana el Punto'):'Ganan los Ciegos'}</h1>`:'<h1>Partida terminada</h1>'}
   <p class="sub">${esc(e.why||'')}</p>
-  ${imps.length?`<p class="dondes">${imps.length>1?'Los impostores eran':'El impostor era'} <b>${imps.map(x=>esc(x.name)).join(' y ')}</b>.</p>`:''}
-  <ul class="gente roles">${S.players.map(x=>`<li>${dot(x)}<span class="${x.role==='imp'?'imp':''}">${esc(x.name)}</span>${bt(x)}<em>${x.role==='imp'?'impostor':'tripulante'}${x.ejected?', expulsado':x.dead?', muerto':''}</em></li>`).join('')}</ul>
+  ${imps.length?`<p class="dondes">${imps.length>1?'Los Puntos eran':'El Punto era'} <b>${imps.map(x=>esc(x.name)).join(' y ')}</b>.</p>`:''}
+  <ul class="gente roles">${S.players.map(x=>`<li>${dot(x)}<span class="${x.role==='imp'?'imp':''}">${esc(x.name)}</span>${bt(x)}<em>${x.role==='imp'?'Punto':'Ciego'}${x.ejected?', expulsado':x.dead?', muerto':''}</em></li>`).join('')}</ul>
   <details class="reglas"><summary>Qué pasó</summary>${(S.log||[]).map(l=>`<p class="log">${mmss(l.t-(S.t0||l.t))} ${esc(l.txt)}</p>`).join('')}</details>`;
   h+=soyHost()?`<button class="b-baliza b-ancho" data-a="aLobby">Otra partida con los mismos</button>`:`<p class="tenue">El anfitrión puede empezar otra partida con el mismo grupo.</p>`;
   return h+`<p><button class="b-link" data-a="salir">Salir</button></p></div>`;
