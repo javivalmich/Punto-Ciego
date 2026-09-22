@@ -1186,10 +1186,26 @@ function botsJuego(now,v){
     if(p.role==='crew'){
       if(!mm.tarea)mm.tarea=now+entre(20000,50000)*v;
       if(now>=mm.tarea){
-        mm.tarea=now+entre(20000,50000)*v;
         const ciego=!p.dead&&S.sab&&(S.sab.kind==='coms'||S.sab.kind==='luces'); /* sin ver el móvil no hay tareas */
-        const pend=ciego?[]:(p.tasks||[]).filter(t=>t.done<t.steps.length&&!cerrada(t.steps[t.done].room));
-        if(pend.length){const t=elige(pend);botAccion(p.id,'task',{tid:t.id,step:t.done})}
+        /* si estaba «haciendo» una tarea de vida real (cuenta atrás), la termina cuando toque, ni antes ni después */
+        const tr=mm.trabajando,tAct=tr&&(p.tasks||[]).find(x=>x.id===tr.tid);
+        if(tr&&tAct&&tAct.done===tr.step){
+          if(now>=tr.hasta){botAccion(p.id,'task',{tid:tr.tid,step:tr.step});mm.trabajando=null;mm.tarea=now+entre(20000,50000)*v}
+          else mm.tarea=tr.hasta;
+        }else{
+          mm.trabajando=null;
+          const pend=ciego?[]:(p.tasks||[]).filter(t=>t.done<t.steps.length&&!cerrada(t.steps[t.done].room));
+          /* de las pendientes, las que no exigen esperar más (los pasos de "muestras" con esperaMin) */
+          const listas=pend.filter(t=>{const st=t.steps[t.done];return !(st.esperaMin&&now<(t.doneAt||0)+st.esperaMin)});
+          if(listas.length){
+            const t=elige(listas),d=t.done,st=t.steps[d];
+            if(st.dur){mm.trabajando={tid:t.id,step:d,hasta:now+st.dur};mm.tarea=mm.trabajando.hasta} /* tarea de vida real: se "toma su tiempo" de verdad */
+            else{botAccion(p.id,'task',{tid:t.id,step:d});mm.tarea=now+entre(20000,50000)*v}
+          }else if(pend.length){ /* solo quedan pasos esperando su tiempo: reintenta justo cuando el primero esté listo */
+            const antes=Math.min(...pend.map(t=>{const st=t.steps[t.done];return st.esperaMin?(t.doneAt||0)+st.esperaMin:now}));
+            mm.tarea=Math.max(now+1000,antes);
+          }else mm.tarea=now+entre(20000,50000)*v;
+        }
       }
       const cad=!p.dead&&S.phase==='play'&&S.players.find(x=>x.body);
       if(cad){
@@ -1774,12 +1790,44 @@ const GALERIA=[['hold','Mantener'],['simon','Simón'],['wires','Cables'],['order
   ['agitar','Agitar'],['soplar','Soplar'],['parejas','Parejas'],['polillas','Polillas'],['real','Vida real (cuenta atrás)']];
 function vGaleria(){
   return `<h2>Galería de minijuegos</h2><p class="tenue">Solo en modo pruebas: abre cualquiera para probarlo sin necesitar una partida.</p>
-  <div class="rejilla">${GALERIA.map(([k,t])=>`<button class="gente-b" data-a="galeriaAbre" data-g="${k}">${t}</button>`).join('')}</div>`;
+  <div class="rejilla">${GALERIA.map(([k,t])=>`<button class="gente-b" data-a="galeriaAbre" data-g="${k}">${t}</button>`).join('')}</div>
+  <h3 style="margin:18px 0 4px;font-size:22px">Otras cosas para probar</h3>
+  <div class="rejilla"><button class="gente-b" data-a="galeriaLarga">Tarea larga (por etapas)</button><button class="gente-b" data-a="galeriaDisimular">Disimular</button></div>`;
 }
 function galeriaJuego(g){
   if(!(JUEGOS[g]))return;
   abrirSheet(`<h2>${esc((GALERIA.find(x=>x[0]===g)||['',g])[1])}</h2><div id="juego"></div><p><button class="b-link" data-a="galeriaOtra" data-g="${g}">Repetir</button> <button class="b-link" data-a="galeria">Volver a la galería</button></p>`,{});
   JUEGOS[g]($('#juego'),()=>{$('#juego').innerHTML='<p class="hecho-ok">Hecho</p>'});
+}
+/* galería: una tarea larga de mentira, con sus salas de prueba, para ver el paso a paso (y la espera de
+   «muestras») sin necesitar una partida real */
+let GAL_TAREA=null;
+const GAL_SALAS=[{id:'g1',name:'Garaje (de prueba)',type:'garaje',on:true},{id:'g2',name:'Jardín (de prueba)',type:'jardin',on:true},
+  {id:'g3',name:'Despacho (de prueba)',type:'despacho',on:true},{id:'g4',name:'Cocina (de prueba)',type:'cocina',on:true},
+  {id:'g5',name:'Baño (de prueba)',type:'bano',on:true},{id:'g6',name:'Salón (de prueba)',type:'salon',on:true}];
+function vGaleriaTarea(){
+  if(!GAL_TAREA)return '';
+  const {t}=GAL_TAREA,d=t.done;
+  if(d>=t.steps.length)return `<h2>Tarea larga</h2><p class="hecho-ok">Hecho</p><p class="tenue" style="text-align:center">Así se ve una tarea larga terminada, paso a paso y en salas distintas.</p><p><button class="b-link" data-a="galeriaLarga">Otra</button> <button class="b-link" data-a="galeria">Volver a la galería</button></p>`;
+  const st=t.steps[d],r=GAL_SALAS.find(x=>x.id===st.room)||{name:'?'};
+  const listoEn=st.esperaMin?(t.doneAt||0)+st.esperaMin:0,falta=listoEn>ahora();
+  let h=`<h2>Tarea larga</h2><p class="sh-sala">${esc(r.name)}${t.steps.length>1?`, parte ${d+1} de ${t.steps.length}`:''}</p><h2 style="margin-top:2px">${esc(st.txt)}</h2>`;
+  if(falta)h+=`<p class="tenue">Todavía no está listo (como con «muestras» de verdad). Puedes cerrar esto e ir a hacer otra cosa: al volver seguirá contando.</p><p class="g-cuenta">Listo en <b data-until="${listoEn}"></b></p>`;
+  else h+=`<p class="tenue">Ve hasta ahí (aquí, imagínatelo) y toca empezar.</p><div id="juego"><button class="b-baliza b-ancho" data-a="galeriaEmpezar">Ya estoy allí: empezar</button></div>`;
+  return h+`<p style="margin-top:14px"><button class="b-link" data-a="galeria">Volver a la galería</button></p>`;
+}
+function galeriaLarga(){
+  const clave=elige(Object.keys(LARGAS)),steps=generaLarga(clave,GAL_SALAS);
+  GAL_TAREA={t:{id:'gal',steps,done:0,doneAt:ahora()}};
+  abrirSheet('<div id="shVivo"></div>',{refresh:vGaleriaTarea});
+  setHTML($('#shVivo'),vGaleriaTarea());
+}
+function galeriaDisimular(){
+  const opciones=[['hold','Aprieta el botón de la máquina'],['calib','Ajusta la antena'],['order','Marca los números en orden'],['simon','Repite la secuencia de luces'],['caja','Abre la caja fuerte']];
+  const [game,txt]=elige(opciones);
+  GAL_TAREA={t:{id:'galD',steps:[{room:'g1',txt,game}],done:0,doneAt:ahora()}};
+  abrirSheet('<div id="shVivo"></div>',{tid:'galD',step:0,game,disimulo:true,refresh:vGaleriaTarea});
+  setHTML($('#shVivo'),vGaleriaTarea());
 }
 
 /* ============ pruebas del móvil ============ */
@@ -2744,6 +2792,14 @@ const ACT={
   galeria(){abrirSheet(vGaleria(),{})},
   galeriaAbre(d){galeriaJuego(d.g)},
   galeriaOtra(d){galeriaJuego(d.g)},
+  galeriaLarga(){galeriaLarga()},
+  galeriaDisimular(){galeriaDisimular()},
+  galeriaEmpezar(){
+    if(!GAL_TAREA)return;const {t}=GAL_TAREA,st=t.steps[t.done],el=$('#juego');
+    const fin=()=>{t.done++;t.doneAt=ahora();el.innerHTML='<p class="hecho-ok">Hecho</p>';setTimeout(()=>{if(GAL_TAREA)setHTML($('#shVivo'),vGaleriaTarea())},800)};
+    (JUEGOS[st.game]||JUEGOS.hold)(el,fin,st.dur);
+    if(SHEET&&SHEET.disimulo)disimulaJuego(el,st.game);
+  },
   entendido(){LS.set('imp.rol.'+S.gid,1);REVELA=false;despierto()},
   terminar(){abrirSheet(`<h2>¿Terminar la partida?</h2><p class="tenue">Se acaba para todos y se muestran los papeles.</p><button class="b-alarma b-ancho" data-a="terminarOk">Terminar</button>`)},
   terminarOk(){accion('end');cerrarSheet()},
