@@ -216,6 +216,8 @@ ul.tareas{list-style:none;margin:6px 0;padding:0;display:grid;gap:8px}
 .g-hold{position:relative;overflow:hidden;width:100%;min-height:120px;font-family:var(--disp);font-size:26px;background:var(--casco);touch-action:none;user-select:none;-webkit-user-select:none}
 .g-hold span{position:relative;z-index:1;pointer-events:none}
 .g-hold i{position:absolute;inset:0;background:var(--ok);transform:scaleX(0);transform-origin:left;pointer-events:none}
+.g-real{display:flex;align-items:center;justify-content:center;border-radius:10px;border:1px solid var(--remache)}
+.g-real i{transition:transform .2s linear}
 .g-cables{position:relative;display:flex;justify-content:space-between;padding:6px 0;max-width:330px;margin:10px auto}
 .g-svg{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
 .g-col{display:flex;flex-direction:column;gap:14px}
@@ -429,6 +431,32 @@ const TAREAS={
  comun:[['Coge un folleto y déjalo en su sitio','wires'],['Mira el plano de evacuación','calib'],['Siéntate diez segundos','hold'],['Nivela el cuadro del vestíbulo','burbuja']],
  generica:[['Recorre la sala en círculo','hold'],['Toca las cuatro esquinas de la sala','order'],['Enciende y apaga la luz','simon'],['Busca el objeto más raro y señálalo','code'],['Toca el marco de la puerta','calib'],['Pasa tu tarjeta por el lector','swipe'],['Conecta los cables','wires'],['Ajusta una radio imaginaria','radio'],['Llena un vaso sin que rebose','deposito'],['Agita algo que tengas a mano','agitar'],['Marca un patrón con el dedo en el aire','patron']]
 };
+/* tareas de la vida real: [instrucción, duración en ms]. Nada de tocar la pantalla ni terminar antes de
+   tiempo, y nada peligroso (sin correr, sin fuego, sin electrodomésticos, sin meterse en el agua). Los
+   tipos de sala comunes de un hotel (pasillo, rellano, escalera, terraza, zona común) no tienen: ver
+   puedeReal(). */
+const REALES={
+ salon:[['Dobla una manta o un cojín y colócalo bien',18000],['Haz 10 sentadillas',20000],['Cuenta los libros de una estantería',20000]],
+ cocina:[['Dobla tres trapos de cocina',18000],['Cuenta los platos de un armario sin sacarlos',22000],['Haz 10 sentadillas',20000]],
+ comedor:[['Endereza las sillas y dobla las servilletas',20000],['Cuenta las patas de las sillas',15000]],
+ bano:[['Dobla las toallas de mano',18000],['Cuenta los botes que veas',18000]],
+ dormitorio:[['Dobla una prenda de ropa y ponla en su sitio',18000],['Haz 10 sentadillas',20000],['Ordena los zapatos del armario',22000]],
+ despacho:[['Ordena los bolígrafos de la mesa',18000],['Cuenta los libros de una balda',20000]],
+ lavadero:[['Empareja los calcetines de un cesto',25000],['Dobla una prenda',18000]],
+ garaje:[['Cuenta las herramientas que veas',20000],['Dobla un trapo o una lona pequeña',18000]],
+ jardin:[['Cuenta las plantas o macetas',18000],['Haz 10 sentadillas',20000]],
+ piscina:[['Cuenta las hamacas o tumbonas',18000],['Cuenta los escalones de la piscina sin meterte en el agua',20000]],
+ barbacoa:[['Cuenta los utensilios de la barbacoa',18000]],
+ trastero:[['Cuenta las cajas que veas',18000]],
+ buhardilla:[['Cuenta los objetos guardados que veas',20000]],
+ sotano:[['Cuenta las botellas o cajas sin tocar nada peligroso',20000]],
+ hotel:[['Dobla una toalla del baño',18000],['Haz 10 sentadillas en silencio',22000],['Cuenta las perchas del armario',18000],['Ordena tu maleta o mochila',25000]],
+ generica:[['Cuenta cuatro objetos distintos de la sala',18000],['Haz 10 sentadillas en silencio',20000],['Dobla una prenda o un trapo que encuentres',18000]],
+};
+/* en el hotel, nada de ruido ni de tareas de la vida real en zonas comunes (pasillo, rellano, escalera,
+   terraza, zona común): ahí solo minijuegos, silenciosos y discretos */
+const HOTEL_COMUN=new Set(['pasillo','rellano','escalera','terraza','comun']);
+const puedeReal=(venue,room)=>!(venue==='hotel'&&HOTEL_COMUN.has(room.type));
 const LAB={};POSE_K.forEach(k=>LAB[k]='assets/img/m_'+k+'.png?v=5');
 const REF={"frente": [29.9, 225.0, 18.8, 241.1, 210.7, 22.8, 27.7, 31.0], "tresq": [27.9, 229.2, 17.8, 238.0, 211.2, 20.3, 24.7, 31.9], "lado": [28.0, 237.1, 31.1, 232.7, 209.3, 22.8, 34.5, 36.4], "espalda": [26.5, 229.5, 0, 0, 208.8, 22.4, 31.8, 32.0], "movil": [27.9, 228.4, 17.9, 239.6, 211.2, 20.8, 25.0, 31.3], "camina": [28.1, 233.3, 22.4, 236.5, 210.7, 20.4, 28.7, 34.9], "corre": [27.4, 233.6, 25.7, 234.7, 207.1, 20.6, 29.3, 35.2], "salta": [28.5, 223.9, 19.8, 238.9, 210.3, 21.3, 25.7, 31.6], "sentado": [27.5, 230.1, 15.7, 239.8, 215.2, 20.9, 25.0, 31.1], "agachado": [27.2, 231.2, 16.0, 239.4, 215.6, 20.6, 24.7, 31.1], "feliz": [28.4, 227.2, 19.6, 239.9, 211.9, 21.5, 25.9, 31.4], "cabeza": [27.0, 228.9, 19.9, 240.0, 0, 0, 25.6, 0]};
 const LIM={imp:[1,3,1],tasks:[2,8,1],largas:[0,3,1],killCd:[10,90,5],disc:[0,180,15],vote:[15,120,15],emerg:[0,3,1]};
@@ -775,12 +803,13 @@ function pidPara(code){
 function cfgDefecto(venue,prev){
   const V=VENUES[venue]||VENUES.piso;
   const rooms=V.rooms.map((r,i)=>({id:'r'+i,name:r[0],type:r[1],on:i<V.def}));
-  const b=prev?{...prev}:{imp:1,tasks:4,largas:1,killCd:30,disc:60,vote:45,emerg:1,confirm:true,walkie:true};
+  const b=prev?{...prev}:{imp:1,tasks:4,largas:1,killCd:30,disc:60,vote:45,emerg:1,confirm:true,walkie:true,mezcla:'mix'};
   b.venue=venue in VENUES?venue:'piso';b.rooms=rooms;b.meet='r0';return b;
 }
 function limpiaCfg(c,old){
   const o={...old};if(!c||typeof c!=='object')return o;
   if(c.venue in VENUES)o.venue=c.venue;
+  if(['mix','mini','real'].includes(c.mezcla))o.mezcla=c.mezcla;
   if(Array.isArray(c.rooms))o.rooms=c.rooms.slice(0,24).map((r,i)=>({id:String(r.id||'x'+i).slice(0,12),name:String(r.name||'Sala').slice(0,24),type:r.type in TIPOS?r.type:'generica',on:!!r.on}));
   for(const k in LIM){const [a,b]=LIM[k];if(typeof c[k]==='number')o[k]=Math.max(a,Math.min(b,Math.round(c[k])))}
   o.confirm=c.confirm!==undefined?!!c.confirm:o.confirm;o.walkie=c.walkie!==undefined?!!c.walkie:o.walkie;
@@ -829,7 +858,7 @@ function generaLarga(clave,rs){
   else plantilla.forEach(p=>paso(p));
   return pasos;
 }
-function generarTareas(rooms,n,largas=0){
+function generarTareas(rooms,n,largas=0,mezcla='mix',venue='piso'){
   const out=[],usadas=new Set(),juegos=new Set(),rs=barajar(rooms.slice()),ahoraT=ahora();
   const nLargas=Math.max(0,Math.min(largas,n)),claves=barajar(Object.keys(LARGAS));
   for(let i=0;i<nLargas;i++){
@@ -837,7 +866,16 @@ function generarTareas(rooms,n,largas=0){
     steps.forEach(s=>{usadas.add(s.room+s.game);juegos.add(s.game)});
     out.push({id:'t'+i,steps,done:0,doneAt:ahoraT});
   }
+  const probReal={mix:.35,mini:.1,real:.65}[mezcla]??.35;
+  const plantillaReal=r=>{
+    if(!puedeReal(venue,r))return null;
+    const poolR=(REALES[r.type]||REALES.generica||[]).map((t,i)=>[t,'R'+r.type+i]).filter(x=>!usadas.has(r.id+x[1]));
+    if(!poolR.length||Math.random()>=probReal)return null;
+    const x=poolR[Math.floor(Math.random()*poolR.length)];usadas.add(r.id+x[1]); /* no cuenta para la variedad de minijuegos: es otro tipo de tarea */
+    return {room:r.id,txt:x[0][0],game:'real',dur:x[0][1]};
+  };
   const plantilla=r=>{
+    const real=plantillaReal(r);if(real)return real;
     let pool=(TAREAS[r.type]||TAREAS.generica).map((t,i)=>[t,r.type+i]).filter(x=>!usadas.has(r.id+x[1]));
     if(!pool.length)pool=TAREAS.generica.map((t,i)=>[t,'g'+i]).filter(x=>!usadas.has(r.id+x[1]));
     if(!pool.length)pool=[[TAREAS.generica[0],'g0']];
@@ -876,7 +914,7 @@ function empezar(st,now){
   st.players.forEach(p=>{
     const esImp=orden.includes(p.id);
     p.role=esImp?'imp':'crew';p.dead=false;p.body=false;p.ejected=false;
-    p.emerg=st.cfg.emerg;p.kcd=now+st.cfg.killCd*1000;p.tasks=generarTareas(rooms,st.cfg.tasks,st.cfg.largas);
+    p.emerg=st.cfg.emerg;p.kcd=now+st.cfg.killCd*1000;p.tasks=generarTareas(rooms,st.cfg.tasks,st.cfg.largas,st.cfg.mezcla,st.cfg.venue);
     rachas[p.id]=esImp?0:(rachas[p.id]||0)+1; /* se reinicia en cuanto le toca */
   });
   st.phase='play';st.gid=uid(6);st.sab=null;st.locks=[];st.sabCd=now+20000;st.meet=null;st.end=null;st.notice=null;
@@ -1481,6 +1519,7 @@ function vLobby(){
     ${paso('Tareas por persona','tasks')}
     ${paso('Tareas largas por persona','largas')}
     ${c.largas>c.tasks?`<p class="motivo">Con ${c.tasks} tareas por persona, como mucho ${c.tasks} pueden ser largas.</p>`:''}
+    <p class="lbl">Tipo de tareas</p><div class="chips">${[['mix','Mezcla'],['mini','Más minijuegos'],['real','Más vida real']].map(([k,t])=>`<button class="chip ${(c.mezcla||'mix')===k?'on':''}" data-a="mezcla" data-v="${k}">${t}</button>`).join('')}</div>
     ${paso('Espera entre muertes','killCd',v=>v+' s')}
     ${paso('Tiempo de debate','disc',v=>v?v+' s':'nada')}
     ${paso('Tiempo de votación','vote',v=>v+' s')}
@@ -1667,7 +1706,7 @@ function hojaTarea(tid){
   const p=mine(),t=(p.tasks||[]).find(x=>x.id===tid);if(!t)return;
   const d=hechoLocal(p,t);if(d>=t.steps.length)return;
   const st=t.steps[d];
-  abrirSheet('<div id="shVivo"></div>',{juego:true,tid,step:d,game:st.game,refresh:()=>vHojaTarea(tid)});
+  abrirSheet('<div id="shVivo"></div>',{juego:true,tid,step:d,game:st.game,dur:st.dur,refresh:()=>vHojaTarea(tid)});
   setHTML($('#shVivo'),vHojaTarea(tid));
 }
 function tareaHecha(tid,step){
@@ -1721,7 +1760,7 @@ function hojaMas(){MODO={m:'menu'};abrirSheet('<div id="shVivo"></div>',{refresh
 /* ============ galería de minijuegos (modo pruebas): abrir cualquiera sin partida ============ */
 const GALERIA=[['hold','Mantener'],['simon','Simón'],['wires','Cables'],['order','Orden'],['calib','Calibrar'],['swipe','Deslizar tarjeta'],['code','Código'],
   ['burbuja','Burbuja'],['caja','Caja fuerte'],['tuberias','Tuberías'],['patron','Patrón'],['radio','Radio'],['limpiar','Limpiar'],['deposito','Depósito'],
-  ['agitar','Agitar'],['soplar','Soplar'],['parejas','Parejas'],['polillas','Polillas']];
+  ['agitar','Agitar'],['soplar','Soplar'],['parejas','Parejas'],['polillas','Polillas'],['real','Vida real (cuenta atrás)']];
 function vGaleria(){
   return `<h2>Galería de minijuegos</h2><p class="tenue">Solo en modo pruebas: abre cualquiera para probarlo sin necesitar una partida.</p>
   <div class="rejilla">${GALERIA.map(([k,t])=>`<button class="gente-b" data-a="galeriaAbre" data-g="${k}">${t}</button>`).join('')}</div>`;
@@ -1768,6 +1807,18 @@ const JUEGOS={
     b.onpointerdown=e=>{e.preventDefault();if(fin)return;try{b.setPointerCapture(e.pointerId)}catch(_){}t0=Date.now();cancelAnimationFrame(raf);loop()};
     const suelta=()=>{if(fin)return;cancelAnimationFrame(raf);bar.style.transform='scaleX(0)'};
     b.onpointerup=suelta;b.onpointercancel=suelta;b.oncontextmenu=e=>e.preventDefault();
+  },
+  /* tarea de la vida real: nada que tocar, solo esperar el tiempo real de verdad. Al ir por hora real
+     (Date.now()) sigue contando si se bloquea el móvil o se sale de la pestaña, y al volver se pone al día. */
+  real(el,ok,ms=25000){
+    el.innerHTML=`<p class="g-ayuda">No hace falta tocar la pantalla: solo tienes que hacerlo. Espera a que acabe.</p><div class="g-hold g-real"><span id="gT"></span><i id="gBar"></i></div>`;
+    const bar=el.querySelector('#gBar'),txt=el.querySelector('#gT'),t0=Date.now();
+    const loop=()=>{
+      if(!el.isConnected)return;
+      const paso=Math.min(1,(Date.now()-t0)/ms);bar.style.transform=`scaleX(${paso})`;txt.textContent=mmss(ms-(Date.now()-t0));
+      if(paso>=1){vibra([120,60,120]);ok();return}
+      requestAnimationFrame(loop);
+    };loop();
   },
   simon(el,ok){
     el.innerHTML=`<p class="g-ayuda" id="gA">Mira la secuencia…</p><div class="g-rej g3">${Array.from({length:9},(_,i)=>`<button class="g-c" data-i="${i}" aria-label="Casilla ${i+1}"></button>`).join('')}</div>`;
@@ -2391,9 +2442,10 @@ const ACT={
   sube(d){cambiaCfg(c=>{c[d.k]+=LIM[d.k][2]})},
   baja(d){cambiaCfg(c=>{c[d.k]-=LIM[d.k][2]})},
   tog(d){cambiaCfg(c=>{c[d.k]=!c[d.k]})},
+  mezcla(d){cambiaCfg(c=>{c.mezcla=d.v})},
   empezar(){WK.ctx();accion('start')},
   tarea(d){hojaTarea(d.t)},
-  empezarJuego(){if(!SHEET)return;const {tid,step,game}=SHEET;(JUEGOS[game]||JUEGOS.hold)($('#juego'),()=>tareaHecha(tid,step))},
+  empezarJuego(){if(!SHEET)return;const {tid,step,game,dur}=SHEET;(JUEGOS[game]||JUEGOS.hold)($('#juego'),()=>tareaHecha(tid,step),dur)},
   reportar(){const ot=S.players.filter(x=>x.id!==ME.pid);
     abrirSheet(`<h2>¿De quién es el cuerpo?</h2><p class="tenue">Solo si lo tienes delante. Sonará en todos los móviles.</p><div class="rejilla">${ot.map(x=>`<button class="gente-b" data-a="reportarA" data-p="${x.id}">${dot(x)}${esc(x.name)}${bt(x)}</button>`).join('')}</div>`)},
   reportarA(d){accion('report',{target:d.p});cerrarSheet()},
