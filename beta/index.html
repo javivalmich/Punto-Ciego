@@ -431,7 +431,7 @@ const TAREAS={
 };
 const LAB={};POSE_K.forEach(k=>LAB[k]='assets/img/m_'+k+'.png?v=5');
 const REF={"frente": [29.9, 225.0, 18.8, 241.1, 210.7, 22.8, 27.7, 31.0], "tresq": [27.9, 229.2, 17.8, 238.0, 211.2, 20.3, 24.7, 31.9], "lado": [28.0, 237.1, 31.1, 232.7, 209.3, 22.8, 34.5, 36.4], "espalda": [26.5, 229.5, 0, 0, 208.8, 22.4, 31.8, 32.0], "movil": [27.9, 228.4, 17.9, 239.6, 211.2, 20.8, 25.0, 31.3], "camina": [28.1, 233.3, 22.4, 236.5, 210.7, 20.4, 28.7, 34.9], "corre": [27.4, 233.6, 25.7, 234.7, 207.1, 20.6, 29.3, 35.2], "salta": [28.5, 223.9, 19.8, 238.9, 210.3, 21.3, 25.7, 31.6], "sentado": [27.5, 230.1, 15.7, 239.8, 215.2, 20.9, 25.0, 31.1], "agachado": [27.2, 231.2, 16.0, 239.4, 215.6, 20.6, 24.7, 31.1], "feliz": [28.4, 227.2, 19.6, 239.9, 211.9, 21.5, 25.9, 31.4], "cabeza": [27.0, 228.9, 19.9, 240.0, 0, 0, 25.6, 0]};
-const LIM={imp:[1,3,1],tasks:[2,8,1],killCd:[10,90,5],disc:[0,180,15],vote:[15,120,15],emerg:[0,3,1]};
+const LIM={imp:[1,3,1],tasks:[2,8,1],largas:[0,3,1],killCd:[10,90,5],disc:[0,180,15],vote:[15,120,15],emerg:[0,3,1]};
 const SABS={
  gas:{n:'Fuga de gas',d:'Dos personas tienen que reparar a la vez en dos salas. Si en 60 s no lo consiguen, ganáis.'},
  luces:{n:'Luces fuera',d:'La tripulación viva no ve su móvil hasta que alguien repare en una sala. Si queréis, apagad las luces de verdad.'},
@@ -775,7 +775,7 @@ function pidPara(code){
 function cfgDefecto(venue,prev){
   const V=VENUES[venue]||VENUES.piso;
   const rooms=V.rooms.map((r,i)=>({id:'r'+i,name:r[0],type:r[1],on:i<V.def}));
-  const b=prev?{...prev}:{imp:1,tasks:4,killCd:30,disc:60,vote:45,emerg:1,confirm:true,walkie:true};
+  const b=prev?{...prev}:{imp:1,tasks:4,largas:1,killCd:30,disc:60,vote:45,emerg:1,confirm:true,walkie:true};
   b.venue=venue in VENUES?venue:'piso';b.rooms=rooms;b.meet='r0';return b;
 }
 function limpiaCfg(c,old){
@@ -793,8 +793,50 @@ function nuevaPartida(hostId,name,look){
     chat:[],ackd:[],log:[],notice:null,meet:null,sab:null,locks:[],sabCd:0,end:null,...(PRUEBAS?{pruebas:true,pr:{rol:'azar',vel:'normal'}}:{})};
 }
 const maxImp=n=>Math.max(1,Math.floor((n-1)/3));
-function generarTareas(rooms,n){
-  const out=[],usadas=new Set(),juegos=new Set(),rs=barajar(rooms.slice());
+/* tareas largas: encadenadas, con historia, con estado entre pasos. Las salas de cada paso se eligen
+   según el tipo (con alternativas si esa sala no está en la partida: ver elegeSala). */
+const LARGAS={
+  combustible:[
+    {salas:['garaje','trastero','terraza'],txt:'Llena el bidón de combustible',game:'deposito'},
+    {salas:['jardin','piscina','barbacoa'],txt:'Vacía el bidón (va lleno) en el depósito de esta sala',game:'deposito'},
+  ],
+  datos:[
+    {salas:['despacho','salon'],txt:'Descarga los datos: mantén la pantalla abierta hasta que termine',game:'hold'},
+    {salas:['pasillo','entrada','comun'],txt:'Sube los datos por el router de esta sala',game:'code'},
+  ],
+  energia:[
+    {salas:['sotano','garaje'],txt:'Desvía la energía en el cuadro de esta sala',game:'wires'},
+    {salas:['despacho','salon','dormitorio'],txt:'Acepta la energía desviada',game:'simon'},
+  ],
+  muestras:[
+    {salas:['jardin','cocina','bano'],txt:'Recoge una muestra',game:'order'},
+    {salas:['despacho','sotano'],txt:'Analiza la muestra (tarda un poco: puedes irte y volver)',game:'calib',esperaMin:25000},
+  ],
+};
+/* sala de alguno de los tipos dados, evitando repetir sala dentro de la misma tarea larga si se puede;
+   si no hay ninguna de esos tipos en la partida, cae a cualquier sala libre: nunca deja una tarea sin sala */
+function elegeSala(tipos,rs,usadasRooms){
+  for(const t of tipos){const cand=rs.filter(r=>r.type===t&&!usadasRooms.has(r.id));if(cand.length)return elige(cand)}
+  for(const t of tipos){const cand=rs.filter(r=>r.type===t);if(cand.length)return elige(cand)}
+  const libres=rs.filter(r=>!usadasRooms.has(r.id));return elige(libres.length?libres:rs);
+}
+function generaLarga(clave,rs){
+  const plantilla=LARGAS[clave],usadasRooms=new Set(),pasos=[];
+  const paso=(p,sufijo='')=>{const r=elegeSala(p.salas,rs,usadasRooms);usadasRooms.add(r.id);
+    pasos.push({room:r.id,txt:p.txt+sufijo,game:p.game,...(p.esperaMin?{esperaMin:p.esperaMin}:{})})};
+  if(clave==='combustible'){const n=Math.random()<0.5?2:4;for(let rep=0;rep<n/2;rep++)plantilla.forEach(p=>paso(p))}
+  else if(clave==='energia'){paso(plantilla[0]);const extra=Math.random()<0.5?1:2;for(let i=0;i<extra;i++)paso(plantilla[1],extra>1?` (parte ${i+1})`:'')}
+  else plantilla.forEach(p=>paso(p));
+  return pasos;
+}
+function generarTareas(rooms,n,largas=0){
+  const out=[],usadas=new Set(),juegos=new Set(),rs=barajar(rooms.slice()),ahoraT=ahora();
+  const nLargas=Math.max(0,Math.min(largas,n)),claves=barajar(Object.keys(LARGAS));
+  for(let i=0;i<nLargas;i++){
+    const steps=generaLarga(claves[i%claves.length],rs);
+    steps.forEach(s=>{usadas.add(s.room+s.game);juegos.add(s.game)});
+    out.push({id:'t'+i,steps,done:0,doneAt:ahoraT});
+  }
   const plantilla=r=>{
     let pool=(TAREAS[r.type]||TAREAS.generica).map((t,i)=>[t,r.type+i]).filter(x=>!usadas.has(r.id+x[1]));
     if(!pool.length)pool=TAREAS.generica.map((t,i)=>[t,'g'+i]).filter(x=>!usadas.has(r.id+x[1]));
@@ -802,10 +844,10 @@ function generarTareas(rooms,n){
     const sinRepetir=pool.filter(x=>!juegos.has(x[0][1])),elegible=sinRepetir.length?sinRepetir:pool; /* si se puede, ningún minijuego se repite */
     const x=elegible[Math.floor(Math.random()*elegible.length)];usadas.add(r.id+x[1]);juegos.add(x[0][1]);return {room:r.id,txt:x[0][0],game:x[0][1]};
   };
-  for(let i=0;i<n;i++){
+  for(let i=nLargas;i<n;i++){
     const r=rs[i%rs.length];const steps=[plantilla(r)];
-    if(i===n-1&&n>=3&&rs.length>=2)steps.push(plantilla(rs[(i+1)%rs.length]));
-    out.push({id:'t'+i,steps,done:0});
+    if(i===n-1&&n>=3&&rs.length>=2&&nLargas===0)steps.push(plantilla(rs[(i+1)%rs.length])); /* el paso extra del final solo si no hay tareas largas, para no duplicar la idea */
+    out.push({id:'t'+i,steps,done:0,doneAt:ahoraT});
   }
   return out;
 }
@@ -834,7 +876,7 @@ function empezar(st,now){
   st.players.forEach(p=>{
     const esImp=orden.includes(p.id);
     p.role=esImp?'imp':'crew';p.dead=false;p.body=false;p.ejected=false;
-    p.emerg=st.cfg.emerg;p.kcd=now+st.cfg.killCd*1000;p.tasks=generarTareas(rooms,st.cfg.tasks);
+    p.emerg=st.cfg.emerg;p.kcd=now+st.cfg.killCd*1000;p.tasks=generarTareas(rooms,st.cfg.tasks,st.cfg.largas);
     rachas[p.id]=esImp?0:(rachas[p.id]||0)+1; /* se reinicia en cuanto le toca */
   });
   st.phase='play';st.gid=uid(6);st.sab=null;st.locks=[];st.sabCd=now+20000;st.meet=null;st.end=null;st.notice=null;
@@ -911,7 +953,7 @@ function reducir(st,a,now,local){
   case 'task':{
     if(st.phase!=='play'||!p||p.role!=='crew')return true;
     const t=(p.tasks||[]).find(x=>x.id===a.tid);
-    if(t&&t.done===a.step&&t.done<t.steps.length){t.done++;ganador(st,now)}return true;
+    if(t&&t.done===a.step&&t.done<t.steps.length){t.done++;t.doneAt=now;ganador(st,now)}return true;
   }
   case 'kill':{
     if(st.phase!=='play')return true;const v=P(st,a.target);
@@ -1437,6 +1479,8 @@ function vLobby(){
     ${paso('Impostores','imp',v=>Math.min(v,mx)===v?v:`${Math.min(v,mx)}`)}
     ${c.imp>mx?`<p class="motivo">Con ${ps.length} personas solo puede haber ${mx}.</p>`:''}
     ${paso('Tareas por persona','tasks')}
+    ${paso('Tareas largas por persona','largas')}
+    ${c.largas>c.tasks?`<p class="motivo">Con ${c.tasks} tareas por persona, como mucho ${c.tasks} pueden ser largas.</p>`:''}
     ${paso('Espera entre muertes','killCd',v=>v+' s')}
     ${paso('Tiempo de debate','disc',v=>v?v+' s':'nada')}
     ${paso('Tiempo de votación','vote',v=>v+' s')}
@@ -1606,21 +1650,38 @@ setInterval(pinta,250);
 function pararSheet(){if(SHEET&&SHEET.limpia){try{SHEET.limpia()}catch(e){}}}
 function abrirSheet(h,extra={}){pararSheet();$('#shBody').innerHTML=h;$('#sheet').hidden=false;SHEET={...extra};$('.sh-caja').scrollTop=0}
 function cerrarSheet(){if(!SHEET&&$('#sheet').hidden)return;pararSheet();$('#sheet').hidden=true;$('#shBody').innerHTML='';SHEET=null;MODO={m:'menu'}}
+/* algunos pasos de las tareas largas (p.ej. analizar una muestra) exigen esperar un poco desde que
+   terminó el paso anterior: se puede cerrar la hoja y volver luego, la cuenta sigue por hora real */
+function vHojaTarea(tid){
+  const p=mine(),t=p&&(p.tasks||[]).find(x=>x.id===tid);if(!t)return '';
+  const d=hechoLocal(p,t);if(d>=t.steps.length)return '<p class="hecho-ok">Hecho</p>';
+  const st=t.steps[d],r=sala(st.room)||{name:'?'},cerr=cerrada(st.room);
+  const listoEn=st.esperaMin?(t.doneAt||0)+st.esperaMin:0,falta=listoEn>ahora();
+  let h=`<p class="sh-sala">${esc(r.name)}${t.steps.length>1?`, parte ${d+1} de ${t.steps.length}`:''}</p><h2>${esc(st.txt)}</h2>`;
+  if(falta)h+=`<p class="tenue">Todavía no está listo. Puedes cerrar esto e ir a hacer otra cosa: cuando vuelvas seguirá contando.</p><p class="g-cuenta">Listo en <b data-until="${listoEn}"></b></p>`;
+  else h+=`<p class="tenue">${cerr?'Esta sala está cerrada ahora mismo. Espera a que se abra.':'Ve hasta allí, haz lo que dice y completa la prueba.'}</p>
+  <div id="juego"><button class="b-baliza b-ancho" data-a="empezarJuego" ${cerr?'disabled':''}>Ya estoy allí: empezar</button></div>`;
+  return h;
+}
 function hojaTarea(tid){
   const p=mine(),t=(p.tasks||[]).find(x=>x.id===tid);if(!t)return;
   const d=hechoLocal(p,t);if(d>=t.steps.length)return;
-  const st=t.steps[d],r=sala(st.room)||{name:'?'},cerr=cerrada(st.room);
-  abrirSheet(`<p class="sh-sala">${esc(r.name)}${t.steps.length>1?`, parte ${d+1} de ${t.steps.length}`:''}</p><h2>${esc(st.txt)}</h2>
-  <p class="tenue">${cerr?'Esta sala está cerrada ahora mismo. Espera a que se abra.':'Ve hasta allí, haz lo que dice y completa la prueba.'}</p>
-  <div id="juego"><button class="b-baliza b-ancho" data-a="empezarJuego" ${cerr?'disabled':''}>Ya estoy allí: empezar</button></div>`,{juego:true,tid,step:d,game:st.game});
+  const st=t.steps[d];
+  abrirSheet('<div id="shVivo"></div>',{juego:true,tid,step:d,game:st.game,refresh:()=>vHojaTarea(tid)});
+  setHTML($('#shVivo'),vHojaTarea(tid));
 }
 function tareaHecha(tid,step){
   const p=mine();if(!p||!S)return;SON.tarea();vibra(60);
+  /* primero se fija la hoja en "Hecho" y se apaga SHEET.refresh: si somos el anfitrión, accion() más abajo
+     aplica el cambio y repinta en el momento, y sin esto el refresco de la hoja podría borrar #juego (al
+     pasar ya al siguiente paso) antes de que termináramos de escribir en él */
+  pararSheet();if(SHEET){SHEET.limpia=null;SHEET.refresh=null}
+  $('#juego').innerHTML='<p class="hecho-ok">Hecho</p>';
   if(p.role==='imp'){const f=LS.get('imp.fake.'+S.gid,{});f[tid]=Math.max(f[tid]||0,step+1);LS.set('imp.fake.'+S.gid,f)}
   else{OPT.add(optK(tid,step));accion('task',{tid,step})}
-  pararSheet();if(SHEET)SHEET.limpia=null;
-  $('#juego').innerHTML='<p class="hecho-ok">Hecho</p>';
-  setTimeout(()=>{if(SHEET&&SHEET.tid===tid)cerrarSheet()},800);pinta();
+  /* si es una tarea de varios pasos, tid es el mismo en todos: hay que comprobar también el paso, o esto podría
+     cerrar por error la hoja del siguiente paso si se reabre la tarea antes de que salte este aviso */
+  setTimeout(()=>{if(SHEET&&SHEET.tid===tid&&SHEET.step===step)cerrarSheet()},800);pinta();
 }
 function hojaFix(panel){
   const p=mine();if(!S.sab||!p||p.dead)return;const r=sala(S.sab.rooms[panel])||{name:'?'};
