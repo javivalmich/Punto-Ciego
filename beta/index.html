@@ -233,6 +233,36 @@ ul.tareas{list-style:none;margin:6px 0;padding:0;display:grid;gap:8px}
 .g-tarjeta{position:absolute;left:6px;top:6px;width:96px;height:60px;border-radius:8px;background:var(--tiza);color:#0C0C0C;display:grid;place-items:center;font-size:30px;touch-action:none;cursor:grab;user-select:none;-webkit-user-select:none}
 .g-pantalla{text-align:center;font-family:var(--disp);font-size:46px;letter-spacing:.35em;padding:10px;margin:8px auto;max-width:330px;border-radius:8px;background:#0e151c;color:var(--ok);min-height:78px}
 .g-teclas .g-c{aspect-ratio:auto;min-height:56px}
+.g4{grid-template-columns:repeat(4,1fr)}
+.g-lbl{font-size:13px;color:var(--niebla);margin:8px 0 2px}
+.g-nivel{position:relative;width:150px;height:150px;margin:14px auto;background:var(--casco);border:1px solid var(--remache);border-radius:50%;touch-action:none}
+.g-diana{position:absolute;left:50%;top:50%;width:66px;height:66px;margin:-33px 0 0 -33px;border:2px dashed var(--ok);border-radius:50%}
+.g-burb{position:absolute;left:50%;top:50%;width:26px;height:26px;margin:-13px 0 0 -13px;border-radius:50%;background:var(--sonar);box-shadow:0 0 0 4px rgba(156,196,212,.25)}
+.g-caja{position:relative;width:170px;margin:14px auto 6px;text-align:center}
+.g-rueda{position:relative;width:170px;height:170px;border-radius:50%;background:var(--casco);border:3px solid var(--remache);touch-action:none}
+.g-rueda i{position:absolute;top:6px;left:50%;width:6px;height:22px;margin-left:-3px;background:var(--tiza);border-radius:3px}
+.g-num-caja{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);font-family:var(--disp);font-size:40px;pointer-events:none}
+.g-tuberias{display:flex;align-items:center;gap:6px;justify-content:center}
+.g-flecha{font-size:20px;color:var(--ok)}
+.g-tubo{aspect-ratio:1;min-height:0;padding:0;background:var(--casco)}
+.g-tubo svg{width:100%;height:100%}
+.g-tubo svg line{stroke:var(--tiza);stroke-width:8;stroke-linecap:round}
+.g-tubo svg circle{fill:var(--tiza)}
+.g-tubo.hecho svg line,.g-tubo.hecho svg circle{stroke:var(--ok);fill:var(--ok)}
+.g-patron{position:relative;width:210px;height:210px;margin:14px auto;touch-action:none}
+.g-punto{position:absolute;width:22px;height:22px;margin:-11px;border-radius:50%;background:var(--casco);border:2px solid var(--remache)}
+.g-punto.on{background:var(--ok);border-color:var(--ok)}
+.g-onda{width:100%;height:110px;background:var(--casco);border:1px solid var(--remache);border-radius:8px;margin:10px 0;display:block}
+.g-sucio{position:relative;display:grid;grid-template-columns:repeat(12,1fr);grid-template-rows:repeat(8,1fr);gap:1px;width:100%;aspect-ratio:12/8;background:var(--remache);border-radius:8px;overflow:hidden;touch-action:none}
+.g-sucio i{background:#6b5f4c;display:block}
+.g-sucio i.ok{background:transparent}
+.g-dep{position:relative;width:90px;height:150px;margin:14px auto;background:var(--casco);border:2px solid var(--remache);border-radius:6px 6px 10px 10px;overflow:hidden}
+.g-marca{position:absolute;left:0;right:0;height:2px;background:var(--ok)}
+.g-agua{position:absolute;left:0;right:0;bottom:0;background:var(--sonar)}
+.g-llenar.activo{background:var(--ok);border-color:var(--ok)}
+.g-vaho{width:100%;height:90px;margin:10px 0;border-radius:8px;background:#cfd6da}
+.g-jardin{position:relative;width:100%;height:150px;background:var(--casco);border:1px solid var(--remache);border-radius:8px;overflow:hidden;margin:10px 0}
+.g-polilla{position:absolute;background:transparent;border:0;font-size:26px;padding:6px;min-height:0}
 .hecho-ok{text-align:center;font-family:var(--disp);font-size:38px;color:var(--ok);padding:30px 0}
 
 #toast{position:fixed;left:50%;bottom:calc(96px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);z-index:60;background:var(--tiza);color:var(--acero);padding:10px 16px;border-radius:10px;font-weight:600;max-width:90vw;display:none;box-shadow:0 8px 24px rgba(0,0,0,.4)}
@@ -375,29 +405,29 @@ const VENUES={
 };
 /* tareas: [lo que haces de verdad, prueba del móvil] */
 const TAREAS={
- salon:[['Coloca bien los cojines del sofá','wires'],['Cuenta los enchufes de la pared','order'],['Toca la parte de atrás de la tele','calib'],['Endereza un libro o un adorno de la estantería','simon'],['Siéntate diez segundos en el sofá sin hablar','hold']],
- cocina:[['Abre la nevera, cuenta las baldas y ciérrala','order'],['Llena un vaso de agua y déjalo en la encimera','hold'],['Comprueba que el fuego está apagado','calib'],['Busca una cuchara de madera y señálala','code'],['Toca el grifo tres veces','simon']],
- comedor:[['Mete bien todas las sillas','wires'],['Cuenta las sillas del comedor','order'],['Alinea el mantel o el camino de mesa','calib'],['Da una vuelta completa a la mesa','hold']],
- bano:[['Recoloca las toallas','wires'],['Mírate al espejo diez segundos sin reírte','hold'],['Comprueba el grifo del agua caliente','calib'],['Cuenta los botes de la ducha','order']],
- dormitorio:[['Estira la colcha de la cama','swipe'],['Abre y cierra el armario','code'],['Cuenta las perchas vacías','order'],['Enciende y apaga la lamparita','simon'],['Mira debajo de la cama','hold']],
- pasillo:[['Enciende y apaga la luz del pasillo dos veces','simon'],['Recorre el pasillo contando los pasos','order'],['Endereza un cuadro o toca el marco de una puerta','calib'],['Espera diez segundos pegado a la pared','hold']],
- entrada:[['Comprueba que la puerta de la calle está cerrada','swipe'],['Ordena los zapatos de la entrada','wires'],['Busca las llaves y señálalas','code'],['Mira por la mirilla','hold']],
- terraza:[['Busca una estrella, la luna o un avión','hold'],['Recoloca las sillas de fuera','wires'],['Toca la barandilla en los dos extremos','calib'],['Cuenta las plantas','order']],
- despacho:[['Descarga los datos: toca el teclado del ordenador','hold'],['Introduce la clave del router','code'],['Ordena los bolígrafos','wires'],['Endereza la silla del escritorio','calib']],
- lavadero:[['Abre y cierra la lavadora','swipe'],['Empareja dos pinzas','wires'],['Comprueba el filtro de la secadora','calib'],['Cuenta los productos de limpieza','order']],
- escalera:[['Sube y baja la escalera entera','hold'],['Cuenta los escalones','order'],['Toca la barandilla arriba y abajo','calib'],['Espera en el descansillo diez segundos','simon']],
- garaje:[['Toca la puerta del garaje','swipe'],['Mira el cuadro de luces sin tocar nada','wires'],['Busca una herramienta y déjala a la vista','simon'],['Cuenta las ruedas que veas','order']],
- jardin:[['Da una vuelta completa al jardín','hold'],['Toca el tronco de un árbol','calib'],['Encuentra una piedra y déjala junto a la puerta','order'],['Busca la manguera y señálala','code']],
- piscina:[['Toca el agua con la mano','calib'],['Revisa el skimmer sin meter la mano','wires'],['Cuenta las hamacas','order'],['Da la vuelta a la piscina sin correr','hold']],
- barbacoa:[['Comprueba si queda carbón','simon'],['Toca la tapa de la barbacoa','calib'],['Cuenta las pinzas y utensilios','order']],
- porche:[['Siéntate diez segundos en el porche','hold'],['Cuenta las macetas','order'],['Toca las dos columnas o esquinas','calib']],
- trastero:[['Mueve una caja un palmo','wires'],['Enciende la luz y apágala','simon'],['Busca algo que no uséis nunca','code']],
- buhardilla:[['Mira por la ventana de la buhardilla','calib'],['Busca el objeto más antiguo','code'],['Toca la viga más baja','hold']],
- sotano:[['Revisa la caldera o la bodega sin tocar','calib'],['Cuenta botellas o cajas','order'],['Espera a oscuras diez segundos','hold']],
- hotel:[['Cuelga o descuelga el cartel de la puerta','swipe'],['Saca y mete la tarjeta del interruptor','swipe'],['Cuenta las perchas del armario','order'],['Enciende la tele y apágala','simon'],['Mira por la mirilla de la puerta','hold']],
- rellano:[['Pulsa el botón del ascensor, pero no subas','hold'],['Lee el cartel de emergencia','code'],['Cuenta las puertas que ves','order']],
- comun:[['Coge un folleto y déjalo en su sitio','wires'],['Mira el plano de evacuación','calib'],['Siéntate diez segundos','hold']],
- generica:[['Recorre la sala en círculo','hold'],['Toca las cuatro esquinas de la sala','order'],['Enciende y apaga la luz','simon'],['Busca el objeto más raro y señálalo','code'],['Toca el marco de la puerta','calib'],['Pasa tu tarjeta por el lector','swipe'],['Conecta los cables','wires']]
+ salon:[['Coloca bien los cojines del sofá','wires'],['Cuenta los enchufes de la pared','order'],['Toca la parte de atrás de la tele','calib'],['Endereza un libro o un adorno de la estantería','simon'],['Siéntate diez segundos en el sofá sin hablar','hold'],['Empareja los mandos o los calcetines del cesto','parejas']],
+ cocina:[['Abre la nevera, cuenta las baldas y ciérrala','order'],['Llena un vaso de agua y déjalo en la encimera','hold'],['Comprueba que el fuego está apagado','calib'],['Busca una cuchara de madera y señálala','code'],['Toca el grifo tres veces','simon'],['Agita el bote de las especias','agitar']],
+ comedor:[['Mete bien todas las sillas','wires'],['Cuenta las sillas del comedor','order'],['Alinea el mantel o el camino de mesa','calib'],['Da una vuelta completa a la mesa','hold'],['Llena una jarra de agua sin que rebose','deposito']],
+ bano:[['Recoloca las toallas','wires'],['Mírate al espejo diez segundos sin reírte','hold'],['Comprueba el grifo del agua caliente','calib'],['Cuenta los botes de la ducha','order'],['Sopla el espejo empañado hasta despejarlo','soplar']],
+ dormitorio:[['Estira la colcha de la cama','swipe'],['Abre y cierra el armario','code'],['Cuenta las perchas vacías','order'],['Enciende y apaga la lamparita','simon'],['Mira debajo de la cama','hold'],['Desbloquea el móvil con un patrón','patron']],
+ pasillo:[['Enciende y apaga la luz del pasillo dos veces','simon'],['Recorre el pasillo contando los pasos','order'],['Endereza un cuadro o toca el marco de una puerta','calib'],['Espera diez segundos pegado a la pared','hold'],['Nivela un cuadro de la pared','burbuja']],
+ entrada:[['Comprueba que la puerta de la calle está cerrada','swipe'],['Ordena los zapatos de la entrada','wires'],['Busca las llaves y señálalas','code'],['Mira por la mirilla','hold'],['Sintoniza el walkie-talkie viejo de la entrada','radio']],
+ terraza:[['Busca una estrella, la luna o un avión','hold'],['Recoloca las sillas de fuera','wires'],['Toca la barandilla en los dos extremos','calib'],['Cuenta las plantas','order'],['Frota la barandilla hasta dejarla limpia','limpiar']],
+ despacho:[['Descarga los datos: toca el teclado del ordenador','hold'],['Introduce la clave del router','code'],['Ordena los bolígrafos','wires'],['Endereza la silla del escritorio','calib'],['Abre la caja fuerte pequeña del despacho','caja']],
+ lavadero:[['Abre y cierra la lavadora','swipe'],['Empareja dos pinzas','wires'],['Comprueba el filtro de la secadora','calib'],['Cuenta los productos de limpieza','order'],['Conecta bien el tubo de desagüe','tuberias']],
+ escalera:[['Sube y baja la escalera entera','hold'],['Cuenta los escalones','order'],['Toca la barandilla arriba y abajo','calib'],['Espera en el descansillo diez segundos','simon'],['Comprueba si la barandilla está nivelada','burbuja']],
+ garaje:[['Toca la puerta del garaje','swipe'],['Mira el cuadro de luces sin tocar nada','wires'],['Busca una herramienta y déjala a la vista','simon'],['Cuenta las ruedas que veas','order'],['Llena un cubo de agua sin que rebose','deposito']],
+ jardin:[['Da una vuelta completa al jardín','hold'],['Toca el tronco de un árbol','calib'],['Encuentra una piedra y déjala junto a la puerta','order'],['Busca la manguera y señálala','code'],['Caza las polillas o bichos que revolotean','polillas']],
+ piscina:[['Toca el agua con la mano','calib'],['Revisa el skimmer sin meter la mano','wires'],['Cuenta las hamacas','order'],['Da la vuelta a la piscina sin correr','hold'],['Comprueba que el borde está nivelado','burbuja']],
+ barbacoa:[['Comprueba si queda carbón','simon'],['Toca la tapa de la barbacoa','calib'],['Cuenta las pinzas y utensilios','order'],['Sopla las brasas para avivarlas','soplar']],
+ porche:[['Siéntate diez segundos en el porche','hold'],['Cuenta las macetas','order'],['Toca las dos columnas o esquinas','calib'],['Frota la mesa del porche','limpiar']],
+ trastero:[['Mueve una caja un palmo','wires'],['Enciende la luz y apágala','simon'],['Busca algo que no uséis nunca','code'],['Espanta las polillas del trastero','polillas']],
+ buhardilla:[['Mira por la ventana de la buhardilla','calib'],['Busca el objeto más antiguo','code'],['Toca la viga más baja','hold'],['Sintoniza la radio vieja de la buhardilla','radio']],
+ sotano:[['Revisa la caldera o la bodega sin tocar','calib'],['Cuenta botellas o cajas','order'],['Espera a oscuras diez segundos','hold'],['Revisa las tuberías vistas del sótano','tuberias']],
+ hotel:[['Cuelga o descuelga el cartel de la puerta','swipe'],['Saca y mete la tarjeta del interruptor','swipe'],['Cuenta las perchas del armario','order'],['Enciende la tele y apágala','simon'],['Mira por la mirilla de la puerta','hold'],['Abre la caja fuerte de la habitación','caja']],
+ rellano:[['Pulsa el botón del ascensor, pero no subas','hold'],['Lee el cartel de emergencia','code'],['Cuenta las puertas que ves','order'],['Marca el código del portero automático','patron']],
+ comun:[['Coge un folleto y déjalo en su sitio','wires'],['Mira el plano de evacuación','calib'],['Siéntate diez segundos','hold'],['Nivela el cuadro del vestíbulo','burbuja']],
+ generica:[['Recorre la sala en círculo','hold'],['Toca las cuatro esquinas de la sala','order'],['Enciende y apaga la luz','simon'],['Busca el objeto más raro y señálalo','code'],['Toca el marco de la puerta','calib'],['Pasa tu tarjeta por el lector','swipe'],['Conecta los cables','wires'],['Ajusta una radio imaginaria','radio'],['Llena un vaso sin que rebose','deposito'],['Agita algo que tengas a mano','agitar'],['Marca un patrón con el dedo en el aire','patron']]
 };
 const LAB={};POSE_K.forEach(k=>LAB[k]='assets/img/m_'+k+'.png?v=5');
 const REF={"frente": [29.9, 225.0, 18.8, 241.1, 210.7, 22.8, 27.7, 31.0], "tresq": [27.9, 229.2, 17.8, 238.0, 211.2, 20.3, 24.7, 31.9], "lado": [28.0, 237.1, 31.1, 232.7, 209.3, 22.8, 34.5, 36.4], "espalda": [26.5, 229.5, 0, 0, 208.8, 22.4, 31.8, 32.0], "movil": [27.9, 228.4, 17.9, 239.6, 211.2, 20.8, 25.0, 31.3], "camina": [28.1, 233.3, 22.4, 236.5, 210.7, 20.4, 28.7, 34.9], "corre": [27.4, 233.6, 25.7, 234.7, 207.1, 20.6, 29.3, 35.2], "salta": [28.5, 223.9, 19.8, 238.9, 210.3, 21.3, 25.7, 31.6], "sentado": [27.5, 230.1, 15.7, 239.8, 215.2, 20.9, 25.0, 31.1], "agachado": [27.2, 231.2, 16.0, 239.4, 215.6, 20.6, 24.7, 31.1], "feliz": [28.4, 227.2, 19.6, 239.9, 211.9, 21.5, 25.9, 31.4], "cabeza": [27.0, 228.9, 19.9, 240.0, 0, 0, 25.6, 0]};
@@ -764,12 +794,13 @@ function nuevaPartida(hostId,name,look){
 }
 const maxImp=n=>Math.max(1,Math.floor((n-1)/3));
 function generarTareas(rooms,n){
-  const out=[],usadas=new Set(),rs=barajar(rooms.slice());
+  const out=[],usadas=new Set(),juegos=new Set(),rs=barajar(rooms.slice());
   const plantilla=r=>{
     let pool=(TAREAS[r.type]||TAREAS.generica).map((t,i)=>[t,r.type+i]).filter(x=>!usadas.has(r.id+x[1]));
     if(!pool.length)pool=TAREAS.generica.map((t,i)=>[t,'g'+i]).filter(x=>!usadas.has(r.id+x[1]));
     if(!pool.length)pool=[[TAREAS.generica[0],'g0']];
-    const x=pool[Math.floor(Math.random()*pool.length)];usadas.add(r.id+x[1]);return {room:r.id,txt:x[0][0],game:x[0][1]};
+    const sinRepetir=pool.filter(x=>!juegos.has(x[0][1])),elegible=sinRepetir.length?sinRepetir:pool; /* si se puede, ningún minijuego se repite */
+    const x=elegible[Math.floor(Math.random()*elegible.length)];usadas.add(r.id+x[1]);juegos.add(x[0][1]);return {room:r.id,txt:x[0][0],game:x[0][1]};
   };
   for(let i=0;i<n;i++){
     const r=rs[i%rs.length];const steps=[plantilla(r)];
@@ -1358,6 +1389,7 @@ function vHome(){
   <div class="fila"><input id="cod" class="in-cod" maxlength="5" value="${esc(q)}" placeholder="ABCDE" autocapitalize="characters" autocomplete="off" spellcheck="false"><button class="${q?'b-baliza':''}" data-a="unirme">Unirme</button></div></div>
   ${q?`<div class="bloque"><button class="b-link" data-a="crear">Crear una partida nueva</button></div>`:''}
   ${ult?`<div class="bloque"><button class="b-link" data-a="volver" data-c="${esc(ult)}">Volver a la partida ${esc(ult)}</button></div>`:''}
+  ${PRUEBAS?`<div class="bloque"><button class="b-link" data-a="galeria">Galería de minijuegos (pruebas)</button></div>`:''}
   <p><button class="b-link" data-a="aPortada">Pantalla de inicio</button>${CUENTAS&&USER?` <span class="tenue sep">·</span> <button class="b-link" data-a="salirCuenta">Cerrar sesión</button>`:''}</p>
   <p class="tenue pie">${CUENTAS&&USER?`Sesión iniciada con ${esc(USER.email||'')}.`:'Tu perfil se guarda solo en este móvil.'}</p>`;
 }
@@ -1570,8 +1602,10 @@ function relojes(){const t=ahora();document.querySelectorAll('[data-until]').for
 setInterval(pinta,250);
 
 /* ============ hojas ============ */
-function abrirSheet(h,extra={}){$('#shBody').innerHTML=h;$('#sheet').hidden=false;SHEET={...extra};$('.sh-caja').scrollTop=0}
-function cerrarSheet(){if(!SHEET&&$('#sheet').hidden)return;$('#sheet').hidden=true;$('#shBody').innerHTML='';SHEET=null;MODO={m:'menu'}}
+/* los minijuegos que usan sensores, micro o temporizadores propios dejan aquí cómo pararse (SHEET.limpia) */
+function pararSheet(){if(SHEET&&SHEET.limpia){try{SHEET.limpia()}catch(e){}}}
+function abrirSheet(h,extra={}){pararSheet();$('#shBody').innerHTML=h;$('#sheet').hidden=false;SHEET={...extra};$('.sh-caja').scrollTop=0}
+function cerrarSheet(){if(!SHEET&&$('#sheet').hidden)return;pararSheet();$('#sheet').hidden=true;$('#shBody').innerHTML='';SHEET=null;MODO={m:'menu'}}
 function hojaTarea(tid){
   const p=mine(),t=(p.tasks||[]).find(x=>x.id===tid);if(!t)return;
   const d=hechoLocal(p,t);if(d>=t.steps.length)return;
@@ -1584,6 +1618,7 @@ function tareaHecha(tid,step){
   const p=mine();if(!p||!S)return;SON.tarea();vibra(60);
   if(p.role==='imp'){const f=LS.get('imp.fake.'+S.gid,{});f[tid]=Math.max(f[tid]||0,step+1);LS.set('imp.fake.'+S.gid,f)}
   else{OPT.add(optK(tid,step));accion('task',{tid,step})}
+  pararSheet();if(SHEET)SHEET.limpia=null;
   $('#juego').innerHTML='<p class="hecho-ok">Hecho</p>';
   setTimeout(()=>{if(SHEET&&SHEET.tid===tid)cerrarSheet()},800);pinta();
 }
@@ -1622,7 +1657,48 @@ function vMas(){
 }
 function hojaMas(){MODO={m:'menu'};abrirSheet('<div id="shVivo"></div>',{refresh:vMas});setHTML($('#shVivo'),vMas())}
 
+/* ============ galería de minijuegos (modo pruebas): abrir cualquiera sin partida ============ */
+const GALERIA=[['hold','Mantener'],['simon','Simón'],['wires','Cables'],['order','Orden'],['calib','Calibrar'],['swipe','Deslizar tarjeta'],['code','Código'],
+  ['burbuja','Burbuja'],['caja','Caja fuerte'],['tuberias','Tuberías'],['patron','Patrón'],['radio','Radio'],['limpiar','Limpiar'],['deposito','Depósito'],
+  ['agitar','Agitar'],['soplar','Soplar'],['parejas','Parejas'],['polillas','Polillas']];
+function vGaleria(){
+  return `<h2>Galería de minijuegos</h2><p class="tenue">Solo en modo pruebas: abre cualquiera para probarlo sin necesitar una partida.</p>
+  <div class="rejilla">${GALERIA.map(([k,t])=>`<button class="gente-b" data-a="galeriaAbre" data-g="${k}">${t}</button>`).join('')}</div>`;
+}
+function galeriaJuego(g){
+  if(!(JUEGOS[g]))return;
+  abrirSheet(`<h2>${esc((GALERIA.find(x=>x[0]===g)||['',g])[1])}</h2><div id="juego"></div><p><button class="b-link" data-a="galeriaOtra" data-g="${g}">Repetir</button> <button class="b-link" data-a="galeria">Volver a la galería</button></p>`,{});
+  JUEGOS[g]($('#juego'),()=>{$('#juego').innerHTML='<p class="hecho-ok">Hecho</p>'});
+}
+
 /* ============ pruebas del móvil ============ */
+/* sensores: piden permiso al tocar «Empezar» (iOS lo exige) y, si no hay sensor de verdad, no se quedan
+   esperando: en menos de un segundo pasan solos a la versión táctil equivalente. */
+async function permisoOrient(){
+  try{
+    if(typeof DeviceOrientationEvent!=='undefined'&&typeof DeviceOrientationEvent.requestPermission==='function')
+      return (await DeviceOrientationEvent.requestPermission())==='granted';
+    return typeof DeviceOrientationEvent!=='undefined';
+  }catch(e){return false}
+}
+async function permisoMotion(){
+  try{
+    if(typeof DeviceMotionEvent!=='undefined'&&typeof DeviceMotionEvent.requestPermission==='function')
+      return (await DeviceMotionEvent.requestPermission())==='granted';
+    return typeof DeviceMotionEvent!=='undefined';
+  }catch(e){return false}
+}
+function detectaSensor(evento,permisoFn){
+  return new Promise(res=>{
+    let hecho=false,tId=0;
+    const listo=()=>{if(hecho)return;hecho=true;window.removeEventListener(evento,listo);clearTimeout(tId);res(true)};
+    permisoFn().then(ok=>{
+      if(!ok){if(!hecho){hecho=true;res(false)}return}
+      window.addEventListener(evento,listo);
+      tId=setTimeout(()=>{if(!hecho){hecho=true;window.removeEventListener(evento,listo);res(false)}},900);
+    }).catch(()=>{if(!hecho){hecho=true;res(false)}});
+  });
+}
 const JUEGOS={
   hold(el,ok,ms=4500){
     el.innerHTML=`<p class="g-ayuda">Mantén pulsado hasta llenar la barra. Si sueltas, vuelve a empezar.</p><button class="g-hold"><span>Mantener</span><i></i></button>`;
@@ -1709,6 +1785,286 @@ const JUEGOS={
       if(k==='⌫')es=es.slice(0,-1);else if(k==='✓'){if(es===cod){pan.textContent='OK';ts.forEach(x=>x.disabled=true);setTimeout(ok,250);return}pan.textContent='Mal';setTimeout(mostrar,600);return}
       else if(es.length<4)es+=k;pan.textContent=es});
     mostrar();
+  },
+  burbuja(el,ok){
+    el.innerHTML=`<p class="g-ayuda">Comprobando el sensor de inclinación…</p>`;
+    detectaSensor('deviceorientation',permisoOrient).then(hay=>{if(!el.isConnected)return;hay?JUEGOS._burbujaS(el,ok):JUEGOS._burbujaT(el,ok)});
+  },
+  _burbujaS(el,ok){
+    el.innerHTML=`<p class="g-ayuda">Nivela el móvil: mantén la burbuja en el centro 2,5 s.</p><div class="g-nivel"><i class="g-diana"></i><i class="g-burb" id="gB"></i></div><p class="g-cuenta" id="gC">0%</p>`;
+    const b=el.querySelector('#gB'),cta=el.querySelector('#gC');
+    let acum=0,vivo=true,ultimo=performance.now();
+    const on=e=>{
+      const ahora=performance.now(),dt=(ahora-ultimo)/1000;ultimo=ahora;if(!vivo)return;
+      const gx=Math.max(-1,Math.min(1,(e.gamma||0)/28)),gy=Math.max(-1,Math.min(1,(e.beta||0)/28));
+      b.style.transform=`translate(${gx*45}px,${gy*45}px)`;
+      if(Math.hypot(gx,gy)<0.22)acum+=dt;else acum=Math.max(0,acum-dt*1.4);
+      cta.textContent=Math.round(Math.min(1,acum/2.5)*100)+'%';
+      if(acum>=2.5){vivo=false;window.removeEventListener('deviceorientation',on);vibra(40);ok()}
+    };
+    window.addEventListener('deviceorientation',on);
+    SHEET.limpia=()=>{vivo=false;window.removeEventListener('deviceorientation',on)};
+  },
+  _burbujaT(el,ok){
+    el.innerHTML=`<p class="g-ayuda">Sin sensor: arrastra la burbuja al centro y mantenla ahí 2,5 s.</p><div class="g-nivel" id="gP"><i class="g-diana"></i><i class="g-burb" id="gB"></i></div><p class="g-cuenta" id="gC">0%</p>`;
+    const pista=el.querySelector('#gP'),b=el.querySelector('#gB'),cta=el.querySelector('#gC'),R=45;
+    let acum=0,ultimo=performance.now(),vivo=true,activo=false,bx=0,by=0;
+    const loop=now=>{
+      if(!vivo||!el.isConnected)return;
+      const dt=(now-ultimo)/1000;ultimo=now;const d=Math.hypot(bx,by)/R;
+      if(activo&&d<0.22)acum+=dt;else acum=Math.max(0,acum-dt*1.4);
+      cta.textContent=Math.round(Math.min(1,acum/2.5)*100)+'%';
+      if(acum>=2.5){vivo=false;vibra(40);ok();return}
+      requestAnimationFrame(loop);
+    };requestAnimationFrame(loop);
+    const mueve=(cx,cy)=>{const r=pista.getBoundingClientRect();bx=Math.max(-R,Math.min(R,cx-(r.left+r.width/2)));by=Math.max(-R,Math.min(R,cy-(r.top+r.height/2)));b.style.transform=`translate(${bx}px,${by}px)`};
+    pista.onpointerdown=e=>{e.preventDefault();activo=true;try{pista.setPointerCapture(e.pointerId)}catch(_){}mueve(e.clientX,e.clientY)};
+    pista.onpointermove=e=>{if(activo)mueve(e.clientX,e.clientY)};
+    const suelta=()=>{activo=false};pista.onpointerup=suelta;pista.onpointercancel=suelta;
+  },
+  caja(el,ok){
+    el.innerHTML=`<p class="g-ayuda">Gira la rueda con el dedo. Alterna el sentido en cada número.</p><div class="g-caja"><div class="g-rueda" id="gR"><i></i></div><b class="g-num-caja" id="gN">0</b></div><p class="g-cuenta" id="gC"></p>`;
+    const rueda=el.querySelector('#gR'),marcaN=el.querySelector('#gN'),cta=el.querySelector('#gC');
+    const metas=[Math.floor(Math.random()*10)];while(metas.length<3){const n=Math.floor(Math.random()*10);if(n!==metas[metas.length-1])metas.push(n)}
+    let dirNec=Math.random()<0.5?1:-1,paso=0,angAcum=0,prevAng=null,desdeUltima=0;
+    const num=()=>(((Math.round(angAcum/(2*Math.PI)*10))%10)+10)%10;
+    const texto=()=>cta.textContent=`Gira a la ${dirNec>0?'derecha':'izquierda'}: busca el ${metas[paso]}`;texto();
+    const centro=()=>{const r=rueda.getBoundingClientRect();return {x:r.left+r.width/2,y:r.top+r.height/2}};
+    rueda.onpointerdown=e=>{e.preventDefault();try{rueda.setPointerCapture(e.pointerId)}catch(_){}const c=centro();prevAng=Math.atan2(e.clientY-c.y,e.clientX-c.x)};
+    rueda.onpointermove=e=>{
+      if(prevAng==null)return;const c=centro(),ang=Math.atan2(e.clientY-c.y,e.clientX-c.x);
+      let d=ang-prevAng;while(d>Math.PI)d-=2*Math.PI;while(d<-Math.PI)d+=2*Math.PI;
+      prevAng=ang;angAcum+=d;desdeUltima+=d;
+      rueda.style.transform=`rotate(${angAcum}rad)`;marcaN.textContent=num();
+      const enSentido=dirNec>0?desdeUltima>0.35:desdeUltima<-0.35;
+      if(num()===metas[paso]&&enSentido){
+        paso++;desdeUltima=0;dirNec=-dirNec;vibra(25);
+        if(paso>=3){vibra(40);rueda.onpointerdown=rueda.onpointermove=null;setTimeout(ok,150);return}
+        texto();
+      }
+    };
+    const suelta=()=>{prevAng=null};rueda.onpointerup=suelta;rueda.onpointercancel=suelta;
+  },
+  tuberias(el,ok){
+    const LADOS={recta:[['N','S'],['E','W'],['N','S'],['E','W']],codo:[['N','E'],['E','S'],['S','W'],['W','N']]};
+    const opuesto={N:'S',S:'N',E:'W',W:'E'},vec={N:[-1,0],S:[1,0],E:[0,1],W:[0,-1]};
+    const PATHS=[[[1,0],[1,1],[1,2]],[[1,0],[0,0],[0,1],[0,2],[1,2]],[[1,0],[2,0],[2,1],[2,2],[1,2]],[[1,0],[0,0],[0,1],[1,1],[1,2]],[[1,0],[2,0],[2,1],[1,1],[1,2]]];
+    const P=elige(PATHS);
+    const ladoEntre=(a,b)=>{const dr=b[0]-a[0],dc=b[1]-a[1];return dr===-1?'N':dr===1?'S':dc===-1?'W':'E'};
+    const tipoRot=(s1,s2)=>{for(const tipo of ['recta','codo'])for(let rot=0;rot<4;rot++){const [a,b]=LADOS[tipo][rot];if((a===s1&&b===s2)||(a===s2&&b===s1))return {tipo,rot}}};
+    const grid=Array.from({length:3},()=>Array.from({length:3},()=>{const tipo=Math.random()<.5?'recta':'codo';return {tipo,rot:Math.floor(Math.random()*4)}}));
+    const solucion=[];
+    P.forEach((c,i)=>{
+      const s1=i===0?'W':ladoEntre(c,P[i-1]),s2=i===P.length-1?'E':ladoEntre(c,P[i+1]);
+      const sol=tipoRot(s1,s2);let rot=sol.rot;while(rot===sol.rot)rot=Math.floor(Math.random()*4);
+      grid[c[0]][c[1]]={tipo:sol.tipo,rot};solucion.push({r:c[0],c:c[1],rot:sol.rot,clics:(sol.rot-rot+4)%4});
+    });
+    el._testSolucion=solucion; /* solo para pruebas automáticas; el juego real nunca lo lee */
+    const dibuja=()=>{
+      let h='';for(let r=0;r<3;r++)for(let c=0;c<3;c++){
+        const cel=grid[r][c],[a,b]=LADOS[cel.tipo][cel.rot],pt={N:'32,4',S:'32,60',E:'60,32',W:'4,32'};
+        h+=`<button class="g-tubo" data-r="${r}" data-c="${c}"><svg viewBox="0 0 64 64"><line x1="32" y1="32" x2="${pt[a].split(',')[0]}" y2="${pt[a].split(',')[1]}"/><line x1="32" y1="32" x2="${pt[b].split(',')[0]}" y2="${pt[b].split(',')[1]}"/><circle cx="32" cy="32" r="6"/></svg></button>`;
+      }
+      return h;
+    };
+    el.innerHTML=`<p class="g-ayuda">Gira las piezas hasta conectar la entrada (◀) con la salida (▶).</p><div class="g-tuberias"><span class="g-flecha g-izq">▶</span><div class="g-rej g3" id="gT">${dibuja()}</div><span class="g-flecha g-der">▶</span></div>`;
+    const cont=el.querySelector('#gT');
+    const tieneLado=(r,c,s)=>{const [a,b]=LADOS[grid[r][c].tipo][grid[r][c].rot];return a===s||b===s};
+    const conectado=()=>{
+      if(!tieneLado(1,0,'W'))return false;
+      const visto=Array.from({length:3},()=>Array(3).fill(false));const pila=[[1,0]];
+      while(pila.length){const [r,c]=pila.pop();if(visto[r][c])continue;visto[r][c]=true;
+        for(const d of ['N','S','E','W']){if(!tieneLado(r,c,d))continue;const [r2,c2]=[r+vec[d][0],c+vec[d][1]];if(r2<0||r2>2||c2<0||c2>2)continue;if(!visto[r2][c2]&&tieneLado(r2,c2,opuesto[d]))pila.push([r2,c2])}}
+      return visto[1][2]&&tieneLado(1,2,'E');
+    };
+    const enlaza=()=>cont.querySelectorAll('.g-tubo').forEach(b=>b.onclick=()=>{
+      const r=+b.dataset.r,c=+b.dataset.c;grid[r][c].rot=(grid[r][c].rot+1)%4;cont.innerHTML=dibuja();enlaza();
+      if(conectado()){cont.querySelectorAll('.g-tubo').forEach(x=>{x.disabled=true;x.classList.add('hecho')});vibra(40);setTimeout(ok,300)}
+    });
+    enlaza();
+  },
+  patron(el,ok){
+    el.innerHTML=`<p class="g-ayuda" id="gA">Memoriza el patrón…</p><div class="g-patron" id="gP"><svg class="g-svg"></svg>${Array.from({length:9},(_,i)=>`<i class="g-punto" data-i="${i}" style="left:${(i%3)*70+35}px;top:${Math.floor(i/3)*70+35}px"></i>`).join('')}</div>`;
+    const cont=el.querySelector('#gP'),svg=el.querySelector('svg'),A=el.querySelector('#gA'),pts=[...el.querySelectorAll('.g-punto')];
+    const pos=i=>({x:(i%3)*70+35,y:Math.floor(i/3)*70+35});
+    const seq=barajar([0,1,2,3,4,5,6,7,8]).slice(0,4+Math.floor(Math.random()*2));
+    let fase='mira',marcado=[],trazando=false;
+    const muestra=()=>{
+      fase='mira';A.textContent='Memoriza el patrón…';svg.innerHTML='';pts.forEach(p=>p.classList.remove('on'));marcado=[];
+      let k=0;const paso=()=>{
+        if(!el.isConnected)return;
+        if(k>0){const a=pos(seq[k-1]),b=pos(seq[k]);svg.insertAdjacentHTML('beforeend',`<line x1="${a.x}" y1="${a.y}" x2="${b.x}" y2="${b.y}" stroke="var(--sonar)" stroke-width="6" stroke-linecap="round"/>`)}
+        pts[seq[k]].classList.add('on');k++;
+        if(k<seq.length)setTimeout(paso,420);else setTimeout(()=>{if(!el.isConnected)return;fase='dibuja';A.textContent='Ahora repítelo';svg.innerHTML='';pts.forEach(p=>p.classList.remove('on'))},700);
+      };setTimeout(paso,500);
+    };muestra();
+    const idx=(cx,cy)=>{for(const p of pts){const b=p.getBoundingClientRect();if(Math.hypot(cx-(b.left+b.width/2),cy-(b.top+b.height/2))<26)return +p.dataset.i}return -1};
+    const marca=i=>{
+      if(marcado.includes(i))return;
+      if(seq[marcado.length]!==i){A.textContent='Ese no era. Otra vez.';vibra(30);svg.innerHTML='';pts.forEach(p=>p.classList.remove('on'));trazando=false;setTimeout(muestra,700);return}
+      if(marcado.length){const a=pos(marcado[marcado.length-1]),b=pos(i);svg.insertAdjacentHTML('beforeend',`<line x1="${a.x}" y1="${a.y}" x2="${b.x}" y2="${b.y}" stroke="var(--ok)" stroke-width="6" stroke-linecap="round"/>`)}
+      marcado.push(i);pts[i].classList.add('on');
+      if(marcado.length===seq.length){trazando=false;vibra(40);setTimeout(ok,250)}
+    };
+    cont.onpointerdown=e=>{if(fase!=='dibuja')return;e.preventDefault();trazando=true;const i=idx(e.clientX,e.clientY);if(i>=0)marca(i)};
+    cont.onpointermove=e=>{if(!trazando||fase!=='dibuja')return;const i=idx(e.clientX,e.clientY);if(i>=0)marca(i)};
+    const suelta=()=>{trazando=false};cont.onpointerup=suelta;cont.onpointercancel=suelta;
+  },
+  radio(el,ok){
+    const fT=3+Math.random()*4,aT=20+Math.random()*22;
+    el._testSolucion={f:fT,a:aT}; /* solo para pruebas automáticas; el juego real nunca lo lee */
+    el.innerHTML=`<p class="g-ayuda">Ajusta frecuencia y amplitud hasta igualar la señal (línea de puntos).</p>
+    <svg viewBox="0 0 280 100" class="g-onda"><path id="gTgt" stroke="var(--niebla)" stroke-dasharray="4 4" fill="none" stroke-width="2"></path><path id="gCur" stroke="var(--sonar)" fill="none" stroke-width="3"></path></svg>
+    <p class="g-lbl">Frecuencia</p><input id="gF" type="range" min="1" max="8" step="0.1" value="4"><p class="g-lbl">Amplitud</p><input id="gAmp" type="range" min="4" max="45" step="1" value="24"><p class="g-cuenta" id="gC">0%</p>`;
+    const onda=(f,a)=>{let d='M0,50';for(let x=0;x<=280;x+=4)d+=` L${x},${(50+a*Math.sin(x/280*f*2*Math.PI)).toFixed(1)}`;return d};
+    el.querySelector('#gTgt').setAttribute('d',onda(fT,aT));
+    const cur=el.querySelector('#gCur'),fI=el.querySelector('#gF'),aI=el.querySelector('#gAmp'),cta=el.querySelector('#gC');
+    let acum=0,ultimo=performance.now(),vivo=true;
+    const dibuja=()=>cur.setAttribute('d',onda(+fI.value,+aI.value));dibuja();
+    fI.oninput=dibuja;aI.oninput=dibuja;
+    const loop=now=>{
+      if(!vivo||!el.isConnected)return;
+      const dt=(now-ultimo)/1000;ultimo=now;const cerca=Math.abs(+fI.value-fT)<0.35&&Math.abs(+aI.value-aT)<4;
+      if(cerca){acum+=dt;cur.setAttribute('stroke',acum>1?'var(--ok)':'var(--sonar)')}else acum=Math.max(0,acum-dt);
+      cta.textContent=Math.round(Math.min(1,acum/1.4)*100)+'%';
+      if(acum>=1.4){vivo=false;vibra(40);ok();return}
+      requestAnimationFrame(loop);
+    };requestAnimationFrame(loop);
+  },
+  limpiar(el,ok){
+    const COLS=12,ROWS=8,total=COLS*ROWS;
+    el.innerHTML=`<p class="g-ayuda">Frota la pantalla con el dedo hasta dejarla limpia.</p><div class="g-sucio" id="gS">${Array.from({length:total},()=>'<i></i>').join('')}</div><p class="g-cuenta" id="gC">0%</p>`;
+    const cont=el.querySelector('#gS'),cta=el.querySelector('#gC'),celdas=[...cont.children];
+    let limpias=0,activo=false;
+    const limpia=(cx,cy)=>{
+      const r=cont.getBoundingClientRect();if(cx<r.left||cx>r.right||cy<r.top||cy>r.bottom)return;
+      const col=Math.min(COLS-1,Math.max(0,Math.floor((cx-r.left)/r.width*COLS))),fila=Math.min(ROWS-1,Math.max(0,Math.floor((cy-r.top)/r.height*ROWS)));
+      for(const [dc,df] of [[0,0],[1,0],[-1,0],[0,1],[0,-1]]){
+        const c=col+dc,f=fila+df;if(c<0||c>=COLS||f<0||f>=ROWS)continue;
+        const cel=celdas[f*COLS+c];if(!cel.classList.contains('ok')){cel.classList.add('ok');limpias++}
+      }
+      const pct=Math.round(limpias/total*100);cta.textContent=pct+'%';
+      if(pct>=90){cont.onpointerdown=cont.onpointermove=null;vibra(40);ok()}
+    };
+    cont.onpointerdown=e=>{e.preventDefault();activo=true;try{cont.setPointerCapture(e.pointerId)}catch(_){}limpia(e.clientX,e.clientY)};
+    cont.onpointermove=e=>{if(activo)limpia(e.clientX,e.clientY)};
+    const suelta=()=>{activo=false};cont.onpointerup=suelta;cont.onpointercancel=suelta;
+  },
+  deposito(el,ok){
+    const lo=55+Math.random()*10,hi=lo+12;
+    el.innerHTML=`<p class="g-ayuda">Mantén pulsado para llenar. Suelta cuando el nivel esté entre las marcas: si se pasa, se derrama.</p>
+    <div class="g-dep"><i class="g-marca" style="bottom:${lo}%"></i><i class="g-marca" style="bottom:${hi}%"></i><i class="g-agua" id="gAg"></i></div>
+    <button class="b-baliza b-ancho g-llenar" id="gB">Mantener para llenar</button><p class="g-cuenta" id="gC"></p>`;
+    const agua=el.querySelector('#gAg'),btn=el.querySelector('#gB'),cta=el.querySelector('#gC');
+    let nivel=0,activo=false,vivo=true,ultimo=performance.now();
+    const loop=now=>{
+      if(!vivo||!el.isConnected)return;
+      const dt=(now-ultimo)/1000;ultimo=now;
+      if(activo){nivel+=dt*38;if(nivel>=100){nivel=0;cta.textContent='Se ha derramado. Otra vez.';vibra(60);activo=false;btn.classList.remove('activo')}}
+      agua.style.height=nivel+'%';requestAnimationFrame(loop);
+    };requestAnimationFrame(loop);
+    btn.onpointerdown=e=>{e.preventDefault();if(!vivo)return;activo=true;btn.classList.add('activo');try{btn.setPointerCapture(e.pointerId)}catch(_){}};
+    const suelta=()=>{
+      if(!activo)return;activo=false;btn.classList.remove('activo');
+      if(nivel>=lo&&nivel<=hi){vivo=false;vibra(40);cta.textContent='Justo';setTimeout(ok,200)}
+      else cta.textContent=nivel<lo?'Aún no llega a la marca':'';
+    };
+    btn.onpointerup=suelta;btn.onpointercancel=suelta;
+  },
+  agitar(el,ok){
+    el.innerHTML=`<p class="g-ayuda">Comprobando el sensor de movimiento…</p>`;
+    detectaSensor('devicemotion',permisoMotion).then(hay=>{if(!el.isConnected)return;hay?JUEGOS._agitarS(el,ok):JUEGOS._agitarT(el,ok)});
+  },
+  _agitarS(el,ok){
+    el.innerHTML=`<p class="g-ayuda">Agita el móvil hasta llenar la barra.</p><div class="g-hold"><span>Agitando…</span><i id="gBar"></i></div>`;
+    const bar=el.querySelector('#gBar');let nivel=0,prev=null,vivo=true;
+    const on=e=>{
+      if(!vivo)return;const a=e.accelerationIncludingGravity||e.acceleration;if(!a)return;
+      const mag=Math.hypot(a.x||0,a.y||0,a.z||0);
+      if(prev!=null){const jerk=Math.abs(mag-prev);if(jerk>7){nivel=Math.min(1,nivel+jerk/220);bar.style.transform=`scaleX(${nivel})`;if(nivel>=1){vivo=false;window.removeEventListener('devicemotion',on);clearInterval(dren);vibra(40);ok();return}}}
+      prev=mag;
+    };
+    window.addEventListener('devicemotion',on);
+    const dren=setInterval(()=>{if(!vivo)return;nivel=Math.max(0,nivel-.02);bar.style.transform=`scaleX(${nivel})`},200);
+    SHEET.limpia=()=>{vivo=false;window.removeEventListener('devicemotion',on);clearInterval(dren)};
+  },
+  _agitarT(el,ok){
+    el.innerHTML=`<p class="g-ayuda">Sin sensor de movimiento: toca rápido para llenar la barra.</p><button class="g-hold" id="gB"><span>Toca rápido</span><i id="gBar"></i></button>`;
+    const btn=el.querySelector('#gB'),bar=el.querySelector('#gBar');let nivel=0,vivo=true;
+    btn.onpointerdown=e=>{e.preventDefault();if(!vivo)return;nivel=Math.min(1,nivel+.11);bar.style.transform=`scaleX(${nivel})`;if(nivel>=1){vivo=false;clearInterval(dren);vibra(40);ok()}};
+    const dren=setInterval(()=>{if(!vivo)return;nivel=Math.max(0,nivel-.025);bar.style.transform=`scaleX(${nivel})`},200);
+    SHEET.limpia=()=>{vivo=false;clearInterval(dren)};
+  },
+  soplar(el,ok){
+    el.innerHTML=`<p class="g-ayuda">Comprobando el micro…</p>`;
+    if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){JUEGOS._soplarT(el,ok);return}
+    navigator.mediaDevices.getUserMedia({audio:true}).then(stream=>{
+      if(!el.isConnected){stream.getTracks().forEach(t=>t.stop());return}JUEGOS._soplarS(el,ok,stream);
+    }).catch(()=>{if(el.isConnected)JUEGOS._soplarT(el,ok)});
+  },
+  _soplarS(el,ok,stream){
+    el.innerHTML=`<p class="g-ayuda">Sopla al móvil hasta despejarlo.</p><div class="g-vaho" id="gV"></div><p class="g-cuenta" id="gC">0%</p>`;
+    const vaho=el.querySelector('#gV'),cta=el.querySelector('#gC');
+    const C=window.AudioContext||window.webkitAudioContext,ctx=new C(),src=ctx.createMediaStreamSource(stream),an=ctx.createAnalyser();
+    an.fftSize=512;src.connect(an);const buf=new Uint8Array(an.fftSize);let nivel=0,vivo=true;
+    const parar=()=>{try{ctx.close()}catch(e){}try{stream.getTracks().forEach(t=>t.stop())}catch(e){}};
+    const loop=()=>{
+      if(!vivo||!el.isConnected)return;
+      an.getByteTimeDomainData(buf);let suma=0;for(let i=0;i<buf.length;i++){const v=(buf[i]-128)/128;suma+=v*v}
+      const rms=Math.sqrt(suma/buf.length);
+      if(rms>0.09)nivel=Math.min(1,nivel+0.02);else nivel=Math.max(0,nivel-0.01);
+      vaho.style.opacity=1-nivel;cta.textContent=Math.round(nivel*100)+'%';
+      if(nivel>=1){vivo=false;parar();vibra(40);ok();return}
+      requestAnimationFrame(loop);
+    };requestAnimationFrame(loop);
+    SHEET.limpia=()=>{vivo=false;parar()};
+  },
+  _soplarT(el,ok){
+    el.innerHTML=`<p class="g-ayuda">Sin micro: mantén pulsado hasta despejarlo.</p><div class="g-vaho" id="gV"></div><button class="b-baliza b-ancho" id="gB">Mantener</button>`;
+    const vaho=el.querySelector('#gV'),btn=el.querySelector('#gB');let nivel=0,activo=false,vivo=true,ultimo=performance.now();
+    const loop=now=>{
+      if(!vivo||!el.isConnected)return;const dt=(now-ultimo)/1000;ultimo=now;
+      if(activo)nivel=Math.min(1,nivel+dt*.5);else nivel=Math.max(0,nivel-dt*.3);
+      vaho.style.opacity=1-nivel;
+      if(nivel>=1){vivo=false;vibra(40);ok();return}
+      requestAnimationFrame(loop);
+    };requestAnimationFrame(loop);
+    btn.onpointerdown=e=>{e.preventDefault();activo=true;try{btn.setPointerCapture(e.pointerId)}catch(_){}};
+    const suelta=()=>{activo=false};btn.onpointerup=suelta;btn.onpointercancel=suelta;
+  },
+  parejas(el,ok){
+    const emojis=['🔑','⭐','🍀','🎈'],cartas=barajar([...emojis,...emojis]);
+    el.innerHTML=`<p class="g-ayuda">Encuentra las 4 parejas.</p><div class="g-rej g4">${cartas.map((e,i)=>`<button class="g-c g-carta" data-i="${i}" data-e="${e}">?</button>`).join('')}</div>`;
+    const btns=[...el.querySelectorAll('.g-carta')];let abiertas=[],bloq=false,encontradas=0;
+    btns.forEach(b=>b.onclick=()=>{
+      if(bloq||b.classList.contains('hecho')||abiertas.includes(b))return;
+      b.textContent=b.dataset.e;b.classList.add('on');abiertas.push(b);
+      if(abiertas.length===2){bloq=true;
+        if(abiertas[0].dataset.e===abiertas[1].dataset.e){
+          abiertas.forEach(x=>x.classList.add('hecho'));encontradas++;abiertas=[];bloq=false;
+          if(encontradas===4){vibra(40);setTimeout(ok,300)}
+        }else setTimeout(()=>{abiertas.forEach(x=>{x.textContent='?';x.classList.remove('on')});abiertas=[];bloq=false},700);
+      }
+    });
+  },
+  polillas(el,ok){
+    el.innerHTML=`<p class="g-ayuda">Toca los bichos antes de que crucen la pantalla. 6 en total.</p><div class="g-jardin" id="gJ"></div><p class="g-cuenta" id="gC">0 de 6</p>`;
+    const cont=el.querySelector('#gJ'),cta=el.querySelector('#gC');let cazadas=0,vivo=true,vivos=[];
+    const nueva=()=>{
+      if(!vivo||!el.isConnected)return;
+      const y=8+Math.random()*74,dur=2200+Math.random()*1800,derecha=Math.random()<0.5;
+      const b=document.createElement('button');b.className='g-polilla';b.textContent='🦋';b.setAttribute('aria-label','Bicho');
+      b.style.top=y+'%';b.style.left=(derecha?-8:108)+'%';cont.appendChild(b);vivos.push(b);
+      const t0=performance.now();
+      const paso=now=>{if(!b.isConnected)return;const p=Math.min(1,(now-t0)/dur);b.style.left=(derecha?-8+p*116:108-p*116)+'%';if(p<1)requestAnimationFrame(paso);else fuera()};requestAnimationFrame(paso);
+      const fuera=()=>{if(b.isConnected)b.remove();vivos=vivos.filter(x=>x!==b);if(vivo)nueva()};
+      b.onpointerdown=e=>{e.preventDefault();if(!b.isConnected)return;b.remove();vivos=vivos.filter(x=>x!==b);cazadas++;cta.textContent=cazadas+' de 6';vibra(20);
+        if(cazadas>=6){vivo=false;vivos.forEach(x=>x.remove());vivos=[];vibra(40);setTimeout(ok,200);return}
+        nueva();
+      };
+    };
+    nueva();nueva();
+    SHEET.limpia=()=>{vivo=false;vivos.forEach(x=>x.remove());vivos=[]};
   }
 };
 
@@ -1997,6 +2353,9 @@ const ACT={
   votar(d){accion('vote',{target:d.p})},
   verPapel(){ROLVIS=Date.now()<ROLVIS?0:Date.now()+3500},
   revelar(){REVELA=true;vibra(30)},
+  galeria(){abrirSheet(vGaleria(),{})},
+  galeriaAbre(d){galeriaJuego(d.g)},
+  galeriaOtra(d){galeriaJuego(d.g)},
   entendido(){LS.set('imp.rol.'+S.gid,1);REVELA=false;despierto()},
   terminar(){abrirSheet(`<h2>¿Terminar la partida?</h2><p class="tenue">Se acaba para todos y se muestran los papeles.</p><button class="b-alarma b-ancho" data-a="terminarOk">Terminar</button>`)},
   terminarOk(){accion('end');cerrarSheet()},
