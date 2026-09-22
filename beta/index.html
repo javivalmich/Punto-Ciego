@@ -781,14 +781,29 @@ function progreso(st){
   let h=0,t=0;for(const p of st.players)if(p.role==='crew')for(const k of p.tasks||[]){t+=k.steps.length;h+=Math.min(k.done,k.steps.length)}
   return {hechas:h,total:t};
 }
+/* nImp siempre >= 1 (maxImp nunca da 0), así que nunca puede empezar una partida sin impostor */
+function elegeImpostores(st,nImp){
+  const ids=st.players.map(p=>p.id);if(nImp>=ids.length)return ids;
+  const rachas=st.racha||{},pool=ids.map(id=>({id,w:1+Math.min(rachas[id]||0,12)}));
+  const orden=[];
+  for(let k=0;k<nImp&&pool.length;k++){
+    const tot=pool.reduce((s,x)=>s+x.w,0);let r=Math.random()*tot,i=0;
+    while(i<pool.length-1&&r>=pool[i].w){r-=pool[i].w;i++}
+    orden.push(pool[i].id);pool.splice(i,1);
+  }
+  return orden;
+}
 function empezar(st,now){
   const rooms=salas(st);if(st.players.length<4||rooms.length<2)return;
   const n=st.players.length,nImp=Math.min(st.cfg.imp,maxImp(n));
-  const orden=barajar(st.players.map(p=>p.id)).slice(0,nImp);
+  const orden=elegeImpostores(st,nImp);
   if(st.pruebas&&st.pr&&st.pr.rol!=='azar')ajustaPapel(st,orden);
+  const rachas=st.racha||(st.racha={});
   st.players.forEach(p=>{
-    p.role=orden.includes(p.id)?'imp':'crew';p.dead=false;p.body=false;p.ejected=false;
+    const esImp=orden.includes(p.id);
+    p.role=esImp?'imp':'crew';p.dead=false;p.body=false;p.ejected=false;
     p.emerg=st.cfg.emerg;p.kcd=now+st.cfg.killCd*1000;p.tasks=generarTareas(rooms,st.cfg.tasks);
+    rachas[p.id]=esImp?0:(rachas[p.id]||0)+1; /* se reinicia en cuanto le toca */
   });
   st.phase='play';st.gid=uid(6);st.sab=null;st.locks=[];st.sabCd=now+20000;st.meet=null;st.end=null;st.notice=null;
   st.log=[{t:now,txt:'Empieza la partida'}];st.t0=now;
@@ -850,8 +865,9 @@ function reducir(st,a,now,local){
   }
   case 'leave':
     if(st.phase!=='lobby'||!p)return true;
-    st.players=st.players.filter(x=>x!==p);if(esHost&&st.players.length)st.hostId=(st.players.find(x=>!x.bot)||st.players[0]).id;return true;
-  case 'kick':if(esHost&&st.phase==='lobby'&&a.target!==st.hostId)st.players=st.players.filter(x=>x.id!==a.target);return true;
+    st.players=st.players.filter(x=>x!==p);if(esHost&&st.players.length)st.hostId=(st.players.find(x=>!x.bot)||st.players[0]).id;
+    if(st.racha)delete st.racha[p.id];return true;
+  case 'kick':if(esHost&&st.phase==='lobby'&&a.target!==st.hostId){st.players=st.players.filter(x=>x.id!==a.target);if(st.racha)delete st.racha[a.target]}return true;
   case 'cfg':if(esHost&&st.phase==='lobby')st.cfg=limpiaCfg(a.cfg,st.cfg);return true;
   case 'start':if(esHost&&st.phase==='lobby')empezar(st,now);return true;
   case 'end':if(esHost&&st.phase!=='lobby'){st.phase='end';st.end={w:null,why:'El anfitrión ha terminado la partida',t:now};st.sab=null;st.meet=null}return true;
