@@ -9,19 +9,19 @@
          PJ.aplica() (monta/actualiza los <canvas data-v>) · PJ.config({...})                          */
 (function(G){
 'use strict';
-const PJ={estado:'sin',onCambio:null,cfg:{antialias:true,bin:'assets/personaje.bin?v=4'}};
+const PJ={estado:'sin',onCambio:null,cfg:{antialias:true,bin:'assets/personaje.bin?v=5'}};
 G.PJ=PJ;
 
 /* ---------- shaders ---------- */
 const VS=`
-attribute vec4 aP;   // posición ACTUAL (hoy = reposo; con esqueleto será la malla deformada)
-attribute vec4 aR;   // posición en REPOSO (zonas y estampados); w = campo de la unión capucha/cuello
+attribute vec3 aP;   // posición ACTUAL (hoy = reposo; con esqueleto será la malla deformada)
+attribute vec3 aR;   // posición en REPOSO (estampados)
+attribute float aZ;  // zona de este vértice (1 sudadera, 2 capucha, 3 cara, 4 ojos, 5 guantes, 6 pantalón, 7 mochila y correas, 8 zapatillas)
 attribute vec4 aN;   // normal (xyz) y oclusión ambiental (w)
-attribute vec4 aF;   // campos horneados en reposo: x = asas de la mochila (distancia con signo, unidades de 0,5 mm)
 uniform mat4 uMV; uniform mat4 uProj; uniform mat3 uNM; uniform vec3 uExt;
-varying vec3 vN; varying vec3 vR; varying vec3 vNo; varying float vAO; varying vec3 vV; varying float vS; varying float vSt;
+varying vec3 vN; varying vec3 vR; varying vec3 vNo; varying float vAO; varying vec3 vV; varying float vZ;
 void main(){
-  vec3 p=aP.xyz*uExt; vR=aR.xyz*uExt; vSt=aF.x*0.0005; vS=aR.w;   // aR.w: distancia con signo a la unión capucha/cuello, horneada en reposo
+  vec3 p=aP*uExt; vR=aR*uExt; vZ=aZ;   // la malla está cortada por zonas: cada vértice pertenece a una sola, sin mezcla por interpolación
   vec3 n=aN.xyz*2.0-1.0;
   vN=uNM*n; vNo=n; vAO=aN.w;
   vec4 v=uMV*vec4(p,1.0); vV=v.xyz;
@@ -33,38 +33,34 @@ precision highp float;
 #else
 precision mediump float;
 #endif
-varying vec3 vN; varying vec3 vR; varying vec3 vNo; varying float vAO; varying vec3 vV; varying float vS; varying float vSt;
-uniform vec3 uCloth,uPants,uShoes,uPack,uHood,uFace,uEye,uGlove,uRimC; uniform float uPat,uPatP,uW,uGray,uAlpha,uRimK,uMask; uniform mat3 uNM;
+varying vec3 vN; varying vec3 vR; varying vec3 vNo; varying float vAO; varying vec3 vV; varying float vZ;
+uniform vec3 uCloth,uPants,uShoes,uPack,uHood,uFace,uEye,uGlove,uRimC; uniform float uPat,uPatP,uGray,uAlpha,uRimK,uMask,uAoK; uniform mat3 uNM;
+#ifdef DERIV
+float fw1(float x){return fwidth(x);}
+#else
+float fw1(float x){return 0.02;}
+#endif
 vec3 lin(vec3 c){return pow(c,vec3(2.2));}
 float hash(vec3 p){p=fract(p*0.3183099+vec3(.1,.2,.3));p*=17.0;return fract(p.x*p.y*p.z*(p.x+p.y+p.z));}
 float vnoise(vec3 x){vec3 i=floor(x),f=fract(x);f=f*f*(3.0-2.0*f);
   return mix(mix(mix(hash(i),hash(i+vec3(1,0,0)),f.x),mix(hash(i+vec3(0,1,0)),hash(i+vec3(1,1,0)),f.x),f.y),
              mix(mix(hash(i+vec3(0,0,1)),hash(i+vec3(1,0,1)),f.x),mix(hash(i+vec3(0,1,1)),hash(i+vec3(1,1,1)),f.x),f.y),f.z);}
-// estampado pegado al objeto (coordenadas en reposo): id 0 liso, 1 rayas, 2 cuadros, 3 camuflaje
+// onda cuadrada con borde suavizado por el tamaño del píxel: 0 en las casillas pares, 1 en las impares (bordes en los enteros)
+float onda(float f){ float w=min(fw1(f),0.6); float s=0.5-0.5*clamp(sin(3.14159265*f)/(3.14159265*w*0.9+1e-4),-1.0,1.0); return mix(s,0.5,smoothstep(0.35,0.8,w)); }
+// estampado pegado al objeto (coordenadas en reposo): id 0 liso, 1 rayas, 2 cuadros, 3 camuflaje. Con antialiasing: sin dientes al verse pequeño
 float estampado(float id,vec3 P,vec3 vNo){
   if(id<0.5)return 1.0;
-  if(id<1.5)return mod(floor(P.y*26.0),2.0)<0.5?1.0:0.6;
-  if(id<2.5){ vec3 a=abs(vNo); vec2 uv=(a.z>=a.x&&a.z>=a.y)?P.xy:((a.x>=a.y)?P.zy:P.xz); vec2 c=floor(uv*19.0); return mod(c.x+c.y,2.0)<0.5?1.0:0.62; }
-  float q=vnoise(P*7.0)*0.65+vnoise(P*15.0+7.0)*0.35; return q>0.62?0.5:(q>0.42?0.8:1.04);
+  if(id<1.5)return mix(1.0,0.6,onda(P.y*26.0));
+  if(id<2.5){ vec3 a=abs(vNo); vec2 uv=((a.z>=a.x&&a.z>=a.y)?P.xy:((a.x>=a.y)?P.zy:P.xz))*19.0; float sx=onda(uv.x),sy=onda(uv.y); return mix(1.0,0.62,sx+sy-2.0*sx*sy); }
+  float q=vnoise(P*7.0)*0.65+vnoise(P*15.0+7.0)*0.35; float w=min(fw1(q)*0.8,0.06)+0.003;
+  return mix(mix(1.04,0.8,smoothstep(0.42-w,0.42+w,q)),0.5,smoothstep(0.62-w,0.62+w,q));
 }
 void main(){
-  vec3 n=normalize(vN); vec3 V=normalize(-vV);
-  float w=uW; vec3 P=vR;
-  // zonas por píxel a partir de la posición en reposo
-  float qL=length(vec2(P.x/0.44,(P.y-0.43)/0.35)); float sdH=max(vS,min((1.0-qL)*0.36,P.z-0.1));   // cúpula (línea de unión horneada) + reborde que rodea la cara
-  float qF=length(vec2(P.x/0.385,(P.y-0.43)/0.315)); float sdF=min((1.0-qF)*0.33,(P.z-0.05));
-  // la cara es una esfera: todo lo que está sobre ella (hasta el borde de la capucha) es cara, también por los lados y abajo
-  vec3 nS=normalize(P-vec3(0.0,0.44,-0.017));
-  float sdFs=min(min(0.008-abs(length(P-vec3(0.0,0.44,-0.017))-0.503),P.z-0.1),min(min(P.y-0.09,0.44-abs(P.x)),(dot(nS,normalize(vNo))-0.97)*0.3));   // la normal debe coincidir con la de la esfera: descarta cruces con la cúpula
-  sdF=max(sdF,sdFs);
-  float ex=abs(P.x)-0.194; float sdE=(1.0-length(vec2(ex/0.052,(P.y-0.355)/0.112)))*0.055; if(P.z<0.2)sdE=-1.0;
-  vec2 gp=vec2(abs(P.x)-0.455,P.y+0.545); float sdG=min((1.0-length(vec3(gp.x/0.10,gp.y/0.115,(P.z-0.03)/0.14)))*0.11,-0.455-P.y);
-  float sdPn=-0.575-P.y;                                                          // pantalón y zapatillas: por debajo del borde de la sudadera
-  float sdSh=max(-0.80-P.y,min(P.z-0.12,-0.762-P.y));                                                          // zapatillas: por debajo del bajo del pantalón
-  float sdPk=max(min(min(-0.30-P.z,0.44-abs(P.x)),min(P.y+0.56,0.02-P.y)),vSt);    // mochila: bloque en la espalda + asas (campo horneado)
-  float mPn=smoothstep(-w,w,sdPn), mSh=smoothstep(-w,w,sdSh), mPk=smoothstep(-w,w,sdPk);
-  float mH=smoothstep(-w,w,sdH), mF=smoothstep(-w,w,sdF), mE=smoothstep(-w,w,sdE), mG=smoothstep(-w,w,sdG);
-  if(uMask>0.5){ float l=1.0; if(sdPn>0.0)l=6.0; if(sdSh>0.0)l=8.0; if(sdPk>0.0)l=7.0; if(sdH>0.0)l=2.0; if(sdF>0.0)l=3.0; if(sdG>0.0)l=5.0; if(sdE>0.0)l=4.0; gl_FragColor=vec4(vec3(l*30.0/255.0),1.0); return; }
+  vec3 n=normalize(vN); vec3 V=normalize(-vV); vec3 P=vR;
+  float z=floor(vZ+0.5);
+  if(uMask>0.5){ gl_FragColor=vec4(vec3(z*30.0/255.0),1.0); return; }
+  float mH=step(abs(z-2.0),0.5), mF=step(abs(z-3.0),0.5), mE=step(abs(z-4.0),0.5), mG=step(abs(z-5.0),0.5);
+  float mPn=step(abs(z-6.0),0.5), mPk=step(abs(z-7.0),0.5), mSh=step(abs(z-8.0),0.5);
   // la cara es una esfera lisa: su normal exacta evita reflejos rotos por el ruido de la malla
   n=normalize(mix(n,normalize(uNM*normalize(P-vec3(0.0,0.44,-0.017))),mF));
   float tS=estampado(uPat,P,vNo), tP=estampado(uPatP,P,vNo);
@@ -72,24 +68,27 @@ void main(){
   vec3 alb=uCloth*tS;
   alb=mix(alb,uPants*tP,mPn); alb=mix(alb,uShoes,mSh); alb=mix(alb,uPack,mPk);   // mochila y zapatillas siempre lisas
   alb=mix(alb,uHood,mH); alb=mix(alb,uFace,mF); alb=mix(alb,uEye,mE); alb=mix(alb,uGlove,mG);
-  float isFace=mF*(1.0-mE), isEye=mE, isGlove=mG*(1.0-mF), isHood=mH*(1.0-mF);
+  float isFace=mF, isEye=mE, isGlove=mG, isHood=mH;
   vec3 Lk=normalize(vec3(-0.55,0.75,0.65)), Lf=normalize(vec3(0.85,0.15,0.45)), Lr=normalize(vec3(0.2,0.35,-1.0));
-  float ao=mix(1.0,vAO,0.92); ao=ao*ao*(3.0-2.0*ao)*0.35+ao*0.65;
+  float ao=mix(1.0,vAO,0.92*uAoK); ao=ao*ao*(3.0-2.0*ao)*0.35+ao*0.65;
+  ao=mix(ao,1.0,0.40*mG);   // guantes: la oclusión bajo el puño no debe verse como una sombra gris
   float wrap=0.35;
   float dk=clamp((dot(n,Lk)+wrap)/(1.0+wrap),0.0,1.0), df=clamp((dot(n,Lf)+0.2)/1.2,0.0,1.0), dr=clamp(dot(n,Lr),0.0,1.0);
   vec3 amb=mix(vec3(0.26,0.22,0.24),vec3(0.62,0.68,0.80),n.y*0.5+0.5);
   vec3 light=amb*0.62*ao + vec3(1.0,0.93,0.84)*dk*1.05*mix(0.35,1.0,ao) + vec3(0.55,0.68,0.95)*df*0.34*ao + vec3(0.9,0.95,1.0)*dr*0.35*ao;
   vec3 col=lin(alb)*light*mix(gr,1.0,mF+mE+mG*0.6);
-  float fr=pow(1.0-clamp(dot(n,V),0.0,1.0),3.0);
+  float ndv=clamp(dot(n,V),0.0,1.0), fr=pow(1.0-ndv,3.0);
   col+=lin(mix(alb,vec3(1.0),0.35))*fr*0.16*ao*(1.0-isFace);
-  vec3 H=normalize(Lk+V); float sp=pow(clamp(dot(n,H),0.0,1.0),isFace>0.5?90.0:(isGlove>0.5?24.0:12.0));
-  col+=vec3(1.0,0.97,0.92)*sp*(isFace*0.6+isGlove*0.10+isHood*0.04+(1.0-isFace-isGlove-isHood)*0.03);
-  vec3 R=reflect(-V,n); float env=smoothstep(-0.2,0.9,R.y); col+=vec3(0.30,0.36,0.50)*env*fr*0.8*isFace;
-  vec3 H2=normalize(Lf+V); col+=vec3(0.5,0.65,1.0)*pow(clamp(dot(n,H2),0.0,1.0),60.0)*0.35*isFace;
+  vec3 H=normalize(Lk+V); float sp=pow(clamp(dot(n,H),0.0,1.0),isGlove>0.5?24.0:12.0);
+  col+=vec3(1.0,0.97,0.92)*sp*(isGlove*0.10+isHood*0.04+(1.0-isFace-isGlove-isHood)*0.03);
+  // visera: un solo brillo pequeño y definido + un reflejo de contorno muy suave
+  float hl=smoothstep(0.9935,0.9975,dot(n,H));
+  col+=vec3(1.0,0.98,0.95)*hl*0.95*isFace;
+  col+=vec3(0.28,0.34,0.50)*fr*0.20*isFace;
   col=mix(col,lin(uEye)*(0.92+0.25*dk),isEye);
   // estados: muerto (gris) y luz de contorno (impostor: roja, fantasma: azulada)
   float lum=dot(col,vec3(0.3,0.59,0.11)); col=mix(col,vec3(lum),uGray)*mix(1.0,0.78,uGray);
-  col+=uRimC*pow(1.0-clamp(dot(n,V),0.0,1.0),2.2)*uRimK*(0.4+0.6*ao);
+  col+=uRimC*pow(1.0-ndv,2.2)*uRimK*(0.4+0.6*ao);
   col=col/(1.0+col*0.16)*1.06;
   vec3 o=pow(clamp(col,0.0,1.0),vec3(1.0/2.2));
   gl_FragColor=vec4(o*uAlpha,uAlpha);
@@ -116,21 +115,23 @@ function creaGL(){
   if(!gl)throw new Error('sin WebGL');
   GL.gl=gl;GL.lose=gl.getExtension('WEBGL_lose_context');
   const sh=(t,s)=>{const o=gl.createShader(t);gl.shaderSource(o,s);gl.compileShader(o);if(!gl.getShaderParameter(o,gl.COMPILE_STATUS))throw new Error(gl.getShaderInfoLog(o));return o};
-  const pr=gl.createProgram();gl.attachShader(pr,sh(gl.VERTEX_SHADER,VS));gl.attachShader(pr,sh(gl.FRAGMENT_SHADER,FS));gl.linkProgram(pr);
-  if(!gl.getProgramParameter(pr,gl.LINK_STATUS))throw new Error(gl.getProgramInfoLog(pr));
+  // antialiasing del estampado con derivadas de pantalla (fwidth); si el dispositivo no las ofrece, se compila sin ellas
+  const crea=der=>{const p=gl.createProgram();gl.attachShader(p,sh(gl.VERTEX_SHADER,VS));gl.attachShader(p,sh(gl.FRAGMENT_SHADER,(der?'#extension GL_OES_standard_derivatives : enable\n#define DERIV 1\n':'')+FS));gl.linkProgram(p);
+    if(!gl.getProgramParameter(p,gl.LINK_STATUS))throw new Error(gl.getProgramInfoLog(p));return p};
+  let pr;try{pr=gl.getExtension('OES_standard_derivatives')?crea(true):crea(false)}catch(e){console.warn('PJ: sin derivadas',e);pr=crea(false)}
   GL.prog=pr;gl.useProgram(pr);
-  GL.U={};['uMV','uProj','uNM','uExt','uCloth','uPants','uShoes','uPack','uPatP','uHood','uFace','uEye','uGlove','uRimC','uPat','uW','uGray','uAlpha','uRimK','uMask'].forEach(k=>GL.U[k]=gl.getUniformLocation(pr,k));
-  GL.A={aP:gl.getAttribLocation(pr,'aP'),aR:gl.getAttribLocation(pr,'aR'),aN:gl.getAttribLocation(pr,'aN'),aF:gl.getAttribLocation(pr,'aF')};
+  GL.U={};['uMV','uProj','uNM','uExt','uCloth','uPants','uShoes','uPack','uPatP','uHood','uFace','uEye','uGlove','uRimC','uPat','uGray','uAlpha','uRimK','uMask','uAoK'].forEach(k=>GL.U[k]=gl.getUniformLocation(pr,k));
+  GL.A={aP:gl.getAttribLocation(pr,'aP'),aR:gl.getAttribLocation(pr,'aR'),aN:gl.getAttribLocation(pr,'aN'),aZ:gl.getAttribLocation(pr,'aZ')};
   if(GL.buf)subeMalla();   // al restaurar el contexto la malla ya está descargada
 }
 function subeMalla(){
   const gl=GL.gl,buf=GL.buf,dv=new DataView(buf);
-  if(dv.getUint32(0,true)!==0x44334A50)throw new Error('modelo no válido');
+  if(dv.getUint32(0,true)!==0x315A4A50)throw new Error('modelo no válido');
   const nV=dv.getUint32(4,true),nI=dv.getUint32(8,true);
   GL.ext=[dv.getFloat32(16,true),dv.getFloat32(20,true),dv.getFloat32(24,true)];
   const off=32;
-  GL.vb=gl.createBuffer();gl.bindBuffer(gl.ARRAY_BUFFER,GL.vb);gl.bufferData(gl.ARRAY_BUFFER,new Uint8Array(buf,off,nV*16),gl.STATIC_DRAW);
-  GL.ib=gl.createBuffer();gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER,GL.ib);gl.bufferData(gl.ELEMENT_ARRAY_BUFFER,new Uint16Array(buf.slice(off+nV*16,off+nV*16+nI*2)),gl.STATIC_DRAW);
+  GL.vb=gl.createBuffer();gl.bindBuffer(gl.ARRAY_BUFFER,GL.vb);gl.bufferData(gl.ARRAY_BUFFER,new Uint8Array(buf,off,nV*12),gl.STATIC_DRAW);
+  GL.ib=gl.createBuffer();gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER,GL.ib);gl.bufferData(gl.ELEMENT_ARRAY_BUFFER,new Uint16Array(buf.slice(off+nV*12,off+nV*12+nI*2)),gl.STATIC_DRAW);
   GL.n=nI;
 }
 let errores=0;
@@ -193,16 +194,16 @@ function dibuja(w,h,p,c,look){
   gl.uniform3fv(U.uShoes,L.shoes===undefined?(L.pants===undefined?tela(L.cloth,0):tela(L.pants,0)):tela(L.shoes,0));
   gl.uniform1f(U.uPatP,patP);gl.uniform3fv(U.uHood,hex(L.hood,[0.95,0.93,0.89]));gl.uniform3fv(U.uFace,[0.03,0.03,0.04]);
   gl.uniform3fv(U.uEye,hex(L.eye,[0.98,0.98,0.97]));gl.uniform3fv(U.uGlove,hex(L.glove,[0.93,0.92,0.9]));
-  gl.uniform1f(U.uPat,patS);gl.uniform1f(U.uW,1.1*2*dist*Math.tan(fov/2)/h*(PJ.mascara?0.001:1));
-  gl.uniform1f(U.uGray,p.gray||0);gl.uniform1f(U.uAlpha,p.alpha==null?1:p.alpha);gl.uniform1f(U.uMask,PJ.mascara?1:0);
+  gl.uniform1f(U.uPat,patS);
+  gl.uniform1f(U.uAoK,PJ.aoK==null?1:PJ.aoK);gl.uniform1f(U.uGray,p.gray||0);gl.uniform1f(U.uAlpha,p.alpha==null?1:p.alpha);gl.uniform1f(U.uMask,PJ.mascara?1:0);
   const rim=p.rim==='rojo'?[1.0,0.16,0.10]:p.rim==='azul'?[0.35,0.6,1.0]:[0,0,0];
   gl.uniform3fv(U.uRimC,rim);gl.uniform1f(U.uRimK,p.rim?(p.rim==='rojo'?1.15:0.9):0);
   gl.bindBuffer(gl.ARRAY_BUFFER,GL.vb);
   // aP y aR leen hoy el mismo bloque (malla en reposo). Con esqueleto, aP apuntará a la malla deformada.
-  gl.enableVertexAttribArray(GL.A.aP);gl.vertexAttribPointer(GL.A.aP,4,gl.SHORT,true,16,0);
-  gl.enableVertexAttribArray(GL.A.aR);gl.vertexAttribPointer(GL.A.aR,4,gl.SHORT,true,16,0);
-  gl.enableVertexAttribArray(GL.A.aN);gl.vertexAttribPointer(GL.A.aN,4,gl.UNSIGNED_BYTE,true,16,8);
-  gl.enableVertexAttribArray(GL.A.aF);gl.vertexAttribPointer(GL.A.aF,4,gl.BYTE,false,16,12);
+  gl.enableVertexAttribArray(GL.A.aP);gl.vertexAttribPointer(GL.A.aP,3,gl.SHORT,true,12,0);
+  gl.enableVertexAttribArray(GL.A.aR);gl.vertexAttribPointer(GL.A.aR,3,gl.SHORT,true,12,0);
+  gl.enableVertexAttribArray(GL.A.aZ);gl.vertexAttribPointer(GL.A.aZ,1,gl.UNSIGNED_BYTE,false,12,6);
+  gl.enableVertexAttribArray(GL.A.aN);gl.vertexAttribPointer(GL.A.aN,4,gl.UNSIGNED_BYTE,true,12,8);
   gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER,GL.ib);gl.drawElements(gl.TRIANGLES,GL.n,gl.UNSIGNED_SHORT,0);
   return true;
 }
@@ -223,7 +224,9 @@ const VISTAS={
   feliz:{ar:.68,p:{yaw:.35,pitch:.02,y:.05},c:{zoom:.94}}
 };
 PJ.VISTAS=VISTAS;
-const cubo=n=>n<=96?96:n<=192?192:n<=256?256:n<=340?340:400;
+/* resolución real de la pantalla (devicePixelRatio) con tope en 3 para no gastar de más; los avatares nunca bajan de 2x */
+const DPR_MAX=3, dprReal=()=>Math.min(G.devicePixelRatio||1,DPR_MAX), dprAvatar=()=>Math.max(2,dprReal());
+const cubo=n=>n<=96?96:n<=144?144:n<=192?192:n<=256?256:n<=340?340:n<=420?420:512;
 function estadoP(est,p){
   p=Object.assign({},p);
   if(est==='gris')p.gray=1;
@@ -236,7 +239,7 @@ PJ.avatar=function(vista,look,est,anchoCss){
   const V=VISTAS[vista];if(!V)return null;
   if(PJ.estado==='sin'){PJ.usa();return null}
   if(PJ.estado!=='listo')return null;
-  const w=cubo(Math.round((anchoCss||(vista==='cabeza'?48:150))*2)),h=Math.round(w/V.ar);
+  const w=cubo(Math.round((anchoCss||(vista==='cabeza'?48:150))*dprAvatar())),h=Math.round(w/V.ar);
   try{
     if(!dibuja(w,h,estadoP(est,V.p),V.c,look))return null;
     return GL.cv.toDataURL('image/png');
@@ -248,7 +251,7 @@ PJ.render=function(V,look,est,w){
   const h=Math.round(w/V.ar);
   try{return dibuja(w,h,estadoP(est,V.p),V.c,look)?GL.cv.toDataURL('image/png'):null}catch(e){return null}
 };
-PJ.tamano=(vista,anchoCss)=>{const V=VISTAS[vista];if(!V)return null;const w=cubo(Math.round((anchoCss||150)*2));return {w,h:Math.round(w/V.ar)}};
+PJ.tamano=(vista,anchoCss)=>{const V=VISTAS[vista];if(!V)return null;const w=cubo(Math.round((anchoCss||150)*dprAvatar()));return {w,h:Math.round(w/V.ar)}};
 
 /* ---------- animaciones (todas del cuerpo entero) ---------- */
 const RM=G.matchMedia?G.matchMedia('(prefers-reduced-motion: reduce)'):{matches:false};
@@ -306,7 +309,7 @@ function pintaVista(v,ahora){
   const p=Object.assign({},A.p);
   if(v.est==='rojo'&&!p.rim)p.rim='rojo';
   if(v.est==='gris'&&p.gray==null)p.gray=1;
-  const dpr=Math.min(G.devicePixelRatio||1,2),w=Math.max(2,Math.round(v.w*dpr)),h=Math.max(2,Math.round(v.h*dpr));
+  const dpr=dprReal(),w=Math.max(2,Math.round(v.w*dpr)),h=Math.max(2,Math.round(v.h*dpr));
   if(el.width!==w||el.height!==h){el.width=w;el.height=h}
   const c=Object.assign({},CAM[v.anim]||CAM.reposo,v.cam);
   try{if(!dibuja(w,h,p,c,v.look))return null}catch(e){fallaDibujo(e);return null}
