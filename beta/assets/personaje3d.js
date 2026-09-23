@@ -2,28 +2,54 @@
    - UN solo contexto WebGL para toda la app (avatares, menú, editor, revelado…).
    - Las vistas vivas se copian a canvas 2D normales; los avatares salen como data: URL (nunca blob:).
    - El bucle de dibujo solo corre si hay una vista 3D visible y la pestaña está activa.
-   - Las zonas (capucha, cara, ojos, guantes, ropa) se calculan con la POSICIÓN EN REPOSO (atributo aR),
-     no con la posición actual: cuando la malla se deforme con un esqueleto, aP cambiará y aR no.
+   - Las zonas (capucha, cara, ojos, guantes, ropa) y los estampados se calculan con la POSICIÓN EN
+     REPOSO (atributo aR): el esqueleto deforma aR en el shader (skinning) para dibujar, pero los
+     colores nunca se mueven de sitio con la pose.
+   - Esqueleto: 10 huesos (ver HUESOS), 2 por vértice con reparto de peso (aBI/aBW), calculados en
+     fuentes/herramientas/generar_modelo.py por distancia geodésica sobre la malla + cara/ojos
+     forzados al 100% a Head. La jerarquía y las posiciones de reposo están descritas también en
+     fuentes/esqueleto.json (fuente de verdad para la herramienta de posado); si se toca el rig hay
+     que tocar los dos sitios.
    API:  PJ.usa() · PJ.estado ('sin'|'cargando'|'listo'|'fallo') · PJ.onCambio
          PJ.avatar(vista, look, estado, anchoCss) -> data:URL | null
-         PJ.aplica() (monta/actualiza los <canvas data-v>) · PJ.config({...})                          */
+         PJ.aplica() (monta/actualiza los <canvas data-v>) · PJ.config({...})
+         PJ.HUESOS · PJ.calculaHuesos(pose) -> Float32Array(10*16), matrices de piel para uBones     */
 (function(G){
 'use strict';
-const PJ={estado:'sin',onCambio:null,cfg:{antialias:true,bin:'assets/personaje.bin?v=5'}};
+const PJ={estado:'sin',onCambio:null,cfg:{antialias:true,bin:'assets/personaje.bin?v=6'}};
 G.PJ=PJ;
+
+/* ---------- esqueleto: mismo orden e índices que fuentes/esqueleto.json (y que generar_modelo.py) ---------- */
+const HUESOS=[
+  {n:'Hips',p:-1,j:[0,-0.30,-0.02]},
+  {n:'Head',p:0,j:[0,0.22,0.02]},
+  {n:'LeftArm',p:0,j:[-0.40,0.24,-0.08]},
+  {n:'LeftForeArm',p:2,j:[-0.45,-0.09,-0.01]},
+  {n:'RightArm',p:0,j:[0.40,0.24,-0.08]},
+  {n:'RightForeArm',p:4,j:[0.45,-0.09,-0.01]},
+  {n:'LeftUpLeg',p:0,j:[-0.19,-0.30,-0.02]},
+  {n:'LeftLeg',p:6,j:[-0.19,-0.515,0.02]},
+  {n:'RightUpLeg',p:0,j:[0.19,-0.30,-0.02]},
+  {n:'RightLeg',p:8,j:[0.19,-0.515,0.02]}
+];
+PJ.HUESOS=HUESOS;
+const NB=HUESOS.length;
 
 /* ---------- shaders ---------- */
 const VS=`
-attribute vec3 aP;   // posición ACTUAL (hoy = reposo; con esqueleto será la malla deformada)
-attribute vec3 aR;   // posición en REPOSO (estampados)
+attribute vec3 aR;   // posición en REPOSO (estampados y punto de partida del skinning)
 attribute float aZ;  // zona de este vértice (1 sudadera, 2 capucha, 3 cara, 4 ojos, 5 guantes, 6 pantalón, 7 mochila y correas, 8 zapatillas)
-attribute vec4 aN;   // normal (xyz) y oclusión ambiental (w)
-uniform mat4 uMV; uniform mat4 uProj; uniform mat3 uNM; uniform vec3 uExt;
+attribute vec4 aN;   // normal (xyz) y oclusión ambiental (w), en reposo
+attribute vec2 aBI;  // índices de los 2 huesos con más peso en este vértice
+attribute float aBW; // peso del primero (aBI.x); el segundo se lleva el resto (1-aBW)
+uniform mat4 uMV; uniform mat4 uProj; uniform mat3 uNM; uniform vec3 uExt; uniform mat4 uBones[${NB}];
 varying vec3 vN; varying vec3 vR; varying vec3 vNo; varying float vAO; varying vec3 vV; varying float vZ;
 void main(){
-  vec3 p=aP*uExt; vR=aR*uExt; vZ=aZ;   // la malla está cortada por zonas: cada vértice pertenece a una sola, sin mezcla por interpolación
-  vec3 n=aN.xyz*2.0-1.0;
-  vN=uNM*n; vNo=n; vAO=aN.w;
+  mat4 m=uBones[int(aBI.x)]*aBW+uBones[int(aBI.y)]*(1.0-aBW);   // combinación lineal de las 2 matrices de piel (skinning)
+  vec3 rp=aR*uExt; vR=rp; vZ=aZ;   // la malla está cortada por zonas: cada vértice pertenece a una sola, sin mezcla por interpolación
+  vec3 p=(m*vec4(rp,1.0)).xyz;
+  vec3 n0=aN.xyz*2.0-1.0, n=mat3(m)*n0;   // la normal gira con el hueso (mismo reparto que la posición)
+  vN=uNM*n; vNo=n0; vAO=aN.w;
   vec4 v=uMV*vec4(p,1.0); vV=v.xyz;
   gl_Position=uProj*v;
 }`;
@@ -103,6 +129,27 @@ const RY=a=>{const c=Math.cos(a),s=Math.sin(a),m=I4();m[0]=c;m[2]=-s;m[8]=s;m[10
 const RX=a=>{const c=Math.cos(a),s=Math.sin(a),m=I4();m[5]=c;m[6]=s;m[9]=-s;m[10]=c;return m};
 const RZ=a=>{const c=Math.cos(a),s=Math.sin(a),m=I4();m[0]=c;m[1]=s;m[4]=-s;m[5]=c;return m};
 function persp(fovy,asp,n,f){const t=1/Math.tan(fovy/2);return new Float32Array([t/asp,0,0,0, 0,t,0,0, 0,0,(f+n)/(n-f),-1, 0,0,2*f*n/(n-f),0]);}
+
+/* ---------- esqueleto: de una pose (ángulos por hueso) a las 10 matrices de piel para uBones ----------
+   pose: {NombreHueso:{rx,ry,rz}} en radianes, rotación alrededor del propio nudo, encadenada con la del
+   padre (si el torso se inclina, el brazo se inclina con él). Sin pose (o hueso sin entrada) = reposo. */
+function calculaHuesos(pose){
+  const out=new Float32Array(HUESOS.length*16),wr=[],wj=[];
+  for(let i=0;i<HUESOS.length;i++){
+    const h=HUESOS[i],r=(pose&&pose[h.n])||null;
+    const L=r?mul(RZ(r.rz||0),mul(RY(r.ry||0),RX(r.rx||0))):I4();
+    const pr=h.p<0?null:wr[h.p], pj=h.p<0?[0,0,0]:wj[h.p], pJoint=h.p<0?[0,0,0]:HUESOS[h.p].j;
+    const R=pr?mul(pr,L):L;
+    const off=[h.j[0]-pJoint[0],h.j[1]-pJoint[1],h.j[2]-pJoint[2]];
+    const ro=pr?[pr[0]*off[0]+pr[4]*off[1]+pr[8]*off[2],pr[1]*off[0]+pr[5]*off[1]+pr[9]*off[2],pr[2]*off[0]+pr[6]*off[1]+pr[10]*off[2]]:off;
+    const j=[pj[0]+ro[0],pj[1]+ro[1],pj[2]+ro[2]];
+    wr[i]=R;wj[i]=j;
+    out.set(mul(T(j[0],j[1],j[2]),mul(R,T(-h.j[0],-h.j[1],-h.j[2]))),i*16);
+  }
+  return out;
+}
+PJ.calculaHuesos=calculaHuesos;
+const HUESOS_REPOSO=(()=>{const o=new Float32Array(HUESOS.length*16);for(let i=0;i<HUESOS.length;i++)o.set(I4(),i*16);return o})();
 function hex(h,d){ if(!h) return d; h=String(h).replace('#',''); if(h.length===3)h=h.replace(/./g,'$&$&'); return [parseInt(h.slice(0,2),16)/255,parseInt(h.slice(2,4),16)/255,parseInt(h.slice(4,6),16)/255]; }
 
 /* ---------- WebGL compartido ---------- */
@@ -121,17 +168,18 @@ function creaGL(){
   let pr;try{pr=gl.getExtension('OES_standard_derivatives')?crea(true):crea(false)}catch(e){console.warn('PJ: sin derivadas',e);pr=crea(false)}
   GL.prog=pr;gl.useProgram(pr);
   GL.U={};['uMV','uProj','uNM','uExt','uCloth','uPants','uShoes','uPack','uPatP','uHood','uFace','uEye','uGlove','uRimC','uPat','uGray','uAlpha','uRimK','uMask','uAoK'].forEach(k=>GL.U[k]=gl.getUniformLocation(pr,k));
-  GL.A={aP:gl.getAttribLocation(pr,'aP'),aR:gl.getAttribLocation(pr,'aR'),aN:gl.getAttribLocation(pr,'aN'),aZ:gl.getAttribLocation(pr,'aZ')};
+  GL.U.uBones=gl.getUniformLocation(pr,'uBones[0]');
+  GL.A={aR:gl.getAttribLocation(pr,'aR'),aN:gl.getAttribLocation(pr,'aN'),aZ:gl.getAttribLocation(pr,'aZ'),aBI:gl.getAttribLocation(pr,'aBI'),aBW:gl.getAttribLocation(pr,'aBW')};
   if(GL.buf)subeMalla();   // al restaurar el contexto la malla ya está descargada
 }
 function subeMalla(){
   const gl=GL.gl,buf=GL.buf,dv=new DataView(buf);
-  if(dv.getUint32(0,true)!==0x315A4A50)throw new Error('modelo no válido');
+  if(dv.getUint32(0,true)!==0x325A4A50)throw new Error('modelo no válido');   // 'PJZ2': 16 B/vértice (añade 2 huesos + peso)
   const nV=dv.getUint32(4,true),nI=dv.getUint32(8,true);
   GL.ext=[dv.getFloat32(16,true),dv.getFloat32(20,true),dv.getFloat32(24,true)];
   const off=32;
-  GL.vb=gl.createBuffer();gl.bindBuffer(gl.ARRAY_BUFFER,GL.vb);gl.bufferData(gl.ARRAY_BUFFER,new Uint8Array(buf,off,nV*12),gl.STATIC_DRAW);
-  GL.ib=gl.createBuffer();gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER,GL.ib);gl.bufferData(gl.ELEMENT_ARRAY_BUFFER,new Uint16Array(buf.slice(off+nV*12,off+nV*12+nI*2)),gl.STATIC_DRAW);
+  GL.vb=gl.createBuffer();gl.bindBuffer(gl.ARRAY_BUFFER,GL.vb);gl.bufferData(gl.ARRAY_BUFFER,new Uint8Array(buf,off,nV*16),gl.STATIC_DRAW);
+  GL.ib=gl.createBuffer();gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER,GL.ib);gl.bufferData(gl.ELEMENT_ARRAY_BUFFER,new Uint16Array(buf.slice(off+nV*16,off+nV*16+nI*2)),gl.STATIC_DRAW);
   GL.n=nI;
 }
 let errores=0;
@@ -164,7 +212,9 @@ PJ.usa=function(){
 };
 
 /* ---------- dibujo ---------- */
-/* p: yaw,pitch,roll,x,y,sx,sy,alpha,gray,rim ('rojo'|'azul'|null)  ·  c: zoom,vy,cx,cp */
+/* p: yaw,pitch,roll,x,y,sx,sy,alpha,gray,rim ('rojo'|'azul'|null),huesos (Float32Array ya calculado) o
+   pose (ángulos por hueso, ver calculaHuesos; se recalcula cada llamada, para pocos huesos es barato)
+   ·  c: zoom,vy,cx,cp */
 function dibuja(w,h,p,c,look){
   const gl=GL.gl;if(!gl||GL.perdido||gl.isContextLost()||PJ.estado!=='listo')return false;
   const cv=GL.cv;if(cv.width!==w||cv.height!==h){cv.width=w;cv.height=h}
@@ -198,12 +248,14 @@ function dibuja(w,h,p,c,look){
   gl.uniform1f(U.uAoK,PJ.aoK==null?1:PJ.aoK);gl.uniform1f(U.uGray,p.gray||0);gl.uniform1f(U.uAlpha,p.alpha==null?1:p.alpha);gl.uniform1f(U.uMask,PJ.mascara?1:0);
   const rim=p.rim==='rojo'?[1.0,0.16,0.10]:p.rim==='azul'?[0.35,0.6,1.0]:[0,0,0];
   gl.uniform3fv(U.uRimC,rim);gl.uniform1f(U.uRimK,p.rim?(p.rim==='rojo'?1.15:0.9):0);
+  const huesos=p.huesos||(p.pose?calculaHuesos(p.pose):HUESOS_REPOSO);
+  gl.uniformMatrix4fv(U.uBones,false,huesos);
   gl.bindBuffer(gl.ARRAY_BUFFER,GL.vb);
-  // aP y aR leen hoy el mismo bloque (malla en reposo). Con esqueleto, aP apuntará a la malla deformada.
-  gl.enableVertexAttribArray(GL.A.aP);gl.vertexAttribPointer(GL.A.aP,3,gl.SHORT,true,12,0);
-  gl.enableVertexAttribArray(GL.A.aR);gl.vertexAttribPointer(GL.A.aR,3,gl.SHORT,true,12,0);
-  gl.enableVertexAttribArray(GL.A.aZ);gl.vertexAttribPointer(GL.A.aZ,1,gl.UNSIGNED_BYTE,false,12,6);
-  gl.enableVertexAttribArray(GL.A.aN);gl.vertexAttribPointer(GL.A.aN,4,gl.UNSIGNED_BYTE,true,12,8);
+  gl.enableVertexAttribArray(GL.A.aR);gl.vertexAttribPointer(GL.A.aR,3,gl.SHORT,true,16,0);
+  gl.enableVertexAttribArray(GL.A.aZ);gl.vertexAttribPointer(GL.A.aZ,1,gl.UNSIGNED_BYTE,false,16,6);
+  gl.enableVertexAttribArray(GL.A.aN);gl.vertexAttribPointer(GL.A.aN,4,gl.UNSIGNED_BYTE,true,16,8);
+  gl.enableVertexAttribArray(GL.A.aBI);gl.vertexAttribPointer(GL.A.aBI,2,gl.UNSIGNED_BYTE,false,16,12);
+  gl.enableVertexAttribArray(GL.A.aBW);gl.vertexAttribPointer(GL.A.aBW,1,gl.UNSIGNED_BYTE,true,16,14);
   gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER,GL.ib);gl.drawElements(gl.TRIANGLES,GL.n,gl.UNSIGNED_SHORT,0);
   return true;
 }
@@ -251,7 +303,17 @@ PJ.render=function(V,look,est,w){
   const h=Math.round(w/V.ar);
   try{return dibuja(w,h,estadoP(est,V.p),V.c,look)?GL.cv.toDataURL('image/png'):null}catch(e){return null}
 };
+/* Como PJ.render, pero deja el resultado en PJ.lienzo() en vez de codificarlo a PNG (para dibujar cada
+   fotograma mientras se arrastra un hueso en la herramienta de posado, sin el coste de toDataURL). */
+PJ.dibujaCruda=function(V,look,est,w){
+  if(PJ.estado!=='listo')return false;
+  const h=Math.round(w/V.ar);
+  try{return dibuja(w,h,estadoP(est,V.p),V.c,look)}catch(e){return false}
+};
 PJ.tamano=(vista,anchoCss)=>{const V=VISTAS[vista];if(!V)return null;const w=cubo(Math.round((anchoCss||150)*dprAvatar()));return {w,h:Math.round(w/V.ar)}};
+/* Solo para la herramienta de posado: el <canvas> WebGL en sí (tras un dibuja/render), para copiarlo con drawImage
+   sin pasar por toDataURL en cada fotograma mientras se arrastra un hueso. */
+PJ.lienzo=()=>GL.cv;
 
 /* ---------- animaciones (todas del cuerpo entero) ---------- */
 const RM=G.matchMedia?G.matchMedia('(prefers-reduced-motion: reduce)'):{matches:false};
