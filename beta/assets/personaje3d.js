@@ -6,14 +6,18 @@
      REPOSO (atributo aR): el esqueleto deforma aR en el shader (skinning) para dibujar, pero los
      colores nunca se mueven de sitio con la pose.
    - Esqueleto: 10 huesos (ver HUESOS), 2 por vértice con reparto de peso (aBI/aBW), calculados en
-     fuentes/herramientas/generar_modelo.py por distancia geodésica sobre la malla + cara/ojos
-     forzados al 100% a Head. La jerarquía y las posiciones de reposo están descritas también en
-     fuentes/esqueleto.json (fuente de verdad para la herramienta de posado); si se toca el rig hay
-     que tocar los dos sitios.
+     fuentes/herramientas/generar_modelo.py por distancia geodésica sobre la malla + varias reglas
+     por zona (cara/ojos rígidos a Head, capucha a Head/Hips, mochila rígida a Hips, sudadera con el
+     peso del brazo atenuado cerca del torso) para que no se rasgue al mover un brazo del todo. La
+     jerarquía y las posiciones de reposo están descritas también en fuentes/esqueleto.json (fuente
+     de verdad para la herramienta de posado); si se toca el rig hay que tocar los dos sitios.
+   - El skinning es por CUATERNIONES DUALES (uQR/uQD), no por matrices: mezclar matrices de piel en
+     giros grandes (p.ej. un brazo levantado del todo) las "encoge" y la malla se ve rota/dentada
+     (el clásico "candy-wrapper" del skinning lineal); los cuaterniones duales no tienen ese problema.
    API:  PJ.usa() · PJ.estado ('sin'|'cargando'|'listo'|'fallo') · PJ.onCambio
          PJ.avatar(vista, look, estado, anchoCss) -> data:URL | null
          PJ.aplica() (monta/actualiza los <canvas data-v>) · PJ.config({...})
-         PJ.HUESOS · PJ.calculaHuesos(pose) -> Float32Array(10*16), matrices de piel para uBones     */
+         PJ.HUESOS · PJ.calculaHuesos(pose) -> {qr,qd} Float32Array(10*4) cada uno, para uQR/uQD     */
 (function(G){
 'use strict';
 const PJ={estado:'sin',onCambio:null,cfg:{antialias:true,bin:'assets/personaje.bin?v=6'}};
@@ -42,13 +46,20 @@ attribute float aZ;  // zona de este vértice (1 sudadera, 2 capucha, 3 cara, 4 
 attribute vec4 aN;   // normal (xyz) y oclusión ambiental (w), en reposo
 attribute vec2 aBI;  // índices de los 2 huesos con más peso en este vértice
 attribute float aBW; // peso del primero (aBI.x); el segundo se lleva el resto (1-aBW)
-uniform mat4 uMV; uniform mat4 uProj; uniform mat3 uNM; uniform vec3 uExt; uniform mat4 uBones[${NB}];
+uniform mat4 uMV; uniform mat4 uProj; uniform mat3 uNM; uniform vec3 uExt;
+uniform vec4 uQR[${NB}]; uniform vec4 uQD[${NB}];   // piel por cuaterniones duales: parte real (giro) y dual (con la traslación)
 varying vec3 vN; varying vec3 vR; varying vec3 vNo; varying float vAO; varying vec3 vV; varying float vZ;
+// gira v por un cuaternión unitario (u,w)
+vec3 qrot(vec4 q,vec3 v){ return v+2.0*cross(q.xyz,cross(q.xyz,v)+q.w*v); }
 void main(){
-  mat4 m=uBones[int(aBI.x)]*aBW+uBones[int(aBI.y)]*(1.0-aBW);   // combinación lineal de las 2 matrices de piel (skinning)
+  vec4 qr0=uQR[int(aBI.x)],qd0=uQD[int(aBI.x)],qr1=uQR[int(aBI.y)],qd1=uQD[int(aBI.y)];
+  if(dot(qr0,qr1)<0.0){ qr1=-qr1; qd1=-qd1; }   // mismo lado de la doble cobertura: si no, el promedio se cancela
+  vec4 qr=qr0*aBW+qr1*(1.0-aBW), qd=qd0*aBW+qd1*(1.0-aBW);
+  float qlen=length(qr); qr/=qlen; qd/=qlen;   // combinación lineal de cuaterniones duales (skinning), normalizada
   vec3 rp=aR*uExt; vR=rp; vZ=aZ;   // la malla está cortada por zonas: cada vértice pertenece a una sola, sin mezcla por interpolación
-  vec3 p=(m*vec4(rp,1.0)).xyz;
-  vec3 n0=aN.xyz*2.0-1.0, n=mat3(m)*n0;   // la normal gira con el hueso (mismo reparto que la posición)
+  vec3 t=2.0*(qr.w*qd.xyz-qd.w*qr.xyz+cross(qr.xyz,qd.xyz));
+  vec3 p=qrot(qr,rp)+t;
+  vec3 n0=aN.xyz*2.0-1.0, n=qrot(qr,n0);   // la normal gira con el hueso (mismo reparto que la posición)
   vN=uNM*n; vNo=n0; vAO=aN.w;
   vec4 v=uMV*vec4(p,1.0); vV=v.xyz;
   gl_Position=uProj*v;
@@ -130,11 +141,27 @@ const RX=a=>{const c=Math.cos(a),s=Math.sin(a),m=I4();m[5]=c;m[6]=s;m[9]=-s;m[10
 const RZ=a=>{const c=Math.cos(a),s=Math.sin(a),m=I4();m[0]=c;m[1]=s;m[4]=-s;m[5]=c;return m};
 function persp(fovy,asp,n,f){const t=1/Math.tan(fovy/2);return new Float32Array([t/asp,0,0,0, 0,t,0,0, 0,0,(f+n)/(n-f),-1, 0,0,2*f*n/(n-f),0]);}
 
-/* ---------- esqueleto: de una pose (ángulos por hueso) a las 10 matrices de piel para uBones ----------
+/* ---------- cuaterniones (piel por cuaterniones duales: sin el "efecto caramelo" de mezclar
+   matrices en giros grandes, que es lo que pasaba al levantar un brazo del todo) ---------- */
+function matAquat(m){   // rotación (3x3 de un mat4 columna-mayor) -> cuaternión [x,y,z,w]
+  const m00=m[0],m10=m[1],m20=m[2],m01=m[4],m11=m[5],m21=m[6],m02=m[8],m12=m[9],m22=m[10];
+  const tr=m00+m11+m22; let x,y,z,w;
+  if(tr>0){const S=Math.sqrt(tr+1)*2;w=0.25*S;x=(m21-m12)/S;y=(m02-m20)/S;z=(m10-m01)/S}
+  else if(m00>m11&&m00>m22){const S=Math.sqrt(1+m00-m11-m22)*2;w=(m21-m12)/S;x=0.25*S;y=(m01+m10)/S;z=(m02+m20)/S}
+  else if(m11>m22){const S=Math.sqrt(1+m11-m00-m22)*2;w=(m02-m20)/S;x=(m01+m10)/S;y=0.25*S;z=(m12+m21)/S}
+  else{const S=Math.sqrt(1+m22-m00-m11)*2;w=(m10-m01)/S;x=(m02+m20)/S;y=(m12+m21)/S;z=0.25*S}
+  return [x,y,z,w];
+}
+function qmul(a,b){const[ax,ay,az,aw]=a,[bx,by,bz,bw]=b;
+  return [aw*bx+ax*bw+ay*bz-az*by, aw*by-ax*bz+ay*bw+az*bx, aw*bz+ax*by-ay*bx+az*bw, aw*bw-ax*bx-ay*by-az*bz];
+}
+const QID=[0,0,0,1];
+
+/* ---------- esqueleto: de una pose (ángulos por hueso) a los cuaterniones duales de piel (uQR/uQD) ----------
    pose: {NombreHueso:{rx,ry,rz}} en radianes, rotación alrededor del propio nudo, encadenada con la del
    padre (si el torso se inclina, el brazo se inclina con él). Sin pose (o hueso sin entrada) = reposo. */
 function calculaHuesos(pose){
-  const out=new Float32Array(HUESOS.length*16),wr=[],wj=[];
+  const qr=new Float32Array(HUESOS.length*4),qd=new Float32Array(HUESOS.length*4),wr=[],wj=[];
   for(let i=0;i<HUESOS.length;i++){
     const h=HUESOS[i],r=(pose&&pose[h.n])||null;
     const L=r?mul(RZ(r.rz||0),mul(RY(r.ry||0),RX(r.rx||0))):I4();
@@ -144,12 +171,20 @@ function calculaHuesos(pose){
     const ro=pr?[pr[0]*off[0]+pr[4]*off[1]+pr[8]*off[2],pr[1]*off[0]+pr[5]*off[1]+pr[9]*off[2],pr[2]*off[0]+pr[6]*off[1]+pr[10]*off[2]]:off;
     const j=[pj[0]+ro[0],pj[1]+ro[1],pj[2]+ro[2]];
     wr[i]=R;wj[i]=j;
-    out.set(mul(T(j[0],j[1],j[2]),mul(R,T(-h.j[0],-h.j[1],-h.j[2]))),i*16);
+    // t = j - R*h.j (la traslación de la misma matriz de piel T(j)*R*T(-h.j), pero en cuaternión dual)
+    const hj=h.j, Rhj=[R[0]*hj[0]+R[4]*hj[1]+R[8]*hj[2],R[1]*hj[0]+R[5]*hj[1]+R[9]*hj[2],R[2]*hj[0]+R[6]*hj[1]+R[10]*hj[2]];
+    const t=[j[0]-Rhj[0],j[1]-Rhj[1],j[2]-Rhj[2]];
+    const q=matAquat(R), d=qmul([t[0],t[1],t[2],0],q).map(v=>v*0.5);
+    qr.set(q,i*4); qd.set(d,i*4);
   }
-  return out;
+  return {qr,qd};
 }
 PJ.calculaHuesos=calculaHuesos;
-const HUESOS_REPOSO=(()=>{const o=new Float32Array(HUESOS.length*16);for(let i=0;i<HUESOS.length;i++)o.set(I4(),i*16);return o})();
+const HUESOS_REPOSO=(()=>{
+  const qr=new Float32Array(HUESOS.length*4),qd=new Float32Array(HUESOS.length*4);
+  for(let i=0;i<HUESOS.length;i++)qr.set(QID,i*4);
+  return {qr,qd};
+})();
 function hex(h,d){ if(!h) return d; h=String(h).replace('#',''); if(h.length===3)h=h.replace(/./g,'$&$&'); return [parseInt(h.slice(0,2),16)/255,parseInt(h.slice(2,4),16)/255,parseInt(h.slice(4,6),16)/255]; }
 
 /* ---------- WebGL compartido ---------- */
@@ -168,7 +203,7 @@ function creaGL(){
   let pr;try{pr=gl.getExtension('OES_standard_derivatives')?crea(true):crea(false)}catch(e){console.warn('PJ: sin derivadas',e);pr=crea(false)}
   GL.prog=pr;gl.useProgram(pr);
   GL.U={};['uMV','uProj','uNM','uExt','uCloth','uPants','uShoes','uPack','uPatP','uHood','uFace','uEye','uGlove','uRimC','uPat','uGray','uAlpha','uRimK','uMask','uAoK'].forEach(k=>GL.U[k]=gl.getUniformLocation(pr,k));
-  GL.U.uBones=gl.getUniformLocation(pr,'uBones[0]');
+  GL.U.uQR=gl.getUniformLocation(pr,'uQR[0]');GL.U.uQD=gl.getUniformLocation(pr,'uQD[0]');
   GL.A={aR:gl.getAttribLocation(pr,'aR'),aN:gl.getAttribLocation(pr,'aN'),aZ:gl.getAttribLocation(pr,'aZ'),aBI:gl.getAttribLocation(pr,'aBI'),aBW:gl.getAttribLocation(pr,'aBW')};
   if(GL.buf)subeMalla();   // al restaurar el contexto la malla ya está descargada
 }
@@ -212,7 +247,7 @@ PJ.usa=function(){
 };
 
 /* ---------- dibujo ---------- */
-/* p: yaw,pitch,roll,x,y,sx,sy,alpha,gray,rim ('rojo'|'azul'|null),huesos (Float32Array ya calculado) o
+/* p: yaw,pitch,roll,x,y,sx,sy,alpha,gray,rim ('rojo'|'azul'|null),huesos ({qr,qd} ya calculado) o
    pose (ángulos por hueso, ver calculaHuesos; se recalcula cada llamada, para pocos huesos es barato)
    ·  c: zoom,vy,cx,cp */
 function dibuja(w,h,p,c,look){
@@ -249,7 +284,7 @@ function dibuja(w,h,p,c,look){
   const rim=p.rim==='rojo'?[1.0,0.16,0.10]:p.rim==='azul'?[0.35,0.6,1.0]:[0,0,0];
   gl.uniform3fv(U.uRimC,rim);gl.uniform1f(U.uRimK,p.rim?(p.rim==='rojo'?1.15:0.9):0);
   const huesos=p.huesos||(p.pose?calculaHuesos(p.pose):HUESOS_REPOSO);
-  gl.uniformMatrix4fv(U.uBones,false,huesos);
+  gl.uniform4fv(U.uQR,huesos.qr);gl.uniform4fv(U.uQD,huesos.qd);
   gl.bindBuffer(gl.ARRAY_BUFFER,GL.vb);
   gl.enableVertexAttribArray(GL.A.aR);gl.vertexAttribPointer(GL.A.aR,3,gl.SHORT,true,16,0);
   gl.enableVertexAttribArray(GL.A.aZ);gl.vertexAttribPointer(GL.A.aZ,1,gl.UNSIGNED_BYTE,false,16,6);
