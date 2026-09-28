@@ -86,6 +86,8 @@ details[open].reglas summary::after{content:" −"}
 .codigo{text-align:center;padding:10px 0 18px;border-bottom:1px solid var(--remache)}
 .cod-grande{display:flex;justify-content:center;gap:8px;margin:6px 0 14px}
 .cod-grande span{font-family:var(--disp);font-weight:800;font-size:42px;width:52px;height:64px;display:grid;place-items:center;background:var(--casco);border:1px solid var(--remache);border-bottom:3px solid var(--baliza);border-radius:8px}
+.qr-invita{width:168px;margin:14px auto 0;padding:8px;background:#fff;border-radius:10px}
+.qr-invita svg{display:block;width:100%;height:auto}
 .b-sec{background:transparent}
 
 ul.gente{list-style:none;margin:10px 0 0;padding:0}
@@ -369,6 +371,7 @@ ul.tareas{list-style:none;margin:6px 0;padding:0;display:grid;gap:8px}
 <noscript>Esta web necesita JavaScript.</noscript>
 
 <script src="assets/personaje3d.js?v=6"></script>
+<script src="assets/qr.js?v=1"></script>
 <script>
 'use strict';
 const POSE_K=['frente','tresq','lado','espalda','movil','camina','corre','salta','sentado','agachado','feliz','cabeza'];
@@ -581,6 +584,7 @@ const OPT=new Set();
 const optK=(tid,step)=>S.gid+'|'+tid+'|'+step;   /* clave ligada a la partida: los ids de tarea (t0, t1…) se repiten en cada una */
 let JOIN_SENT=false,BUSCA_T=0,HOST_PAUSA=0,ROLVIS=0,REVELA=false,SHEET=null,MODO={m:'menu'},PREV=null;
 
+const urlPartida=()=>location.origin+location.pathname+'?c='+ME.code;
 const mine=()=>S&&ME.pid?S.players.find(p=>p.id===ME.pid):null;
 const soyHost=()=>!!(S&&ME.pid&&S.hostId===ME.pid);
 const P=(st,id)=>st.players.find(p=>p.id===id);
@@ -1516,7 +1520,8 @@ function vPruebas(){
 function vLobby(){
   const host=soyHost(),c=S.cfg,ps=S.players,on=salas(S),V=VENUES[c.venue],mx=maxImp(ps.length);
   let h=`<section class="codigo"><p class="lbl">Código de la partida</p><div class="cod-grande">${[...ME.code].map(ch=>`<span>${ch}</span>`).join('')}</div>
-  <button class="b-sec" data-a="compartir">Compartir enlace</button></section>
+  <button class="b-sec" data-a="compartir">Compartir enlace</button>
+  <div class="qr-invita">${qrSVG(urlPartida())}</div><p class="tenue" style="margin-top:6px">O que escaneen este código con la cámara del móvil</p></section>
   <section class="bloque"><h2>${ps.length} a bordo</h2><ul class="gente">${ps.map(p=>`<li>${dot(p)}<span>${esc(p.name)}</span>${bt(p)}${p.id===S.hostId?'<em>anfitrión</em>':''}${p.id===ME.pid?'<em>tú</em>':''}${host&&p.id!==ME.pid?`<button class="b-mini" data-a="kick" data-p="${p.id}">Quitar</button>`:''}</li>`).join('')}</ul></section>`;
   if(host&&PRUEBAS&&S.pruebas)h+=vPruebas();
   if(host){
@@ -2751,7 +2756,7 @@ const ACT={
     if(c.length!==5){toast('El código tiene 5 letras');$('#cod').focus();return}entrar(c,n,false)},
   volver(d){if(!PERFIL){VISTA='editor';return}entrar(d.c,PERFIL.name,false)},
   salir(){salir()},
-  compartir(){const url=location.origin+location.pathname+'?c='+ME.code;const txt=`Únete a mi partida de Punto Ciego con el código ${ME.code}`;
+  compartir(){const url=urlPartida();const txt=`Únete a mi partida de Punto Ciego con el código ${ME.code}`;
     if(navigator.share)navigator.share({title:'Punto Ciego',text:txt,url}).catch(()=>{});
     else if(navigator.clipboard)navigator.clipboard.writeText(url).then(()=>toast('Enlace copiado'));else toast(url)},
   kick(d){accion('kick',{target:d.p})},
