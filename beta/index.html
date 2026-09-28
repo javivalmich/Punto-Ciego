@@ -632,7 +632,6 @@ const SUPA={
 };
 const QS=new URLSearchParams(location.search);
 const PRUEBAS=QS.get('pruebas')==='1'; /* modo pruebas (bots y atajos): sin este parámetro nada de eso existe */
-let CAM_QS=QS.get('cam')||null; /* el secreto que lleva el QR físico de la sala de cámaras; se consume una sola vez */
 const EN_LOCAL=/^(localhost|127\.0\.0\.1)$/.test(location.hostname);
 if(EN_LOCAL&&QS.get('supa')){SUPA.url=QS.get('supa');SUPA.key=QS.get('supakey')||''}
 const SB_LIB=(EN_LOCAL&&QS.get('sblib'))||'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.116.0/dist/umd/supabase.js';
@@ -936,8 +935,7 @@ function empezar(st,now){
     rachas[p.id]=esImp?0:(rachas[p.id]||0)+1; /* se reinicia en cuanto le toca */
   });
   const roomIds=rooms.map(r=>r.id);
-  st.camRoom=roomIds.includes(st.cfg.camRoom)?st.cfg.camRoom:elige(roomIds); /* sala física de cámaras de esta partida */
-  st.camSecret=uid(8); /* cambia cada partida: es lo que lleva el QR físico de esa sala */
+  st.camRoom=roomIds.includes(st.cfg.camRoom)?st.cfg.camRoom:elige(roomIds); /* sala de cámaras de esta partida: sigue siendo una sala normal */
   st.phase='play';st.gid=uid(6);st.sab=null;st.locks=[];st.sabCd=now+20000;st.meet=null;st.end=null;st.notice=null;
   st.log=[{t:now,txt:'Empieza la partida'}];st.t0=now;
 }
@@ -1020,7 +1018,9 @@ function reducir(st,a,now,local){
     v.dead=true;v.body=true;v.diedAt=now;p.kcd=now+st.cfg.killCd*1000;if(st.pruebas)v.killer=p.id;
     st.log.push({t:now,txt:`${p.name} mató a ${v.name}`});ganador(st,now);return true;
   }
-  /* cámaras: solo el Ciego con gafas y los Puntos, solo abriéndolas desde la sala física (ver camSecret).
+  /* cámaras: solo el Ciego con gafas y los Puntos. El propio móvil ya comprueba que está en la sala
+     de cámaras (enSalaCam(), en el cliente) antes de llamar a esta acción, igual que ya pasa con
+     otras acciones físicas (matar, sabotear): aquí solo se valida el rol y el saldo.
      El saldo/cooldown es individual: cerrar no lo reinicia, y el cooldown de 60 s solo empieza al llegar a 0. */
   case 'camAbre':{
     if(st.phase!=='play'||!p||p.dead||!(p.role==='imp'||p.gafas))return true;
@@ -1680,7 +1680,7 @@ function vJuego(){
     <button class="b-alarma" data-a="fix" data-panel="0">Estoy en ${esc(r.name)}: reparar</button>
     <button data-a="reportar">Reportar cuerpo</button></div>`;
   }
-  if(soyHost())h+=`<p style="margin-top:28px"><button class="b-link" data-a="camQR">Código de cámaras</button> <button class="b-link" data-a="terminar">Terminar partida</button></p>`;
+  if(soyHost())h+=`<p style="margin-top:28px"><button class="b-link" data-a="terminar">Terminar partida</button></p>`;
   return h;
 }
 /* «Estoy en»: el juego nunca ha sabido dónde está el Punto, así que se lo preguntamos a él mismo,
@@ -1774,7 +1774,6 @@ function pintaTop(){
   setHTML($('#top'),`<div class="tb"><span class="marca">PUNT<i></i>CIEGO</span>${ME.code?`<span class="tb-cod">${esc(ME.code)}</span><span class="red ${n?'ok':''}" title="${n} de ${NET.cons.length} servidores"></span>`:''}${p?`<span class="yo">${dot(p,26)}${esc(p.name)}</span>`:''}</div>`);
 }
 function pinta(){
-  if(CAM_QS)intentaCam();
   pintaTop();
   let h='',b='',o='';
   if(!ME.code)h=vHome();
@@ -1874,11 +1873,12 @@ function infoSalas(){
 /* estado de cámaras para quien las tiene: no dice "cámaras" a nadie más, así que aquí puede ser explícito */
 function vCamHUD(p){
   if(!tieneCamaras(p))return '';
-  const e=camEstado(p,ahora());
+  const e=camEstado(p,ahora()),rSala=sala(S.camRoom)||{name:'?'};
   let cuerpo;
   if(e.abiertas)cuerpo=`<p class="tenue">Abiertas ahora. Quedan <b data-until="${p.cam.openSince+p.cam.bal}"></b>.</p><button class="b-sec b-ancho" data-a="camCerrar">Cerrar cámaras</button>`;
   else if(e.cd>0)cuerpo=`<p class="tenue">En enfriamiento: <b data-until="${ahora()+e.cd}"></b>.</p>`;
-  else cuerpo=`<p class="tenue">${Math.ceil(e.disp/1000)} s disponibles. Escanea el código de esa sala para abrirlas.</p>`;
+  else if(enSalaCam())cuerpo=`<p class="tenue">${Math.ceil(e.disp/1000)} s disponibles.</p><button class="b-baliza b-ancho" data-a="camAbrir">Abrir cámaras</button>`;
+  else cuerpo=`<p class="tenue">${Math.ceil(e.disp/1000)} s disponibles. Solo se pueden abrir en <b>${esc(rSala.name)}</b>${p.role==='imp'?' (elígela en «Estoy en»)':''}.</p>`;
   return `<section class="bloque cam-hud"><h3 style="margin:0 0 6px;font-size:20px">Cámaras</h3>${cuerpo}</section>`;
 }
 function vMas(){
@@ -1906,12 +1906,21 @@ function vMas(){
   return h+infoSalas();
 }
 function hojaMas(modo){MODO=modo||{m:'menu'};abrirSheet('<div id="shVivo"></div>',{refresh:vMas});setHTML($('#shVivo'),vMas())}
-/* ============ cámaras: sesión física (ver camSecret) + saldo/enfriamiento ============ */
+/* ============ cámaras: solo se abren estando en la sala de cámaras + saldo/enfriamiento ============
+   Sin QR ni secreto: la presencia física se resuelve igual que la "sala actual" de todo el mundo
+   (miAct()) — tarea abierta en esa sala, o cerrada hace menos de 45 s. Para el Punto (que no tiene
+   tareas reales) vale con tener esa sala elegida en "Estoy en" (MI_SALA_IMP). */
 function objetivosEnSala(salaId){
   return S.players.filter(x=>!x.dead&&x.role!=='imp'&&x.act&&x.act.e==='h'&&x.act.room===salaId).map(x=>x.id);
 }
+function enSalaCam(){
+  const p=mine();if(!p||!S||!S.camRoom)return false;
+  if(p.role==='imp')return MI_SALA_IMP===S.camRoom;
+  const act=miAct();
+  return !!(act&&act.e==='h'&&act.room===S.camRoom);
+}
 function abreCamaras(){
-  const p=mine();if(!p||!tieneCamaras(p))return;
+  const p=mine();if(!p||!tieneCamaras(p)||!enSalaCam())return;
   const e=camEstado(p,ahora());if(e.abiertas||e.cd>0||e.disp<=0)return;
   accion('camAbre');
   abrirSheet('<div id="shVivo"></div>',{camaras:true,refresh:vCamaras});
@@ -1930,21 +1939,6 @@ function vCamaras(){
   return `<h2>Cámaras</h2><p class="tenue">Quedan <b data-until="${p.cam.openSince+p.cam.bal}"></b>.</p>
   <div class="cam-lista">${filas}</div>
   <button class="b-sec b-ancho" style="margin-top:14px" data-a="camCerrar">Cerrar cámaras</button>`;
-}
-/* solo el anfitrión ve esto: el cartel físico de la sala de cámaras de esta partida */
-function vCamQR(){
-  if(!soyHost()||!S||!S.camRoom)return '';
-  const r=sala(S.camRoom)||{name:'?'};
-  const url=urlPartida()+'&cam='+S.camSecret;
-  return `<h2>Cámaras: código de la sala</h2><p class="tenue">Imprime esto o enséñalo desde tu móvil, y déjalo en <b>${esc(r.name)}</b>. Quien tenga acceso a cámaras y lo escanee con la cámara normal del móvil, las desbloquea ahí mismo.</p><div class="qr-invita">${qrSVG(url)}</div>`;
-}
-function hojaCamQR(){abrirSheet('<div id="shVivo"></div>',{refresh:vCamQR});setHTML($('#shVivo'),vCamQR())}
-/* consume el "cam" del QR físico una sola vez, en cuanto sabemos quiénes somos en esta partida */
-function intentaCam(){
-  if(!CAM_QS||!S)return;
-  const p=mine();if(!p)return;
-  const secreto=CAM_QS;CAM_QS=null;
-  if(S.camSecret===secreto&&tieneCamaras(p))abreCamaras();
 }
 
 /* ============ galería de minijuegos (modo pruebas): abrir cualquiera sin partida ============ */
@@ -2949,7 +2943,7 @@ const ACT={
   miSala(d){MI_SALA_IMP=d.r;LS.set('imp.sala.'+S.gid,d.r)},
   matarRapido(){const obj=objetivosEnSala(MI_SALA_IMP);if(obj.length)hojaMas(obj.length===1?{m:'conf',p:obj[0]}:{m:'matar',objetivos:obj})},
   camCerrar(){cierraCamaras()},
-  camQR(){hojaCamQR()},
+  camAbrir(){abreCamaras()},
   sab(d){if(d.k==='door'){MODO={m:'puerta'};return}accion('sab',{kind:d.k});cerrarSheet()},
   puertaA(d){accion('sab',{kind:'door',room:d.r});cerrarSheet()},
   fix(d){hojaFix(+d.panel||0)},
