@@ -148,6 +148,15 @@ ul.tareas{list-style:none;margin:6px 0;padding:0;display:grid;gap:8px}
 #bar{position:fixed;left:0;right:0;bottom:0;z-index:10;background:var(--casco);border-top:1px solid var(--remache);padding:10px 16px calc(10px + env(safe-area-inset-bottom,0px))}
 .barra{max-width:560px;margin:0 auto;display:grid;grid-template-columns:1.2fr 1fr .8fr;gap:8px}
 .barra button{padding:10px 8px}
+.barra-imp{max-width:560px;margin:0 auto 8px}
+.chips-sala{flex-wrap:nowrap;overflow-x:auto;padding-bottom:2px}
+.chips-sala .chip{flex:0 0 auto}
+.b-matar-rapido{display:block;width:100%;margin-bottom:8px;font-size:19px;font-weight:800}
+.cam-hud{margin-top:14px}
+.cam-lista{display:grid;gap:8px;margin-top:10px}
+.cam-fila{display:grid;gap:2px;background:var(--casco);border:1px solid var(--remache);border-radius:10px;padding:10px 14px}
+.cam-fila b{font-size:16px}
+.cam-fila span{font-size:14px;color:var(--niebla)}
 
 .apagon{position:fixed;inset:0;z-index:20;background:#05080b;display:flex;flex-direction:column;justify-content:center;align-items:center;gap:14px;text-align:center;padding:24px}
 .apagon h2{font-size:44px;color:#4a5866}
@@ -583,6 +592,8 @@ const PEND=new Map();
 const OPT=new Set();
 const optK=(tid,step)=>S.gid+'|'+tid+'|'+step;   /* clave ligada a la partida: los ids de tarea (t0, t1…) se repiten en cada una */
 let JOIN_SENT=false,BUSCA_T=0,HOST_PAUSA=0,ROLVIS=0,REVELA=false,SHEET=null,MODO={m:'menu'},PREV=null;
+let ACT_CONGELADA=null; /* {room,txt,hasta}: última tarea que tuve abierta, sigue contando como "dónde estoy" un rato tras cerrarla */
+let MI_SALA_IMP=null; /* solo para Puntos: en qué sala dicen estar, para el botón de matar rápido (el juego no seguía la posición de nadie) */
 
 const urlPartida=()=>location.origin+location.pathname+'?c='+ME.code;
 const mine=()=>S&&ME.pid?S.players.find(p=>p.id===ME.pid):null;
@@ -621,6 +632,7 @@ const SUPA={
 };
 const QS=new URLSearchParams(location.search);
 const PRUEBAS=QS.get('pruebas')==='1'; /* modo pruebas (bots y atajos): sin este parámetro nada de eso existe */
+let CAM_QS=QS.get('cam')||null; /* el secreto que lleva el QR físico de la sala de cámaras; se consume una sola vez */
 const EN_LOCAL=/^(localhost|127\.0\.0\.1)$/.test(location.hostname);
 if(EN_LOCAL&&QS.get('supa')){SUPA.url=QS.get('supa');SUPA.key=QS.get('supakey')||''}
 const SB_LIB=(EN_LOCAL&&QS.get('sblib'))||'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.116.0/dist/umd/supabase.js';
@@ -803,9 +815,11 @@ function pidPara(code){
 function cfgDefecto(venue,prev){
   const V=VENUES[venue]||VENUES.piso;
   const rooms=V.rooms.map((r,i)=>({id:'r'+i,name:r[0],type:r[1],on:i<V.def}));
-  const b=prev?{...prev}:{imp:1,tasks:4,largas:1,killCd:30,disc:60,vote:45,emerg:1,confirm:true,walkie:true,mezcla:'mix'};
+  const b=prev?{...prev}:{imp:1,tasks:4,largas:1,killCd:30,disc:60,vote:45,emerg:1,confirm:true,walkie:true,mezcla:'mix',camRoom:''};
   b.venue=venue in VENUES?venue:'piso';b.rooms=rooms;b.meet='r0';return b;
 }
+/* camRoom: sala (de las activas) que este anfitrión ha elegido para las cámaras; '' = al azar
+   cada partida. Solo lo lee y lo ve el anfitrión (vLobby lo pinta solo si soyHost()). */
 function limpiaCfg(c,old){
   const o={...old};if(!c||typeof c!=='object')return o;
   if(c.venue in VENUES)o.venue=c.venue;
@@ -814,6 +828,7 @@ function limpiaCfg(c,old){
   for(const k in LIM){const [a,b]=LIM[k];if(typeof c[k]==='number')o[k]=Math.max(a,Math.min(b,Math.round(c[k])))}
   o.confirm=c.confirm!==undefined?!!c.confirm:o.confirm;o.walkie=c.walkie!==undefined?!!c.walkie:o.walkie;
   const on=o.rooms.filter(r=>r.on);o.meet=on.some(r=>r.id===c.meet)?c.meet:(on[0]?on[0].id:'');
+  o.camRoom=typeof c.camRoom==='string'&&(c.camRoom===''||on.some(r=>r.id===c.camRoom))?c.camRoom:(on.some(r=>r.id===old.camRoom)?old.camRoom:'');
   return o;
 }
 function nuevaPartida(hostId,name,look){
@@ -911,12 +926,18 @@ function empezar(st,now){
   const orden=elegeImpostores(st,nImp);
   if(st.pruebas&&st.pr&&st.pr.rol!=='azar')ajustaPapel(st,orden);
   const rachas=st.racha||(st.racha={});
+  const crewIds=st.players.map(p=>p.id).filter(id=>!orden.includes(id));
+  const gafasId=crewIds.length?elige(crewIds):null; /* el Ciego con gafas: uno solo, al azar, cada partida */
   st.players.forEach(p=>{
     const esImp=orden.includes(p.id);
-    p.role=esImp?'imp':'crew';p.dead=false;p.body=false;p.ejected=false;
+    p.role=esImp?'imp':'crew';p.dead=false;p.body=false;p.ejected=false;p.gafas=p.id===gafasId;
     p.emerg=st.cfg.emerg;p.kcd=now+st.cfg.killCd*1000;p.tasks=generarTareas(rooms,st.cfg.tasks,st.cfg.largas,st.cfg.mezcla,st.cfg.venue);
+    p.cam={bal:30000,cdUntil:0,openSince:0};p.act=null;
     rachas[p.id]=esImp?0:(rachas[p.id]||0)+1; /* se reinicia en cuanto le toca */
   });
+  const roomIds=rooms.map(r=>r.id);
+  st.camRoom=roomIds.includes(st.cfg.camRoom)?st.cfg.camRoom:elige(roomIds); /* sala física de cámaras de esta partida */
+  st.camSecret=uid(8); /* cambia cada partida: es lo que lleva el QR físico de esa sala */
   st.phase='play';st.gid=uid(6);st.sab=null;st.locks=[];st.sabCd=now+20000;st.meet=null;st.end=null;st.notice=null;
   st.log=[{t:now,txt:'Empieza la partida'}];st.t0=now;
 }
@@ -962,7 +983,7 @@ function reducir(st,a,now,local){
   const p=P(st,a.pid),esHost=a.pid===st.hostId;
   if(a.gid&&st.gid&&a.gid!==st.gid&&a.t!=='join'&&a.t!=='ping')return true;   /* acción de otra partida (reenvío tardío): se ignora */
   switch(a.t){
-  case 'ping':if(p)p.seen=now;return false;
+  case 'ping':if(p){p.seen=now;if(a.act!==undefined)p.act=a.act}return false;
   case 'join':{
     if(st.phase!=='lobby')return true;let nombre=String(a.name||'').trim().slice(0,16)||'Sin nombre';
     const look=limpiaLook(a.look);
@@ -998,6 +1019,21 @@ function reducir(st,a,now,local){
     if(!p||!v||p.role!=='imp'||p.dead||v.dead||v.role==='imp'||now<p.kcd)return true;
     v.dead=true;v.body=true;v.diedAt=now;p.kcd=now+st.cfg.killCd*1000;if(st.pruebas)v.killer=p.id;
     st.log.push({t:now,txt:`${p.name} mató a ${v.name}`});ganador(st,now);return true;
+  }
+  /* cámaras: solo el Ciego con gafas y los Puntos, solo abriéndolas desde la sala física (ver camSecret).
+     El saldo/cooldown es individual: cerrar no lo reinicia, y el cooldown de 60 s solo empieza al llegar a 0. */
+  case 'camAbre':{
+    if(st.phase!=='play'||!p||p.dead||!(p.role==='imp'||p.gafas))return true;
+    const c=p.cam||(p.cam={bal:30000,cdUntil:0,openSince:0});
+    if(c.cdUntil&&c.cdUntil<=now){c.bal=30000;c.cdUntil=0} /* el enfriamiento ya pasó: saldo lleno otra vez */
+    if(c.cdUntil>now||c.openSince||c.bal<=0)return true;
+    c.openSince=now;return true;
+  }
+  case 'camCierra':{
+    if(!p||!p.cam||!p.cam.openSince)return false; /* nada que cerrar: no hace falta republicar ni repintar */
+    const c=p.cam;c.bal=Math.max(0,c.bal-(now-c.openSince));c.openSince=0;
+    if(c.bal<=0)c.cdUntil=now+60000;
+    return true;
   }
   case 'report':{
     if(st.phase!=='play'||!p||p.dead)return true;const v=P(st,a.target);
@@ -1081,6 +1117,9 @@ function tick(st,now){
     const n=st.locks.length;st.locks=st.locks.filter(l=>l.until>now);if(st.locks.length!==n)ch=true;
     if(st.sab&&st.sab.kind==='gas')for(const i of [0,1]){const f=st.sab.fix[i];if(f&&now-f.t>=8000){delete st.sab.fix[i];ch=true}}
     if(st.sab&&st.sab.crit&&now>=st.sab.until){st.phase='end';st.end={w:'imp',why:'Nadie ha parado la fuga de gas a tiempo',t:now};st.sab=null;ch=true}
+    for(const p of st.players){ /* si se queda sin saldo con las cámaras abiertas, se cierran solas y empieza el enfriamiento */
+      if(p.cam&&p.cam.openSince&&p.cam.bal-(now-p.cam.openSince)<=0){p.cam.bal=0;p.cam.openSince=0;p.cam.cdUntil=now+60000;ch=true}
+    }
   }else if(st.phase==='meeting'&&st.meet){
     const m=st.meet;
     if(m.fase==='disc'&&now>=m.until){m.fase='vote';m.until=now+st.cfg.vote*1000;ch=true}
@@ -1207,6 +1246,10 @@ function botsJuego(now,v){
           }else mm.tarea=now+entre(20000,50000)*v;
         }
       }
+      /* para poder probar cámaras/matar rápido con bots: mismo formato que miAct(), pero a partir
+         de lo que el propio anfitrión ya sabe de cada bot (mm.trabajando / próxima tarea pendiente) */
+      if(mm.trabajando){const t=(p.tasks||[]).find(x=>x.id===mm.trabajando.tid),st=t&&t.steps[mm.trabajando.step];p.act=st?{e:'h',room:st.room,txt:st.txt}:null}
+      else{p.act=null;for(const t of p.tasks||[])if(t.done<t.steps.length){p.act={e:'y',room:t.steps[t.done].room};break}}
       const cad=!p.dead&&S.phase==='play'&&S.players.find(x=>x.body);
       if(cad){
         if(mm.repDe!==cad.id){mm.repDe=cad.id;mm.rep=Math.random()<.7?now+entre(4000,18000)*v:0}
@@ -1343,7 +1386,15 @@ function accion(t,data={}){
 setInterval(()=>{
   for(const [id,p] of PEND){if(++p.n>25){PEND.delete(id);continue}if(p.n%2===0)enviar('a',p.a)}
 },1000);
-setInterval(()=>{if(S&&mine()&&!soyHost())enviar('a',{id:uid(12),pid:ME.pid,t:'ping'})},8000);
+/* el "ping" ya servía para el hueco de anfitrión (p.seen); ahora también lleva miAct() para las
+   cámaras. Va por fuera de accion()/PEND a propósito: el reducer lo devuelve con pub=false (nunca
+   entra en S.ackd), así que si pasara por accion() se reintentaría sin parar */
+setInterval(()=>{
+  if(!S||!mine())return;
+  const act=miAct();
+  if(soyHost()){const me=mine();me.seen=ahora();me.act=act}
+  else enviar('a',{id:uid(12),pid:ME.pid,t:'ping',act});
+},3000);
 setInterval(()=>{if(soyHost()&&tick(S,ahora())){publicarEstado(true);eventos()}},400);
 setInterval(()=>{if(soyHost())publicarEstado(false)},4000);
 setInterval(()=>{ /* si el anfitrión desaparece, otro coge el mando */
@@ -1529,7 +1580,9 @@ function vLobby(){
     <section class="bloque o"><h2>Salas</h2><p class="tenue">${on.length} en juego. Toca una para quitarla o ponerla.</p>
     <div class="chips">${c.rooms.map(r=>`<button class="chip ${r.on?'on':''}" data-a="sala" data-r="${r.id}">${esc(r.name)}</button>`).join('')}</div>
     <div class="add"><input id="nuevaSala" maxlength="24" placeholder="Añadir otra sala" autocomplete="off"><select id="nuevoTipo" aria-label="Tipo de sala">${Object.entries(TIPOS).map(([k,v])=>`<option value="${k}" ${k==='generica'?'selected':''}>${v}</option>`).join('')}</select><button data-a="addSala">Añadir</button></div>
-    <p style="margin-top:14px"><label class="lbl" for="meetSel">Punto de reunión</label><select id="meetSel" data-cfg="meet">${on.map(r=>`<option value="${r.id}" ${c.meet===r.id?'selected':''}>${esc(r.name)}</option>`).join('')}</select></p></section>
+    <p style="margin-top:14px"><label class="lbl" for="meetSel">Punto de reunión</label><select id="meetSel" data-cfg="meet">${on.map(r=>`<option value="${r.id}" ${c.meet===r.id?'selected':''}>${esc(r.name)}</option>`).join('')}</select></p>
+    <p style="margin-top:14px"><label class="lbl" for="camSel">Sala con función extra</label><select id="camSel" data-cfg="camRoom"><option value="" ${!c.camRoom?'selected':''}>Al azar cada partida</option>${on.map(r=>`<option value="${r.id}" ${c.camRoom===r.id?'selected':''}>${esc(r.name)}</option>`).join('')}</select>
+    <span class="tenue" style="display:block;font-size:13px;margin-top:4px">Solo la ves tú. Es la sala de las cámaras: sigue siendo una sala normal, con sus tareas de siempre.</span></p></section>
     <section class="bloque o"><h2>Reglas</h2>
     ${paso('Puntos','imp',v=>Math.min(v,mx)===v?v:`${Math.min(v,mx)}`)}
     ${c.imp>mx?`<p class="motivo">Con ${ps.length} personas solo puede haber ${mx}.</p>`:''}
@@ -1558,6 +1611,30 @@ function vLobby(){
 function hechoLocal(p,t){
   if(p.role==='imp'){const f=LS.get('imp.fake.'+S.gid,{});return Math.min(f[t.id]||0,t.steps.length)}
   let d=t.done;while(d<t.steps.length&&OPT.has(optK(t.id,d)))d++;return d;
+}
+/* ============ estado para las cámaras: "dónde estoy y qué hago" ============
+   El juego nunca ha seguido la posición de nadie: esto solo mira la tarea que tengo
+   abierta ahora mismo (o la última que cerré hace poco, o la siguiente pendiente) y lo
+   manda con el "ping" de siempre. Nada de histórico: cada ping sustituye al anterior. */
+function miAct(){
+  const p=mine();if(!p||!S||S.phase!=='play')return null;
+  if(SHEET&&SHEET.juego&&SHEET.tid){
+    const t=(p.tasks||[]).find(x=>x.id===SHEET.tid);
+    if(t){const d=Math.min(SHEET.step,t.steps.length-1),st=t.steps[d];if(st)return{e:'h',room:st.room,txt:st.txt}}
+  }
+  if(ACT_CONGELADA&&ACT_CONGELADA.hasta>ahora())return{e:'h',room:ACT_CONGELADA.room,txt:ACT_CONGELADA.txt};
+  for(const t of p.tasks||[]){const d=hechoLocal(p,t);if(d<t.steps.length)return{e:'y',room:t.steps[d].room}}
+  return {e:'n'};
+}
+const tieneCamaras=p=>!!(p&&!p.dead&&(p.role==='imp'||p.gafas));
+/* saldo/estado de cámaras ahora mismo, calculado a partir de lo último que dijo el anfitrión
+   (p.cam) más el tiempo real transcurrido si las tiene abiertas: nunca se guarda un "restante" aparte */
+function camEstado(p,now){
+  const c=(p&&p.cam)||{bal:30000,cdUntil:0,openSince:0};
+  if(c.cdUntil>now)return{disp:0,cd:c.cdUntil-now,abiertas:false};
+  let disp=(c.cdUntil&&c.cdUntil<=now)?30000:c.bal; /* el enfriamiento ya cumplió: se ve lleno aunque el anfitrión aún no lo haya tocado */
+  if(c.openSince)disp=Math.max(0,disp-(now-c.openSince));
+  return{disp,cd:0,abiertas:!!c.openSince};
 }
 function vRol(p){
   const ver=Date.now()<ROLVIS,imp=p.role==='imp';
@@ -1603,7 +1680,17 @@ function vJuego(){
     <button class="b-alarma" data-a="fix" data-panel="0">Estoy en ${esc(r.name)}: reparar</button>
     <button data-a="reportar">Reportar cuerpo</button></div>`;
   }
-  if(soyHost())h+=`<p style="margin-top:28px"><button class="b-link" data-a="terminar">Terminar partida</button></p>`;
+  if(soyHost())h+=`<p style="margin-top:28px"><button class="b-link" data-a="camQR">Código de cámaras</button> <button class="b-link" data-a="terminar">Terminar partida</button></p>`;
+  return h;
+}
+/* «Estoy en»: el juego nunca ha sabido dónde está el Punto, así que se lo preguntamos a él mismo,
+   siempre visible y sin menús, para poder ofrecerle el botón de matar rápido de la sección 8-9. */
+function vBarraImp(p){
+  const guardada=LS.get('imp.sala.'+S.gid);
+  if(!MI_SALA_IMP||!sala(MI_SALA_IMP))MI_SALA_IMP=(guardada&&sala(guardada))?guardada:(salas(S)[0]||{}).id;
+  const obj=MI_SALA_IMP?objetivosEnSala(MI_SALA_IMP):[],okK=ahora()>=p.kcd;
+  let h=`<div class="barra-imp"><p class="lbl" style="margin:0 0 4px">Estoy en</p><div class="chips chips-sala">${salas(S).map(r=>`<button class="chip ${MI_SALA_IMP===r.id?'on':''}" data-a="miSala" data-r="${r.id}">${esc(r.name)}</button>`).join('')}</div></div>`;
+  if(okK&&obj.length)h+=`<button class="b-alarma b-ancho b-matar-rapido" data-a="matarRapido">🔴 MATAR</button>`;
   return h;
 }
 function vBarra(){
@@ -1611,7 +1698,7 @@ function vBarra(){
   if(p.dead&&!(p.role==='imp'))return `<div class="barra" style="grid-template-columns:1fr"><button data-a="menu">Salas y ayuda</button></div>`;
   if(p.dead)return `<div class="barra" style="grid-template-columns:1fr"><button data-a="menu">Más</button></div>`;
   const bloq=S.sab&&S.sab.crit;
-  return `<div class="barra"><button class="b-alarma" data-a="reportar">Reportar cuerpo</button>
+  return (p.role==='imp'?vBarraImp(p):'')+`<div class="barra"><button class="b-alarma" data-a="reportar">Reportar cuerpo</button>
   <button data-a="emergencia" ${p.emerg>0&&!bloq?'':'disabled'}>Emergencia${p.emerg>0?' ('+p.emerg+')':''}</button>
   <button data-a="menu">Más</button></div>`;
 }
@@ -1687,6 +1774,7 @@ function pintaTop(){
   setHTML($('#top'),`<div class="tb"><span class="marca">PUNT<i></i>CIEGO</span>${ME.code?`<span class="tb-cod">${esc(ME.code)}</span><span class="red ${n?'ok':''}" title="${n} de ${NET.cons.length} servidores"></span>`:''}${p?`<span class="yo">${dot(p,26)}${esc(p.name)}</span>`:''}</div>`);
 }
 function pinta(){
+  if(CAM_QS)intentaCam();
   pintaTop();
   let h='',b='',o='';
   if(!ME.code)h=vHome();
@@ -1702,6 +1790,7 @@ function pinta(){
   $('#wkFab').classList.toggle('solo',!b);
   const pf=$('#prFab');if(pf){const q=mine();pf.hidden=!(enPruebas()&&q&&(S.phase==='play'||S.phase==='meeting'));pf.classList.toggle('solo',!b)}
   if(SHEET&&SHEET.juego){const p=mine();if(!S||S.phase!=='play'||!p||(p.dead&&p.body))cerrarSheet()}
+  if(SHEET&&SHEET.camaras){const p=mine();if(!S||S.phase!=='play'||!p||p.dead)cierraCamaras()}
   if(SHEET&&SHEET.refresh){const el=$('#shVivo');if(el)setHTML(el,SHEET.refresh())}
   WK.pinta();relojes();aplicaFiguras();
   if(S&&S.phase==='end'&&CUENTAS&&USER)sumarPartida();
@@ -1713,7 +1802,23 @@ setInterval(pinta,250);
 /* los minijuegos que usan sensores, micro o temporizadores propios dejan aquí cómo pararse (SHEET.limpia) */
 function pararSheet(){if(SHEET&&SHEET.limpia){try{SHEET.limpia()}catch(e){}}}
 function abrirSheet(h,extra={}){pararSheet();$('#shBody').innerHTML=h;$('#sheet').hidden=false;SHEET={...extra};$('.sh-caja').scrollTop=0}
-function cerrarSheet(){if(!SHEET&&$('#sheet').hidden)return;pararSheet();$('#sheet').hidden=true;$('#shBody').innerHTML='';SHEET=null;MODO={m:'menu'}}
+/* cerrarSheet() es el único sitio que de verdad cierra la hoja (hay muchas llamadas sueltas: al morir,
+   al empezar una reunión, al terminar la partida...). Por eso el cierre de cámaras se resuelve aquí
+   dentro y no en cada llamador: así ningún cierre "de golpe" deja el saldo de cámaras a medias.
+   Importante: primero se limpia SHEET y LUEGO se manda camCierra, porque accion()/aplicar() repinta
+   por dentro, y si esta misma función volviera a ver SHEET.camaras entraría en bucle consigo misma. */
+function cerrarSheet(){
+  if(!SHEET&&$('#sheet').hidden)return;
+  let congela=null,eraCam=false;
+  if(SHEET&&SHEET.juego&&SHEET.tid&&mine()){ /* al cerrar una tarea, la sala se recuerda 45 s más (ver miAct) */
+    const t=(mine().tasks||[]).find(x=>x.id===SHEET.tid);
+    if(t){const d=Math.min(SHEET.step,t.steps.length-1),st=t.steps[d];if(st)congela={room:st.room,txt:st.txt,hasta:ahora()+45000}}
+  }
+  if(SHEET&&SHEET.camaras)eraCam=true;
+  pararSheet();$('#sheet').hidden=true;$('#shBody').innerHTML='';SHEET=null;MODO={m:'menu'};
+  if(congela)ACT_CONGELADA=congela;
+  if(eraCam)accion('camCierra');
+}
 /* algunos pasos de las tareas largas (p.ej. analizar una muestra) exigen esperar un poco desde que
    terminó el paso anterior: se puede cerrar la hoja y volver luego, la cuenta sigue por hora real */
 function vHojaTarea(tid){
@@ -1766,12 +1871,22 @@ function infoSalas(){
   return `<div class="info-salas"><p>Punto de reunión: <b>${esc(mr.name)}</b></p><p>Salas en juego: ${on.map(r=>`<b>${esc(r.name)}</b>`).join(', ')}.</p>
   <details class="reglas" style="margin:10px 0 0"><summary>Cómo se juega</summary>${REGLAS}</details></div>`;
 }
+/* estado de cámaras para quien las tiene: no dice "cámaras" a nadie más, así que aquí puede ser explícito */
+function vCamHUD(p){
+  if(!tieneCamaras(p))return '';
+  const e=camEstado(p,ahora());
+  let cuerpo;
+  if(e.abiertas)cuerpo=`<p class="tenue">Abiertas ahora. Quedan <b data-until="${p.cam.openSince+p.cam.bal}"></b>.</p><button class="b-sec b-ancho" data-a="camCerrar">Cerrar cámaras</button>`;
+  else if(e.cd>0)cuerpo=`<p class="tenue">En enfriamiento: <b data-until="${ahora()+e.cd}"></b>.</p>`;
+  else cuerpo=`<p class="tenue">${Math.ceil(e.disp/1000)} s disponibles. Escanea el código de esa sala para abrirlas.</p>`;
+  return `<section class="bloque cam-hud"><h3 style="margin:0 0 6px;font-size:20px">Cámaras</h3>${cuerpo}</section>`;
+}
 function vMas(){
   const p=mine();if(!p||!S||S.phase!=='play')return '';
-  if(p.role!=='imp')return `<h2>Salas y ayuda</h2>${infoSalas()}`;
+  if(p.role!=='imp')return `<h2>Salas y ayuda</h2>${vCamHUD(p)}${infoSalas()}`;
   const t=ahora();let h='';
   if(MODO.m==='matar'){
-    const vic=S.players.filter(x=>!x.dead&&x.role!=='imp');
+    const vic=Array.isArray(MODO.objetivos)?S.players.filter(x=>MODO.objetivos.includes(x.id)):S.players.filter(x=>!x.dead&&x.role!=='imp');
     h=`<h2>¿A quién?</h2><p class="tenue">Tócale el hombro sin que nadie te vea y elige su nombre.</p>
     <div class="rejilla">${vic.map(x=>`<button class="gente-b" data-a="matarA" data-p="${x.id}">${dot(x)}${esc(x.name)}${bt(x)}</button>`).join('')}</div><button class="b-link" data-a="volverMenu">Volver</button>`;
   }else if(MODO.m==='conf'){
@@ -1786,10 +1901,51 @@ function vMas(){
     if(!p.dead)h+=`<button class="b-alarma b-ancho" data-a="matar" ${okK?'':'disabled'}>${okK?'Matar':'Matar dentro de <span data-until="'+p.kcd+'">'+'</span>'}</button>`;
     h+=`<h3 style="margin:18px 0 4px;font-size:22px">Sabotear${okS?'':' en <span data-until="'+S.sabCd+'">'+'</span>'}</h3>`;
     h+=Object.entries(SABS).map(([k,s])=>`<button class="opc" data-a="sab" data-k="${k}" ${okS&&(k==='door'||!S.sab)?'':'disabled'}><b>${s.n}</b><small>${s.d}</small></button>`).join('');
+    h+=vCamHUD(p);
   }
   return h+infoSalas();
 }
-function hojaMas(){MODO={m:'menu'};abrirSheet('<div id="shVivo"></div>',{refresh:vMas});setHTML($('#shVivo'),vMas())}
+function hojaMas(modo){MODO=modo||{m:'menu'};abrirSheet('<div id="shVivo"></div>',{refresh:vMas});setHTML($('#shVivo'),vMas())}
+/* ============ cámaras: sesión física (ver camSecret) + saldo/enfriamiento ============ */
+function objetivosEnSala(salaId){
+  return S.players.filter(x=>!x.dead&&x.role!=='imp'&&x.act&&x.act.e==='h'&&x.act.room===salaId).map(x=>x.id);
+}
+function abreCamaras(){
+  const p=mine();if(!p||!tieneCamaras(p))return;
+  const e=camEstado(p,ahora());if(e.abiertas||e.cd>0||e.disp<=0)return;
+  accion('camAbre');
+  abrirSheet('<div id="shVivo"></div>',{camaras:true,refresh:vCamaras});
+  setHTML($('#shVivo'),vCamaras());
+}
+function cierraCamaras(){cerrarSheet()} /* la cuenta del saldo la resuelve cerrarSheet() (ver arriba) */
+function vCamaras(){
+  const p=mine();if(!p)return '';
+  if(!p.cam||!p.cam.openSince){setTimeout(()=>{if(SHEET&&SHEET.camaras)cerrarSheet()},30);return '<h2>Cámaras</h2><p class="tenue">Sin más tiempo por ahora.</p>'}
+  const filas=S.players.filter(x=>!x.dead).map(x=>{
+    const a=x.act;let sitio='—',act='Sin actividad';
+    if(a&&a.e==='h'){sitio=(sala(a.room)||{}).name||'?';act=a.txt||'Sin actividad'}
+    else if(a&&a.e==='y'){sitio=(sala(a.room)||{}).name||'?';act='Yendo hacia allí'}
+    return `<div class="cam-fila"><b>${esc(x.name)}</b><span>${esc(sitio)}</span><span class="tenue">${esc(act)}</span></div>`;
+  }).join('');
+  return `<h2>Cámaras</h2><p class="tenue">Quedan <b data-until="${p.cam.openSince+p.cam.bal}"></b>.</p>
+  <div class="cam-lista">${filas}</div>
+  <button class="b-sec b-ancho" style="margin-top:14px" data-a="camCerrar">Cerrar cámaras</button>`;
+}
+/* solo el anfitrión ve esto: el cartel físico de la sala de cámaras de esta partida */
+function vCamQR(){
+  if(!soyHost()||!S||!S.camRoom)return '';
+  const r=sala(S.camRoom)||{name:'?'};
+  const url=urlPartida()+'&cam='+S.camSecret;
+  return `<h2>Cámaras: código de la sala</h2><p class="tenue">Imprime esto o enséñalo desde tu móvil, y déjalo en <b>${esc(r.name)}</b>. Quien tenga acceso a cámaras y lo escanee con la cámara normal del móvil, las desbloquea ahí mismo.</p><div class="qr-invita">${qrSVG(url)}</div>`;
+}
+function hojaCamQR(){abrirSheet('<div id="shVivo"></div>',{refresh:vCamQR});setHTML($('#shVivo'),vCamQR())}
+/* consume el "cam" del QR físico una sola vez, en cuanto sabemos quiénes somos en esta partida */
+function intentaCam(){
+  if(!CAM_QS||!S)return;
+  const p=mine();if(!p)return;
+  const secreto=CAM_QS;CAM_QS=null;
+  if(S.camSecret===secreto&&tieneCamaras(p))abreCamaras();
+}
 
 /* ============ galería de minijuegos (modo pruebas): abrir cualquiera sin partida ============ */
 const GALERIA=[['hold','Mantener'],['simon','Simón'],['wires','Cables'],['order','Orden'],['calib','Calibrar'],['swipe','Deslizar tarjeta'],['code','Código'],
@@ -2790,6 +2946,10 @@ const ACT={
   matarA(d){MODO={m:'conf',p:d.p}},
   matarOk(){accion('kill',{target:MODO.p});vibra(40);cerrarSheet()},
   volverMenu(){MODO={m:'menu'}},
+  miSala(d){MI_SALA_IMP=d.r;LS.set('imp.sala.'+S.gid,d.r)},
+  matarRapido(){const obj=objetivosEnSala(MI_SALA_IMP);if(obj.length)hojaMas(obj.length===1?{m:'conf',p:obj[0]}:{m:'matar',objetivos:obj})},
+  camCerrar(){cierraCamaras()},
+  camQR(){hojaCamQR()},
   sab(d){if(d.k==='door'){MODO={m:'puerta'};return}accion('sab',{kind:d.k});cerrarSheet()},
   puertaA(d){accion('sab',{kind:'door',room:d.r});cerrarSheet()},
   fix(d){hojaFix(+d.panel||0)},
