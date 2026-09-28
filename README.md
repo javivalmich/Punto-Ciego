@@ -29,6 +29,16 @@ dependencias (`assets/personaje3d.js`, un único contexto WebGL para toda la app
 El modelo original y los archivos pesados de origen están en `fuentes/`, que **no** se sube
 al repositorio (`.gitignore`).
 
+## Dependencias de terceros
+
+La única dependencia de terceros de todo el proyecto es el generador de códigos QR con el que
+se puede entrar en una partida escaneando en vez de escribir el código: `beta/assets/qr.js`,
+vendorizado (el archivo copiado tal cual en el repo, no instalado como paquete) a partir de
+[`qrcode-generator`](https://github.com/kazuhikoarase/qrcode-generator) de Kazuhiko Arase
+(licencia MIT). No hace ninguna llamada a internet ni a ningún servicio externo: el QR se calcula
+entero en el propio móvil, igual que el resto de la app. Por ahora vive solo en `beta/`; si esa
+carpeta pasa a ser la versión principal, esta nota debería moverse o actualizarse con ella.
+
 ## Cómo se juega
 
 1. Cada jugador abre la web en su móvil, pulsa **Jugar** y entra con su cuenta (o crea una).
