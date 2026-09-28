@@ -43,12 +43,7 @@ img[data-pend]{visibility:hidden}
 .v3d canvas{touch-action:pan-y;-webkit-tap-highlight-color:transparent}
 .v3d canvas[data-drag]{cursor:grab}.v3d canvas[data-drag]:active{cursor:grabbing}
 .v3d canvas:focus-visible{outline:2px solid var(--baliza);outline-offset:2px;border-radius:12px}
-@keyframes flota{0%,100%{transform:translateY(0)}50%{transform:translateY(-5px)}}
-@keyframes hop{0%,100%{transform:translateY(0) scale(1,1)}12%{transform:translateY(0) scale(1.05,.94)}45%{transform:translateY(-16px) scale(.98,1.03)}}
   .listos{margin:.5em 0}.ok-listo{margin-left:6px;color:#63C283;font-weight:800}
-.pose.espectro{animation:flota 2.6s ease-in-out infinite}
-.pose.espectro:not([data-d3]){opacity:.65}
-.pose.hop{animation:hop .85s ease-in-out infinite;transform-origin:50% 100%}
 .pose[data-d3].rojo,.pose[data-d3].gris{filter:none}
 .ed-tip{margin:0;text-align:center;font-size:13px;color:var(--niebla)}
 .pose.rojo{filter:drop-shadow(0 0 18px rgba(255,70,55,.55)) saturate(1.1)}
@@ -778,7 +773,8 @@ const altoDe=(k,w)=>Math.round(w/(k==='cabeza'?1:.68));
 const dot=(p,t=30)=>`<img class="av" ${figura('cabeza',p.look,p.color,t)} width="${t}" height="${t}" alt="">`;
 const pose=(k,w,cls='',p)=>{const est=/\brojo\b/.test(cls)?'rojo':/\bgris\b/.test(cls)?'gris':/\bespectro\b/.test(cls)?'fantasma':'';
   return `<img class="pose ${cls}" ${p?figura(k,p.look,p.color,w,est):`src="${IMG[k]}"`} width="${w}" height="${altoDe(k,w)}" alt="">`};
-/* Vista 3D viva (menú, editor, revelado, reunión, muerte). Sin 3D cae a una imagen fija. anim: reposo|giro|salto|muerte|fantasma */
+/* Vista 3D viva (menú, editor, revelado, reunión, muerte, victoria, fantasma). Sin 3D cae a una imagen fija.
+   anim: reposo|giro|salto|muerte|fantasma|victoria|expulsado */
 function vivo(nombre,o){
   const look=limpiaLook(o.look);let hood=o.hood===undefined?look.hood:o.hood;if(!COLORES[hood])hood=BLANCO;
   const w=o.w,h=o.h,est=o.est||'',ph=o.ph||'tresq',alt=esc(o.alt||'');
@@ -1585,7 +1581,7 @@ function vJuego(){
   const p=mine();const {hechas,total}=progreso(S);const pct=total?Math.round(hechas/total*100):0;
   let h=`<section class="barra-t"><div class="bt-cab"><span>Tareas de los Ciegos</span><b>${pct}%</b></div><div class="bt"><i style="width:${pct}%"></i></div></section>`;
   h+=vRol(p);
-  if(p.dead&&!p.body)h+=`<p class="fantasma">${pose('espalda',54,'espectro',p)}<span>${p.ejected?'Te han expulsado. ':''}Eres un fantasma. ${p.role==='imp'?'Aún puedes sabotear.':'Sigue haciendo tareas: cuentan para los Ciegos.'} En las reuniones no puedes hablar ni votar.</span></p>`;
+  if(p.dead&&!p.body)h+=`<p class="fantasma">${vivo('fantasma',{look:p.look,hood:p.color,anim:'fantasma',k:S.gid+'-'+p.id,w:54,h:78,ph:'espalda',alt:'Tu fantasma'})}<span>${p.ejected?'Te han expulsado. ':''}Eres un fantasma. ${p.role==='imp'?'Aún puedes sabotear.':'Sigue haciendo tareas: cuentan para los Ciegos.'} En las reuniones no puedes hablar ni votar.</span></p>`;
   h+=vAlertas(p);
   const coms=S.sab&&S.sab.kind==='coms'&&!p.dead;
   if(coms)h+=`<div class="coms">Comunicaciones caídas. No ves tus tareas hasta que alguien las repare.</div>`;
@@ -1616,7 +1612,11 @@ function vBarra(){
 }
 function vReunion(){
   const m=S.meet,p=mine(),t=ahora(),mr=sala(S.cfg.meet)||{name:'el punto de reunión'};
-  let h=`<div class="ov"><div class="ov-franja"></div>${(()=>{const q=P(S,m.by);return vivo('reunion',{look:q?q.look:LOOK0,hood:q?q.color:BLANCO,anim:'salto',k:S.gid+(m.body?'c':'r'),w:150,h:190,ph:'salta',alt:'Saltando: reunión'})})()}<h1>${m.body?'Cadáver':'Reunión'}</h1>
+  const ejectado=m.res&&m.res.out?P(S,m.res.out):null;
+  const cabecera=ejectado
+    ?vivo('reunion',{look:ejectado.look,hood:ejectado.color,anim:'expulsado',est:'rojo',k:S.gid+'-eject-'+ejectado.id,w:150,h:190,ph:'espalda',alt:`${ejectado.name} ha sido expulsado`})
+    :(()=>{const q=P(S,m.by);return vivo('reunion',{look:q?q.look:LOOK0,hood:q?q.color:BLANCO,anim:'salto',k:S.gid+(m.body?'c':'r'),w:150,h:190,ph:'salta',alt:'Saltando: reunión'})})();
+  let h=`<div class="ov"><div class="ov-franja"></div>${cabecera}<h1>${m.body?'Cadáver':'Reunión'}</h1>
   <p class="sub">${m.body?`${esc(nombreDe(m.by))} ha encontrado el cuerpo de ${esc(nombreDe(m.body))}.`:`${esc(nombreDe(m.by))} ha convocado una reunión de emergencia.`}</p>
   <p class="dondes">Todos a <b>${esc(mr.name)}</b>. Los muertos pueden levantarse y venir, pero en silencio.</p>`;
   const vivos=S.players.filter(x=>!x.dead);
@@ -1659,7 +1659,9 @@ function vRevela(){
 }
 function vFin(){
   const e=S.end||{};const imps=S.players.filter(x=>x.role==='imp');
-  let h=`<div class="ov"><div class="ov-franja"></div>${pose(e.w==='imp'?'tresq':e.w?'feliz':'frente',150,(e.w==='imp'?'rojo ':'')+(e.w?'hop':''),e.w==='imp'&&imps[0]?imps[0]:mine())}${e.w?`<h1 class="fin-w ${e.w}">${e.w==='imp'?(imps.length>1?'Ganan los Puntos':'Gana el Punto'):'Ganan los Ciegos'}</h1>`:'<h1>Partida terminada</h1>'}
+  const q=e.w==='imp'&&imps[0]?imps[0]:mine();
+  const cara=e.w?vivo('fin',{look:q?q.look:LOOK0,hood:q?q.color:BLANCO,anim:'victoria',est:e.w==='imp'?'rojo':'',k:S.gid+'-'+e.w,w:190,h:230,ph:e.w==='imp'?'tresq':'feliz',alt:e.w==='imp'?'El Punto celebra':'Los Ciegos celebran'}):pose('frente',150,'',mine());
+  let h=`<div class="ov"><div class="ov-franja"></div>${cara}${e.w?`<h1 class="fin-w ${e.w}">${e.w==='imp'?(imps.length>1?'Ganan los Puntos':'Gana el Punto'):'Ganan los Ciegos'}</h1>`:'<h1>Partida terminada</h1>'}
   <p class="sub">${esc(e.why||'')}</p>
   ${imps.length?`<p class="dondes">${imps.length>1?'Los Puntos eran':'El Punto era'} <b>${imps.map(x=>esc(x.name)).join(' y ')}</b>.</p>`:''}
   <ul class="gente roles">${S.players.map(x=>`<li>${dot(x)}<span class="${x.role==='imp'?'imp':''}">${esc(x.name)}</span>${bt(x)}<em>${x.role==='imp'?'Punto':'Ciego'}${x.ejected?', expulsado':x.dead?', muerto':''}</em></li>`).join('')}</ul>

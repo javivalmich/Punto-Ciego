@@ -185,6 +185,17 @@ const HUESOS_REPOSO=(()=>{
   for(let i=0;i<HUESOS.length;i++)qr.set(QID,i*4);
   return {qr,qd};
 })();
+/* ---------- poses guardadas (fuentes/posador/poses.json, horneadas aquí en radianes) ----------
+   Cada entrada es {Hueso:[rx,ry,rz]}; se expande a {Hueso:{rx,ry,rz}} una vez, al cargar, para que
+   calculaHuesos(pose) las use sin más cambios. Si se repinta el modelo o se retocan poses en el
+   posador, hay que volver a generar este bloque (fuentes/posador/poses.json -> grados a radianes). */
+const POSES=(()=>{
+  const RAD={"sentado":{"Head":[0.1745,0.0,0.0],"RightArm":[0.1745,0.0,-0.1396],"RightForeArm":[0.6981,0.1745,0.0],"LeftUpLeg":[-0.6109,0.0,0.0],"LeftLeg":[0.7854,0.0,0.0],"RightUpLeg":[-0.6109,0.0,0.0],"RightLeg":[0.7854,0.0,0.0]},"tumbado":{"Head":[0.2618,0.0,0.2094],"LeftArm":[0.0,0.0,0.2618],"LeftForeArm":[0.2618,0.0,0.0],"RightArm":[0.0,0.0,-0.2618],"RightForeArm":[0.2618,0.0,0.0],"LeftUpLeg":[0.2094,0.0,0.0],"LeftLeg":[0.2618,0.0,0.0],"RightUpLeg":[-0.1396,0.0,0.0],"RightLeg":[0.2094,0.0,0.0]},"cuchillo_lado":{"Hips":[0.0,0.2094,0.0],"Head":[0.0,-0.2618,0.0],"RightArm":[0.1745,0.0,-0.2618],"RightForeArm":[0.2618,0.1745,0.0]},"lupa_cara":{"Head":[0.1396,0.0,0.0],"RightArm":[-0.9599,0.0,-0.1745],"RightForeArm":[1.9199,0.0,0.0]},"saludo":{"Hips":[0.0,0.2618,0.0],"Head":[-0.1396,0.0,0.0],"LeftArm":[-0.1396,0.0,0.1396],"RightArm":[-0.1396,0.0,-0.1396],"LeftUpLeg":[-0.2618,0.0,0.0],"LeftLeg":[0.3142,0.0,0.0],"RightUpLeg":[-0.2618,0.0,0.0],"RightLeg":[0.3142,0.0,0.0]},"reposo":{},"acechando":{"Hips":[0.3491,0.0,0.0],"Head":[-0.2618,0.0,0.0],"LeftArm":[-0.2618,0.0,0.1745],"LeftForeArm":[0.5236,0.0,0.0],"RightArm":[-0.2618,0.0,-0.1745],"RightForeArm":[0.5236,0.0,0.0]},"con_movil":{"Head":[0.2094,0.0,0.0],"RightArm":[0.2618,0.0,-0.1745],"RightForeArm":[1.309,0.0,0.0]},"agachado":{"Hips":[0.1745,0.0,0.0],"LeftArm":[-0.1745,0.0,0.0],"LeftForeArm":[0.2618,0.0,0.0],"RightArm":[-0.1745,0.0,0.0],"RightForeArm":[0.2618,0.0,0.0],"LeftUpLeg":[-0.6109,0.0,0.0],"LeftLeg":[0.9599,0.0,0.0],"RightUpLeg":[-0.6109,0.0,0.0],"RightLeg":[0.9599,0.0,0.0]},"caminando":{"Hips":[0.0873,0.0,0.0],"LeftArm":[0.1745,0.0,0.0],"RightArm":[-0.1745,0.0,0.0],"LeftUpLeg":[-0.2094,0.0,0.0],"LeftLeg":[0.0873,0.0,0.0],"RightUpLeg":[0.1745,0.0,0.0],"RightLeg":[0.2094,0.0,0.0]},"corriendo":{"Hips":[0.1396,0.0,0.0],"LeftArm":[0.2443,0.0,0.0],"RightArm":[-0.2443,0.0,0.0],"LeftUpLeg":[-0.2443,0.0,0.0],"LeftLeg":[0.2618,0.0,0.0],"RightUpLeg":[0.2094,0.0,0.0],"RightLeg":[0.1396,0.0,0.0]},"saltando":{"Hips":[0.0,0.4363,0.0],"Head":[-0.1396,0.0,0.0],"LeftArm":[-0.1396,0.0,0.1396],"RightArm":[-0.1396,0.0,-0.1396],"LeftUpLeg":[-0.6109,0.0,0.0],"LeftLeg":[0.9599,0.0,0.0],"RightUpLeg":[-0.6109,0.0,0.0],"RightLeg":[0.9599,0.0,0.0]}};
+  const out={};
+  for(const k in RAD){const o={};for(const h in RAD[k]){const a=RAD[k][h];o[h]={rx:a[0],ry:a[1],rz:a[2]}}out[k]=o}
+  return out;
+})();
+PJ.POSES=POSES;
 function hex(h,d){ if(!h) return d; h=String(h).replace('#',''); if(h.length===3)h=h.replace(/./g,'$&$&'); return [parseInt(h.slice(0,2),16)/255,parseInt(h.slice(2,4),16)/255,parseInt(h.slice(4,6),16)/255]; }
 
 /* ---------- WebGL compartido ---------- */
@@ -350,9 +361,18 @@ PJ.tamano=(vista,anchoCss)=>{const V=VISTAS[vista];if(!V)return null;const w=cub
    sin pasar por toDataURL en cada fotograma mientras se arrastra un hueso. */
 PJ.lienzo=()=>GL.cv;
 
-/* ---------- animaciones (todas del cuerpo entero) ---------- */
+/* ---------- animaciones (todas del cuerpo entero, algunas ya terminan en una pose de esqueleto) ---------- */
 const RM=G.matchMedia?G.matchMedia('(prefers-reduced-motion: reduce)'):{matches:false};
 const ease=t=>t<0?0:t>1?1:1-Math.pow(1-t,3);
+/* mezcla lineal desde reposo (todo 0) hasta `pose`, en la fracción f (0..1) -- para que los miembros
+   vayan entrando en una pose de esqueleto MIENTRAS avanza una animación de cuerpo entero (p.ej. las
+   piernas y brazos de "tumbado" acomodándose según el personaje cae, no de golpe al final). */
+function mezclaPose(pose,f){
+  if(f<=0)return null;
+  const o={};
+  for(const h in pose){const r=pose[h];o[h]={rx:r.rx*f,ry:r.ry*f,rz:r.rz*f}}
+  return o;
+}
 const ANIM={
   /* respiración y balanceo suave */
   reposo(v,t,rm){
@@ -377,21 +397,44 @@ const ANIM={
     const sq=Math.max(0,(.14-u)/.14)+Math.max(0,(u-.9)/.1);
     return {p:{yaw:.35+.3*Math.sin(t*3.1),y,sy:1-.08*sq+.03*Math.sin(u*Math.PI),sx:1+.05*sq,pitch:.03},fin:false};
   },
-  /* muerte: cae de lado y queda tumbado, en gris */
+  /* muerte: cae de lado y queda tumbado, en gris -- los miembros van entrando en la pose "tumbado"
+     (piernas y brazos echados, ver fuentes/posador/poses.json) a la vez que el cuerpo gira, no de
+     golpe al final, y el giro rígido de cuerpo entero se queda igual que antes (la caída en sí). */
   muerte(v,t,rm){
     const dur=1.3,u=Math.min(1,t/dur);
     let f=u<.72?Math.pow(u/.72,2.3):1-.05*Math.exp(-7*(u-.72))*Math.cos(26*(u-.72));
     if(rm||t>dur+.6)f=1;
+    const fp=Math.max(0,Math.min(1,f));
     const p={yaw:.28,pitch:0,roll:-Math.PI/2*f,tx:-1.5*f,gray:rm?1:Math.min(1,u*1.6)};
+    if(fp>0)p.pose=mezclaPose(POSES.tumbado,fp);
     return {p,fin:rm||t>dur+.6};
   },
   /* fantasma: semitransparente y flotando */
   fantasma(v,t,rm){
     const p={yaw:v.yaw+(rm?0:.16*Math.sin(t*.7)),y:rm?.06:.07+.06*Math.sin(t*1.5),alpha:.6,gray:.55,rim:'azul',pitch:.03};
     return {p,fin:rm};
+  },
+  /* victoria: saltitos felices (mismo resorte que "salto") que se acomodan en la pose "saludo"
+     (brazos a los lados, cadera girada -- ver el pendiente de brazo levantado en NOTAS_ESQUELETO.md) */
+  victoria(v,t,rm){
+    const f=rm?1:Math.min(1,t/.5);
+    if(rm)return {p:{yaw:.35,pitch:.02,pose:POSES.saludo},fin:true};
+    const per=.7,u=(t%per)/per,y=.14*4*u*(1-u);
+    const sq=Math.max(0,(.14-u)/.14)+Math.max(0,(u-.9)/.1);
+    const p={yaw:.35+.1*Math.sin(t*2.1),y,sy:1-.06*sq+.02*Math.sin(u*Math.PI),sx:1+.04*sq,pitch:.02,pose:mezclaPose(POSES.saludo,f)};
+    return {p,fin:false};
+  },
+  /* expulsado: gira y se aleja flotando, transparentándose, con el mismo tinte rojo que el revelado
+     de impostor -- distinto del fantasma (que solo flota) y de la muerte (que cae): aquí se va. */
+  expulsado(v,t,rm){
+    const dur=1.6,u=Math.min(1,t/dur);
+    if(rm)return {p:{yaw:.3,y:.12,alpha:.35,gray:.3,rim:'rojo'},fin:true};
+    const e=ease(u);
+    const p={yaw:.3+e*Math.PI*2.2,y:.04+.55*e,alpha:1-.68*e,gray:.3*e,rim:'rojo',pitch:.05*Math.sin(u*7),roll:0};
+    return {p,fin:u>=1};
   }
 };
-const CAM={reposo:{zoom:.95},giro:{zoom:.92,vy:.08},salto:{zoom:.9,vy:.08},muerte:{zoom:1.3,vy:-.42,cp:.14},fantasma:{zoom:.88,vy:.05}};
+const CAM={reposo:{zoom:.95},giro:{zoom:.92,vy:.08},salto:{zoom:.9,vy:.08},muerte:{zoom:1.3,vy:-.42,cp:.14},fantasma:{zoom:.88,vy:.05},victoria:{zoom:.9,vy:.08},expulsado:{zoom:.86,vy:.1}};
 
 /* ---------- vistas vivas (<canvas data-v>) ---------- */
 const vistas=new Map();
