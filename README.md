@@ -96,6 +96,25 @@ configura, el juego funciona igualmente y guarda el perfil solo en cada móvil.
 > La clave publicable puede estar en el repositorio porque la tabla está protegida con RLS.
 > **Nunca** subas una clave `sb_secret_...` ni `service_role`.
 
+### Probar cuentas en local sin tocar Supabase
+
+`mocksb.js` es un servidor local (Node, sin dependencias) que imita lo justo de la API de
+Supabase (cuentas, perfiles, borrado de cuenta) para probar esos flujos sin conexión ni riesgo
+sobre el proyecto real:
+
+```bash
+node mocksb.js          # escucha en http://localhost:9999
+```
+
+Y abre la beta apuntando a él:
+
+```
+http://localhost:8080/beta/?supa=http://localhost:9999&supakey=local&pruebas=1
+```
+
+Los datos de prueba se guardan en `.mocksb-data.json` (no se sube a git); bórralo para
+empezar de cero.
+
 ## Cómo actualizar el juego
 
 Edita `index.html` (y `assets/` si cambias el personaje), y luego:

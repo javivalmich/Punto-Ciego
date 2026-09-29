@@ -21,6 +21,7 @@ desktop.ini
 *.log
 test-results/
 playwright-report/
+.mocksb-data.json
 
 # Material de origen pesado (modelo 3D original, vídeo): no se sube. GitHub rechaza archivos de más de 100 MB
 fuentes/

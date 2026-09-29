@@ -51,6 +51,7 @@ img[data-pend]{visibility:hidden}
 .mira{display:block}
 .b-ancho{display:block;width:100%}
 .b-link{background:none;border:0;color:var(--niebla);text-decoration:underline;text-underline-offset:3px;min-height:40px;padding:8px 0;font-weight:500}
+.b-link.peligro{color:var(--alarma)}
 .b-mini{min-height:34px;padding:4px 10px;font-size:14px;margin-left:auto;background:transparent}
 .tenue{color:var(--niebla)}
 .lbl{display:block;color:var(--niebla);font-size:14px;margin:0 0 6px}
@@ -638,6 +639,7 @@ const SB_LIB=(EN_LOCAL&&QS.get('sblib'))||'https://cdn.jsdelivr.net/npm/@supabas
 const CUENTAS=!!(SUPA.url&&SUPA.key);
 let SB=null,USER=null,SB_ESTADO=CUENTAS?'cargando':'off',PERFIL_CARGANDO=false,GUARDANDO=false,PEND_ENTRAR=null;
 let ACCESO={modo:'entrar',email:'',pw:'',err:'',msg:'',busy:false};
+let BORRAR={pw:'',palabra:'',err:'',busy:false,ver:false};
 let PERFIL=null;
 let GOOGLE=false; /* se activa solo si el proveedor Google está habilitado en Supabase */
 if(!CUENTAS){
@@ -1509,6 +1511,20 @@ function vAcceso(){
   ${crear?'':`<p><button class="b-link" data-a="olvido">He olvidado la contraseña</button></p>`}
   <p><button class="b-link" data-a="aPortada">Volver</button></p></section>`;
 }
+function campoBorrar(){
+  const ver=!!BORRAR.ver;
+  return `<span class="clave"><input id="bpw" type="${ver?'text':'password'}" autocomplete="current-password" value="${esc(BORRAR.pw)}"><button type="button" class="ver" data-a="verClaveBorrar" aria-pressed="${ver}" aria-label="${ver?'Ocultar contraseña':'Mostrar contraseña'}">${ver?'Ocultar':'Ver'}</button></span>`;
+}
+function vBorrarCuenta(){
+  const b=BORRAR,conPw=!!(USER&&USER.app_metadata&&USER.app_metadata.provider==='email');
+  return `<section class="bloque"><h2>Eliminar cuenta</h2>
+  <p class="tenue">Se borrarán tu cuenta, tu personaje y tus estadísticas. Esta acción no se puede deshacer.</p>
+  ${conPw?`<p><label class="lbl" for="bpw">Escribe tu contraseña para confirmar</label>${campoBorrar()}</p>`
+    :`<p><label class="lbl" for="bpal">Escribe BORRAR para confirmar</label><input id="bpal" value="${esc(b.palabra)}" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="BORRAR"></p>`}
+  ${b.err?`<p class="motivo" role="alert">${esc(b.err)}</p>`:''}
+  <button class="b-alarma b-ancho" data-a="confirmarBorrado" ${b.busy?'disabled':''}>${b.busy?'Borrando…':'Eliminar mi cuenta'}</button>
+  <p><button class="b-sec b-ancho" data-a="aMenu" ${b.busy?'disabled':''}>Cancelar</button></p></section>`;
+}
 function vNuevaClave(){
   return `<section class="bloque"><h2>Nueva contraseña</h2><p class="tenue">Escribe la contraseña que quieres usar a partir de ahora.</p>
   <p><label class="lbl" for="pw">Contraseña nueva</label>${campoClave('new-password',ACCESO.pw,'Mínimo 6 caracteres')}</p>
@@ -1524,6 +1540,7 @@ function vHome(){
     if(SB_ESTADO==='error')return `<section class="bloque"><h2>No se puede conectar con las cuentas</h2><p class="tenue">Comprueba la conexión a internet y vuelve a intentarlo.</p><button class="b-baliza b-ancho" data-a="reintentarCuentas">Reintentar</button><p><button class="b-link" data-a="aPortada">Volver</button></p></section>`;
     if(!USER)return vAcceso();
     if(PERFIL_CARGANDO&&!PERFIL)return vEsperaCuentas('Cargando tu personaje…');
+    if(VISTA==='borrarCuenta')return vBorrarCuenta();
   }
   if(!PERFIL||VISTA==='editor'){if(!EDIT)EDIT={name:PERFIL?PERFIL.name:'',look:{...limpiaLook(PERFIL?PERFIL.look:LOOK0)}};return vEditor()}
   const ult=LS.get('imp.ultima');
@@ -1538,7 +1555,8 @@ function vHome(){
   ${ult?`<div class="bloque"><button class="b-link" data-a="volver" data-c="${esc(ult)}">Volver a la partida ${esc(ult)}</button></div>`:''}
   ${PRUEBAS?`<div class="bloque"><button class="b-link" data-a="galeria">Galería de minijuegos (pruebas)</button></div>`:''}
   <p><button class="b-link" data-a="aPortada">Pantalla de inicio</button>${CUENTAS&&USER?` <span class="tenue sep">·</span> <button class="b-link" data-a="salirCuenta">Cerrar sesión</button>`:''}</p>
-  <p class="tenue pie">${CUENTAS&&USER?`Sesión iniciada con ${esc(USER.email||'')}.`:'Tu perfil se guarda solo en este móvil.'}</p>`;
+  <p class="tenue pie">${CUENTAS&&USER?`Sesión iniciada con ${esc(USER.email||'')}.`:'Tu perfil se guarda solo en este móvil.'}</p>
+  ${CUENTAS&&USER?`<p><button class="b-link peligro" data-a="aBorrarCuenta">Eliminar cuenta</button></p>`:''}`;
 }
 function vBuscando(){
   const lento=Date.now()-BUSCA_T>7000;
@@ -2885,6 +2903,30 @@ const ACT={
     ACCESO.busy=true;pinta();const {error}=await SB.auth.updateUser({password:pw});ACCESO.busy=false;
     if(error)ACCESO.err=errorCuenta(error);else{toast('Contraseña cambiada');VISTA='menu';ACCESO.pw='';ACCESO.ver=false}pinta()},
   async salirCuenta(){if(SB)await SB.auth.signOut();USER=null;PERFIL=null;SES_ID='';EDIT=null;VISTA='portada';pinta()},
+  aBorrarCuenta(){BORRAR={pw:'',palabra:'',err:'',busy:false,ver:false};VISTA='borrarCuenta';scrollTo(0,0)},
+  verClaveBorrar(){BORRAR.ver=!BORRAR.ver},
+  async confirmarBorrado(){
+    const b=BORRAR;b.err='';
+    const conPw=!!(USER&&USER.app_metadata&&USER.app_metadata.provider==='email');
+    if(conPw){if(!b.pw){b.err='Escribe tu contraseña.';return}}
+    else if(b.palabra.trim().toUpperCase()!=='BORRAR'){b.err='Escribe BORRAR (así, en mayúsculas) para confirmar.';return}
+    b.busy=true;pinta();
+    try{
+      if(conPw){
+        const {error}=await SB.auth.signInWithPassword({email:USER.email,password:b.pw});
+        if(error){b.busy=false;b.err='Contraseña incorrecta.';pinta();return}
+      }
+      const {error}=await SB.rpc('eliminar_mi_cuenta');
+      if(error)throw error;
+      const uid=USER.id;
+      try{await SB.auth.signOut()}catch(e){}
+      LS.del('pc.perfil.'+uid);
+      USER=null;PERFIL=null;SES_ID='';EDIT=null;BORRAR={pw:'',palabra:'',err:'',busy:false,ver:false};
+      VISTA='portada';toast('Cuenta eliminada');pinta();
+    }catch(e){
+      b.busy=false;b.err=navigator.onLine?'No se ha podido borrar la cuenta. Inténtalo de nuevo.':'Sin conexión: no se ha podido borrar la cuenta.';pinta();
+    }
+  },
   reintentarCuentas(){SB_ESTADO='cargando';SB?SB.auth.getSession().then(r=>trasSesion('INICIO',r.data.session)).then(()=>{SB_ESTADO='listo';pinta()},()=>{SB_ESTADO='error';pinta()}):iniciaCuentas()},
   aPortada(){VISTA='portada';EDIT=null;scrollTo(0,0)},
   aMenu(){VISTA='menu';EDIT=null;scrollTo(0,0)},
@@ -2987,12 +3029,15 @@ document.addEventListener('click',e=>{
   const b=e.target.closest('[data-a]');if(!b||b.disabled)return;
   if(EDIT&&$('#nom'))EDIT.name=$('#nom').value;
   if($('#em'))ACCESO.email=$('#em').value;if($('#pw'))ACCESO.pw=$('#pw').value;
+  if($('#bpw'))BORRAR.pw=$('#bpw').value;if($('#bpal'))BORRAR.palabra=$('#bpal').value;
   const f=ACT[b.dataset.a];if(f){e.preventDefault();f(b.dataset,b);pinta()}
 });
 addEventListener('pageshow',e=>{if(e.persisted&&ACCESO.busy){ACCESO.busy=false;pinta()}}); /* volver atrás desde Google */
 document.addEventListener('change',e=>{const s=e.target.closest('[data-cfg]');if(s)cambiaCfg(c=>{c[s.dataset.cfg]=s.value})});
 document.addEventListener('keydown',e=>{if(e.key!=='Enter')return;if(e.target.id==='cod'){ACT.unirme();pinta()}
-  if(e.target.id==='pw'||e.target.id==='em'){const b=document.querySelector('[data-a=entrarCuenta],[data-a=crearCuenta],[data-a=nuevaClave]');if(b&&!b.disabled)b.click()}if(e.target.id==='nuevaSala')ACT.addSala()});
+  if(e.target.id==='pw'||e.target.id==='em'){const b=document.querySelector('[data-a=entrarCuenta],[data-a=crearCuenta],[data-a=nuevaClave]');if(b&&!b.disabled)b.click()}
+  if(e.target.id==='bpw'||e.target.id==='bpal'){const b=document.querySelector('[data-a=confirmarBorrado]');if(b&&!b.disabled)b.click()}
+  if(e.target.id==='nuevaSala')ACT.addSala()});
 document.addEventListener('pointerdown',()=>{WK.ctx()},{once:true});
 
 WK.init();
