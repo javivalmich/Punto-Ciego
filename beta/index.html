@@ -342,6 +342,8 @@ ul.tareas{list-style:none;margin:6px 0;padding:0;display:grid;gap:8px}
 .clave .ver{position:absolute;right:2px;top:50%;transform:translateY(-50%);width:auto;min-height:44px;padding:0 14px;background:none;border:0;color:var(--niebla);font-size:14px;font-weight:500;text-decoration:underline;text-underline-offset:3px}
 .b-google{display:flex;align-items:center;justify-content:center;gap:10px;background:var(--casco);color:var(--tiza)}
 .b-google svg{flex:0 0 auto}
+.b-apple{display:flex;align-items:center;justify-content:center;gap:10px;background:var(--tiza);color:#000}
+.b-apple svg{flex:0 0 auto}
 .o-sep{display:flex;align-items:center;gap:12px;color:var(--niebla);font-size:14px;margin:14px 0 4px}
 .o-sep::before,.o-sep::after{content:'';flex:1;height:1px;background:var(--remache)}
 .stats{display:flex;gap:18px;flex-wrap:wrap;color:var(--niebla);font-size:15px;margin:14px 0 0}
@@ -642,6 +644,7 @@ let ACCESO={modo:'entrar',email:'',pw:'',err:'',msg:'',busy:false};
 let BORRAR={pw:'',palabra:'',err:'',busy:false,ver:false};
 let PERFIL=null;
 let GOOGLE=false; /* se activa solo si el proveedor Google está habilitado en Supabase */
+let APPLE=false; /* se activa solo si el proveedor Apple está habilitado en Supabase */
 if(!CUENTAS){
   PERFIL=LS.get('pc.perfil');
   if(!PERFIL&&LS.get('imp.nombre'))PERFIL={name:LS.get('imp.nombre'),look:{...LOOK0}};
@@ -652,7 +655,7 @@ async function iniciaCuentas(){
   try{
     await cargaScript(SB_LIB);
     SB=window.supabase.createClient(SUPA.url,SUPA.key,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}});
-    fetch(SUPA.url+'/auth/v1/settings',{headers:{apikey:SUPA.key}}).then(r=>r.json()).then(j=>{if(j&&j.external&&j.external.google){GOOGLE=true;pinta()}}).catch(()=>{});
+    fetch(SUPA.url+'/auth/v1/settings',{headers:{apikey:SUPA.key}}).then(r=>r.json()).then(j=>{if(j&&j.external){if(j.external.google){GOOGLE=true}if(j.external.apple){APPLE=true}pinta()}}).catch(()=>{});
     SB.auth.onAuthStateChange((ev,ses)=>{setTimeout(()=>trasSesion(ev,ses),0)});
     const {data}=await SB.auth.getSession();
     await trasSesion('INICIO',data.session);
@@ -1494,6 +1497,7 @@ function vEditor(){
   ${nuevo?(CUENTAS&&USER?`<button class="b-link" data-a="salirCuenta">Cerrar sesión</button>`:`<button class="b-link" data-a="aPortada">Volver</button>`):`<button class="b-link" data-a="aMenu">Cancelar</button>`}</div></section>`;
 }
 const G_LOGO='<svg width="18" height="18" viewBox="0 0 48 48" aria-hidden="true"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>';
+const A_LOGO='<svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path fill="#000" d="M16.365 1.43c0 1.14-.416 2.06-1.25 2.79-.905.79-1.998 1.24-3.017 1.16-.12-1.11.42-2.1 1.24-2.85.86-.79 2.03-1.26 3.02-1.1zM20.6 17.06c-.44 1.02-.96 2.02-1.63 2.94-.9 1.26-1.83 2.5-3.3 2.53-1.44.03-1.9-.86-3.55-.86-1.65 0-2.16.83-3.53.89-1.4.06-2.47-1.36-3.38-2.6C3.42 17.4 2 12.79 3.87 9.66c.93-1.55 2.6-2.53 4.4-2.55 1.38-.03 2.68.93 3.53.93.84 0 2.43-1.15 4.1-.98.7.03 2.66.28 3.92 2.1-.1.06-2.34 1.37-2.32 4.08.03 3.24 2.84 4.32 2.87 4.33-.03.09-.44 1.53-1.47 2.99z"/></svg>';
 function campoClave(auto,valor,ph){
   const ver=!!ACCESO.ver;
   return `<span class="clave"><input id="pw" type="${ver?'text':'password'}" autocomplete="${auto}" value="${esc(valor)}" placeholder="${ph}"${ver?' autocapitalize="off" autocorrect="off" spellcheck="false"':''}><button type="button" class="ver" data-a="verClave" aria-pressed="${ver}" aria-label="${ver?'Ocultar contraseña':'Mostrar contraseña'}">${ver?'Ocultar':'Ver'}</button></span>`;
@@ -1502,7 +1506,9 @@ function vAcceso(){
   const a=ACCESO,crear=a.modo==='crear';
   return `<section class="bloque"><div class="pf-fig" style="margin:0 auto">${mira()}<img class="pose" src="${IMG.movil}" width="150" alt=""></div>
   <div class="pestanas"><button class="${crear?'':'on'}" data-a="modoAcceso" data-m="entrar">Entrar</button><button class="${crear?'on':''}" data-a="modoAcceso" data-m="crear">Crear cuenta</button></div>
-  ${GOOGLE?`<button class="b-google b-ancho" data-a="google" ${a.busy?'disabled':''}>${G_LOGO}<span>${crear?'Registrarme con Google':'Entrar con Google'}</span></button><div class="o-sep" aria-hidden="true">o con tu correo</div>`:''}
+  ${GOOGLE?`<button class="b-google b-ancho" data-a="google" ${a.busy?'disabled':''}>${G_LOGO}<span>${crear?'Registrarme con Google':'Entrar con Google'}</span></button>`:''}
+  ${APPLE?`<button class="b-apple b-ancho" data-a="apple" ${a.busy?'disabled':''}>${A_LOGO}<span>${crear?'Registrarme con Apple':'Entrar con Apple'}</span></button>`:''}
+  ${GOOGLE||APPLE?`<div class="o-sep" aria-hidden="true">o con tu correo</div>`:''}
   <p class="tenue">${crear?'Con tu cuenta tu personaje y tus partidas te siguen a cualquier móvil.':'Entra con el correo y la contraseña de tu cuenta.'}</p>
   <p><label class="lbl" for="em">Correo</label><input id="em" type="email" autocomplete="email" inputmode="email" value="${esc(a.email)}" placeholder="tu@correo.com"></p>
   <p><label class="lbl" for="pw">Contraseña</label>${campoClave(crear?'new-password':'current-password',a.pw,crear?'Mínimo 6 caracteres':'')}</p>
@@ -2879,6 +2885,10 @@ const ACT={
   async google(){
     const a=ACCESO;a.err='';a.msg='';a.busy=true;pinta();
     const {error}=await SB.auth.signInWithOAuth({provider:'google',options:{redirectTo:location.origin+location.pathname}});
+    if(error){a.busy=false;a.err=errorCuenta(error);pinta()}},
+  async apple(){
+    const a=ACCESO;a.err='';a.msg='';a.busy=true;pinta();
+    const {error}=await SB.auth.signInWithOAuth({provider:'apple',options:{redirectTo:location.origin+location.pathname}});
     if(error){a.busy=false;a.err=errorCuenta(error);pinta()}},
   async entrarCuenta(){
     const a=ACCESO;a.err='';a.msg='';if(!a.email||!a.pw){a.err='Escribe el correo y la contraseña.';return}
