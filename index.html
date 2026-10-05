@@ -1576,7 +1576,7 @@ function vPortada(){
   <ul class="rasgos"><li><b>Tareas</b>en salas de verdad de tu casa</li><li><b>Sabotajes</b>gas, apagones, puertas cerradas</li><li><b>Un traidor</b>que nadie ha visto venir</li><li><b>Walkie</b>para hablar entre móviles</li></ul>
   <button class="b-jugar" data-a="jugar">Jugar</button>
   <details class="reglas"><summary>Cómo se juega</summary>${REGLAS}</details>
-  <p class="legal"><a href="privacidad.html">Privacidad</a> · <a href="soporte.html">Soporte</a></p></section>`;
+  <p class="legal"><a href="privacidad.html">Privacidad</a> · <a href="terminos.html">Términos</a> · <a href="soporte.html">Soporte</a></p></section>`;
 }
 function vEditor(){
   const nuevo=!PERFIL,l=limpiaLook(EDIT.look);
@@ -1621,7 +1621,7 @@ function vAcceso(){
   <button class="b-baliza b-ancho" data-a="${crear?'crearCuenta':'entrarCuenta'}" ${a.busy?'disabled':''}>${a.busy?'Un momento…':crear?'Crear cuenta':'Entrar'}</button>
   ${crear?'':`<p><button class="b-link" data-a="olvido">He olvidado la contraseña</button></p>`}
   <p><button class="b-link" data-a="aPortada">Volver</button></p>
-  <p class="legal">Al crear una cuenta aceptas la <a href="privacidad.html" target="_blank" rel="noopener">política de privacidad</a>.</p></section>`;
+  <p class="legal">Al crear una cuenta (mínimo 13 años) aceptas los <a href="terminos.html" target="_blank" rel="noopener">términos y condiciones</a> y la <a href="privacidad.html" target="_blank" rel="noopener">política de privacidad</a>.</p></section>`;
 }
 function campoBorrar(){
   const ver=!!BORRAR.ver;
@@ -1670,7 +1670,7 @@ function vHome(){
   <p><button class="b-link" data-a="aPortada">Pantalla de inicio</button>${CUENTAS&&USER?` <span class="tenue sep">·</span> <button class="b-link" data-a="salirCuenta">Cerrar sesión</button>`:''}</p>
   <p class="tenue pie">${CUENTAS&&USER?`Sesión iniciada con ${esc(USER.email||'')}.`:'Tu perfil se guarda solo en este móvil.'}</p>
   ${CUENTAS&&USER?`<p><button class="b-link peligro" data-a="aBorrarCuenta">Eliminar cuenta</button></p>`:''}
-  <p class="legal"><a href="privacidad.html" target="_blank" rel="noopener">Privacidad</a> · <a href="soporte.html" target="_blank" rel="noopener">Soporte</a></p>`;
+  <p class="legal"><a href="privacidad.html" target="_blank" rel="noopener">Privacidad</a> · <a href="terminos.html" target="_blank" rel="noopener">Términos</a> · <a href="soporte.html" target="_blank" rel="noopener">Soporte</a></p>`;
 }
 function vBuscando(){
   const lento=Date.now()-BUSCA_T>7000;
