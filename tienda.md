@@ -60,6 +60,7 @@ Texto sugerido para `NSMotionUsageDescription`: «Algunas tareas del juego usan 
 
 - **Google Play, Seguridad de los datos**: recopila correo y nombre/ID de usuario (cuenta obligatoria para jugar), y «Audio: voz o sonido» solo en tránsito, no almacenado ni compartido; no se venden ni se comparten con terceros para publicidad; cifrado en tránsito; el usuario puede pedir el borrado (en la app y por URL).
 - **Apple, Privacidad de la app**: «Datos de contacto: correo» y «Contenido del usuario / identificadores: nombre y personaje», vinculados al usuario, solo para funcionalidad; sin seguimiento.
+- **Moderación (Apple 1.2)**: el chat no está moderado, pero hay **bloquear** (en la lista de jugadores y ⚑ en el walkie; local al móvil) y **reportar** (correo a soporte con nombre, código y fecha), y el aviso de que es un chat entre amigos sin moderar (lista de jugadores, walkie, privacidad y soporte).
 - **Clasificación por edades**: violencia de fantasía (eliminaciones entre personajes, sin sangre ni imágenes realistas) e interacción entre usuarios (voz y texto sin moderación): Apple 12+ aprox.; PEGI 12.
 
 ## Capturas de pantalla (`tienda/capturas/`)
@@ -75,7 +76,7 @@ Generadas con Playwright (`tienda/capturar.js`, ver su cabecera), 10 pantallas p
 
 Las fichas admiten 8 (Google) o 10 (Apple) capturas: elige las mejores. Nota: el emoji 🪵 de «Casa rural» sale como un cuadrado en las capturas por falta de fuente en el navegador de pruebas; en un móvil real se ve bien.
 
-Iconos en `assets/icons/`: `icon-512.png` (Google Play) e `icon-1024.png` (App Store, sin transparencia). Salen de recortar el logo existente (`assets/logo.webp`, ~634 px de ancho), así que el 1024 está ampliado: para la tienda conviene un icono redibujado en alta resolución.
+Iconos en `assets/icons/`: `icon-512.png` (Google Play) e `icon-1024.png` (App Store, sin transparencia), más `icon-maskable-*.png` (con margen para recortes redondos). Están **redibujados como vector** (reticle + personaje, a partir de las formas del logo): el fuente es `assets/icons/icono.svg` / `icono-maskable.svg` y se regeneran con `tienda/generar-iconos.js`, sin ampliar ningún original pequeño. `tienda/vista-previa-recortes.png` muestra cómo queda recortado en círculo y en cuadrado redondeado.
 
 ## Pendiente de que rellenes tú
 
@@ -83,6 +84,6 @@ Iconos en `assets/icons/`: `icon-512.png` (Google Play) e `icon-1024.png` (App S
 - [ ] Capturas de iPad y tablet si la app va a ser compatible (si no, restringe a iPhone/teléfono).
 - [ ] Nombre del desarrollador / titular legal y dirección postal.
 - [ ] Cuentas de desarrollador: Google Play Console (25 USD, una vez) y Apple Developer Program (99 USD/año).
-- [ ] Activar Sign in with Apple en Supabase (`docs/APPLE_SIGNIN.md`): Apple lo exige si ofreces «Entrar con Google». Hoy el botón solo aparece si Supabase lo tiene activo.
+- [ ] Activar Sign in with Apple en Supabase (`docs/APPLE_SIGNIN.md`): Apple lo exige si ofreces «Entrar con Google». Hoy el botón solo aparece si Supabase lo tiene activo. Después, desplegar la revocación del token al borrar la cuenta (`docs/BORRADO_APPLE.md`).
 - [ ] Credenciales de revisión para Apple/Google: una cuenta de prueba (correo + contraseña) y cómo probarlo (hacen falta varios móviles; valora preparar un vídeo corto).
 - [ ] Cuestionarios de clasificación por edades y de seguridad de datos.

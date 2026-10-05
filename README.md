@@ -71,6 +71,11 @@ no existe nada de esto: ni panel, ni botón, ni código activo.
 - `privacidad.html` y `soporte.html` (en la raíz y en `beta/`) se enlazan desde la portada, el acceso y el perfil. Al pasar la beta a la principal no hace falta tocarlos.
 - `tienda.md` y `tienda/capturas/` son el material de las fichas; las capturas se regeneran con `tienda/capturar.js`.
 
+## Bloquear y reportar, y borrado de cuenta
+
+- **Bloquear / reportar**: en la lista de jugadores («Bloquear») y con ⚑ junto a los mensajes del walkie. Bloquear oculta la voz y los mensajes de ese jugador en esa partida, solo en ese móvil (`imp.bloq.<código>` en localStorage). Reportar abre un correo a `SUPPORT_MAIL` con nombre, id, código de partida y fecha. No hay moderación ni servidor nuevo; los textos avisan de que el chat es entre amigos y sin moderar.
+- **Eliminar cuenta**: la cuenta es **compartida con Punto Falso** (mismo proyecto de Supabase y misma tabla `profiles`): borrarla en un juego la borra en el otro, y así lo dice el aviso de los dos. El cliente llama a la Edge Function `eliminar-cuenta` (que revoca el token de Apple si hace falta y borra) y, si no está desplegada o falla, usa el respaldo `eliminar_mi_cuenta()`. Ver `docs/BORRADO_APPLE.md`.
+
 ## Cómo se publica (GitHub Pages)
 
 1. Sube el repositorio a GitHub (rama `main`).

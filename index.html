@@ -61,6 +61,9 @@ img[data-pend]{visibility:hidden}
 .b-ancho{display:block;width:100%}
 .b-link{background:none;border:0;color:var(--niebla);text-decoration:underline;text-underline-offset:3px;min-height:40px;padding:8px 0;font-weight:500}
 .b-link.peligro{color:var(--alarma)}
+.wk-m .flag{min-height:32px;width:34px;padding:0;margin-left:8px;float:right;color:var(--niebla)}
+.b-mini.on{color:var(--alarma);border-color:var(--alarma)}
+#wkNormas{font-size:12.5px;color:var(--niebla);margin:8px auto 0;line-height:1.35}
 .b-mini{min-height:34px;padding:4px 10px;font-size:14px;margin-left:auto;background:transparent}
 .tenue{color:var(--niebla)}
 .lbl{display:block;color:var(--niebla);font-size:14px;margin:0 0 6px}
@@ -415,6 +418,7 @@ body.capa{position:fixed;left:0;right:0;width:100%;overflow:hidden}
     <div id="wkLista"></div>
     <div class="wk-escribe"><input id="wkTxt" maxlength="200" placeholder="Escribe un mensaje" autocomplete="off"><button id="wkEnviar">Enviar</button></div>
     <button id="wkPtt"><span id="wkPttTxt">Mantén para hablar</span><i id="wkNivel"></i></button>
+    <p id="wkNormas">El chat es entre amigos y no está moderado. Toca ⚑ junto a un mensaje para bloquear o reportar a alguien.</p>
     <p id="wkMicNota">🎤 El micrófono solo se activa mientras mantienes pulsado el botón de hablar. Tu voz se envía al grupo en directo, cifrada, y no se graba ni se guarda. La primera vez, tu móvil te pedirá permiso.</p>
     <p id="wkEstado"></p>
     <p id="wkDiag"></p>
@@ -693,12 +697,30 @@ if(!CUENTAS){
   if(PERFIL)PERFIL.look=limpiaLook(PERFIL.look);
 }
 function cargaScript(src){return new Promise((ok,ko)=>{const e=document.createElement('script');e.src=src;e.onload=ok;e.onerror=()=>ko(new Error('no carga '+src));document.head.appendChild(e)})}
+/* ---------- Borrado de cuenta y revocación del token de Apple ----------
+   La Edge Function `eliminar-cuenta` revoca el token de Apple (si entró con Apple y hay credenciales) y borra la cuenta.
+   Si la función no está desplegada o falla, se usa el respaldo de siempre (eliminar_mi_cuenta), que borra igual. */
+async function borrarCuentaRemota(sb){
+  try{
+    const {data,error}=await sb.functions.invoke('eliminar-cuenta',{body:{}});
+    if(!error&&data&&data.ok)return;
+  }catch(e){}
+  const {error:rpcErr}=await sb.rpc('eliminar_mi_cuenta');
+  if(rpcErr)throw rpcErr;
+}
+/* Al entrar con Apple, Supabase da el token de Apple una sola vez: se guarda (solo el servidor puede leerlo) para poder revocarlo al borrar la cuenta */
+function guardaTokenApple(sb,ses){
+  try{
+    if(!ses||!ses.provider_refresh_token||!ses.user||!ses.user.app_metadata||ses.user.app_metadata.provider!=='apple')return;
+    sb.rpc('guardar_token_apple',{p_token:ses.provider_refresh_token,p_origen:'web'}).then(()=>{},()=>{});
+  }catch(e){}
+}
 async function iniciaCuentas(){
   try{
     await cargaScript(SB_LIB);
     SB=window.supabase.createClient(SUPA.url,SUPA.key,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}});
     fetch(SUPA.url+'/auth/v1/settings',{headers:{apikey:SUPA.key}}).then(r=>r.json()).then(j=>{if(j&&j.external){if(j.external.google){GOOGLE=true}if(j.external.apple){APPLE=true}pinta()}}).catch(()=>{});
-    SB.auth.onAuthStateChange((ev,ses)=>{setTimeout(()=>trasSesion(ev,ses),0)});
+    SB.auth.onAuthStateChange((ev,ses)=>{guardaTokenApple(SB,ses);setTimeout(()=>trasSesion(ev,ses),0)});
     const {data}=await SB.auth.getSession();
     await trasSesion('INICIO',data.session);
     SB_ESTADO='listo';
@@ -850,6 +872,28 @@ function mira(){ /* retícula del logo: tres cuartos claros y uno rojo */
   return `<svg class="mira" viewBox="0 0 210 210" aria-hidden="true">${arc(8,82,'#FF4637')}${arc(98,172,'#FF4637')}${arc(188,262,'#F3EEE6')}${arc(278,352,'#F3EEE6')}<path d="M105 0v22M105 188v22M0 105h22M188 105h22" stroke="#F3EEE6" stroke-width="7"/></svg>`;
 }
 const nombreDe=id=>{const p=S&&P(S,id);return p?p.name:'Alguien'};
+/* ============ bloquear y reportar jugadores: sin moderación ni servidor, solo en este móvil ============ */
+const SUPPORT_MAIL='javivalmich@gmail.com';
+const BLK={
+  k:()=>'imp.bloq.'+(ME&&ME.code||''),
+  list(){const l=LS.get(this.k(),[]);return Array.isArray(l)?l:[]},
+  has(id){return this.list().includes(id)},
+  set(id,on){const l=this.list().filter(x=>x!==id);if(on)l.push(id);LS.set(this.k(),l.slice(-50))}
+};
+function reportarJugador(id,nombre){
+  const cuerpo=`Jugador: ${nombre}\nIdentificador: ${id}\nPartida: ${ME&&ME.code||'-'}\nFecha: ${new Date().toISOString()}\n\nMotivo (cuéntanos qué ha pasado):\n`;
+  const a=document.createElement('a');
+  a.href='mailto:'+SUPPORT_MAIL+'?subject='+encodeURIComponent('Reporte en Punto Ciego')+'&body='+encodeURIComponent(cuerpo);
+  document.body.appendChild(a);a.click();a.remove();
+}
+function hojaJugador(id,nombre){
+  const b=BLK.has(id);
+  abrirSheet(`<h2>${esc(nombre)}</h2>
+    <p class="tenue">${b?'Lo tienes bloqueado: no oyes su voz ni ves sus mensajes en esta partida. Solo afecta a este móvil.':'Si lo bloqueas, dejas de oír su voz y de ver sus mensajes en esta partida. Solo afecta a este móvil y puedes deshacerlo.'}</p>
+    <button class="b-baliza b-ancho" data-a="bloquea" data-p="${esc(id)}" data-n="${esc(nombre)}">${b?'Desbloquear':'Bloquear'}</button>
+    <button class="b-sec b-ancho" data-a="reporta" data-p="${esc(id)}" data-n="${esc(nombre)}" style="margin-top:8px">Reportar</button>
+    <p class="tenue" style="font-size:13.5px">Reportar abre un correo a soporte con su nombre, el código de la partida y la fecha. El chat es entre amigos y no está moderado.</p>`);
+}
 
 function pidPara(code){
   if(CUENTAS&&USER)return USER.id;
@@ -1586,7 +1630,8 @@ function campoBorrar(){
 function vBorrarCuenta(){
   const b=BORRAR,conPw=!!(USER&&USER.app_metadata&&USER.app_metadata.provider==='email');
   return `<section class="bloque"><h2>Eliminar cuenta</h2>
-  <p class="tenue">Se borrarán tu cuenta, tu personaje y tus estadísticas. Esta acción no se puede deshacer.</p>
+  <p class="tenue">Es la <b>misma cuenta</b> que usas en <b>Punto Falso</b>: al eliminarla se borra también allí, con tu personaje, tu nombre y tus estadísticas de los dos juegos.</p>
+  <p class="tenue"><b>No se puede deshacer.</b></p>
   ${conPw?`<p><label class="lbl" for="bpw">Escribe tu contraseña para confirmar</label>${campoBorrar()}</p>`
     :`<p><label class="lbl" for="bpal">Escribe BORRAR para confirmar</label><input id="bpal" value="${esc(b.palabra)}" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="BORRAR"></p>`}
   ${b.err?`<p class="motivo" role="alert">${esc(b.err)}</p>`:''}
@@ -1660,7 +1705,7 @@ function vLobby(){
   let h=`<section class="codigo"><p class="lbl">Código de la partida</p><div class="cod-grande">${[...ME.code].map(ch=>`<span>${ch}</span>`).join('')}</div>
   <button class="b-sec" data-a="compartir">Compartir enlace</button>
   <div class="qr-invita">${qrSVG(urlPartida())}</div><p class="tenue" style="margin-top:6px">O que escaneen este código con la cámara del móvil</p></section>
-  <section class="bloque"><h2>${ps.length} a bordo</h2><ul class="gente">${ps.map(p=>`<li>${dot(p)}<span>${esc(p.name)}</span>${bt(p)}${p.id===S.hostId?'<em>anfitrión</em>':''}${p.id===ME.pid?'<em>tú</em>':''}${host&&p.id!==ME.pid?`<button class="b-mini" data-a="kick" data-p="${p.id}">Quitar</button>`:''}</li>`).join('')}</ul></section>`;
+  <section class="bloque"><h2>${ps.length} a bordo</h2><p class="tenue" style="font-size:13.5px">El chat es entre amigos y no está moderado. Bloquea o reporta a cualquiera desde esta lista.</p><ul class="gente">${ps.map(p=>`<li>${dot(p)}<span>${esc(p.name)}</span>${bt(p)}${p.id===S.hostId?'<em>anfitrión</em>':''}${p.id===ME.pid?'<em>tú</em>':''}${p.id!==ME.pid?`<button class="b-mini${BLK.has(p.id)?' on':''}" data-a="jug" data-p="${p.id}" data-n="${esc(p.name)}" aria-label="Bloquear o reportar a ${esc(p.name)}">${BLK.has(p.id)?'Bloqueado':'Bloquear'}</button>`:''}${host&&p.id!==ME.pid?`<button class="b-mini" data-a="kick" data-p="${p.id}" style="margin-left:6px">Quitar</button>`:''}</li>`).join('')}</ul></section>`;
   if(host&&PRUEBAS&&S.pruebas)h+=vPruebas();
   if(host){
     h+=`<section class="bloque o"><h2>Dónde jugáis</h2><div class="sitios">${Object.entries(VENUES).map(([k,v])=>`<button class="sitio ${c.venue===k?'on':''}" data-a="venue" data-v="${k}"><b>${v.i} ${v.n}</b><small>${v.h}</small></button>`).join('')}</div></section>
@@ -2951,7 +2996,7 @@ const WK={
   subir(pcm){const c=this.ctx(),sr=c.sampleRate,n=Math.max(1,Math.floor(pcm.length*sr/8000)),b=c.createBuffer(1,n,sr),d=b.getChannelData(0),k=8000/sr;
     for(let i=0;i<n;i++){const x=i*k,i0=Math.floor(x),f=x-i0;d[i]=(pcm[i0]||0)*(1-f)+(pcm[i0+1]||pcm[i0]||0)*f}return b},
   recibe(m){
-    if(!m||m.pid===ME.pid||!S)return;if(!this.oye(m.ch))return;
+    if(!m||m.pid===ME.pid||!S||BLK.has(m.pid))return;if(!this.oye(m.ch))return;
     const c=this.ctx();if(!c)return;const nombre=nombreDe(m.pid);
     if(m.k==='pcm'){
       let s=this.ses[m.s];
@@ -2990,8 +3035,8 @@ const WK={
   },
   elementos(){
     if(!S)return [];
-    const txt=(S.chat||[]).filter(m=>this.oye(m.ch)).map(m=>({t:m.t,pid:m.pid,ch:m.ch,txt:m.txt}));
-    const voz=this.voces.map((v,i)=>({t:v.t,pid:v.pid,ch:v.ch,voz:i,dur:v.dur}));
+    const txt=(S.chat||[]).filter(m=>this.oye(m.ch)&&!BLK.has(m.pid)).map(m=>({t:m.t,pid:m.pid,ch:m.ch,txt:m.txt}));
+    const voz=this.voces.map((v,i)=>({t:v.t,pid:v.pid,ch:v.ch,voz:i,dur:v.dur})).filter(v=>!BLK.has(v.pid));
     return txt.concat(voz).sort((a,b)=>a.t-b.t).slice(-80);
   },
   pinta(){
@@ -3006,7 +3051,8 @@ const WK={
     const no=this.noPuede();if(!this.rec){if(no)this.estado(no);else if(this._no)this.estado('')}this._no=no;
     $('#wkPtt').disabled=!!no&&!this.rec;$('#wkEnviar').disabled=!!no;$('#wkTxt').disabled=!!no;
     const h=els.length?els.map(e=>{const q=P(S,e.pid)||{color:0,name:'?'};const nom=`${dot(q)} <b>${esc(q.name)}</b>`;
-      return e.txt!==undefined?`<div class="wk-m ${e.ch}">${nom}${esc(e.txt)}</div>`:`<div class="wk-m ${e.ch}">${nom}<button data-a="wkPlay" data-i="${e.voz}">▶ ${Math.max(1,Math.round(e.dur||0))} s</button></div>`}).join('')
+      const fl=e.pid!==ME.pid?`<button class="flag" data-a="jug" data-p="${esc(e.pid)}" data-n="${esc(q.name)}" aria-label="Bloquear o reportar a ${esc(q.name)}">⚑</button>`:'';
+      return e.txt!==undefined?`<div class="wk-m ${e.ch}">${nom}${fl}${esc(e.txt)}</div>`:`<div class="wk-m ${e.ch}">${nom}<button data-a="wkPlay" data-i="${e.voz}">▶ ${Math.max(1,Math.round(e.dur||0))} s</button>${fl}</div>`}).join('')
       :'<p class="wk-vacio">'+pose('movil',96)+'Aún no ha hablado nadie. Mantén el botón para hablar o escribe abajo.</p>';
     const L=$('#wkLista');if(L._h!==h){const abajo=L.scrollHeight-L.scrollTop-L.clientHeight<40;L._h=h;L.innerHTML=h;if(abajo||!L._ini){L.scrollTop=L.scrollHeight;L._ini=true}}
   },
@@ -3100,8 +3146,7 @@ const ACT={
         const {error}=await SB.auth.signInWithPassword({email:USER.email,password:b.pw});
         if(error){b.busy=false;b.err='Contraseña incorrecta.';pinta();return}
       }
-      const {error}=await SB.rpc('eliminar_mi_cuenta');
-      if(error)throw error;
+      await borrarCuentaRemota(SB);
       const uid=USER.id;
       try{await SB.auth.signOut()}catch(e){}
       LS.del('pc.perfil.'+uid);
@@ -3198,6 +3243,13 @@ const ACT={
   soy(d){ME.pid=d.p;LS.set('imp.pid.'+ME.code,d.p);pinta()},
   cerrarSheet(){cerrarSheet()},
   wkPlay(d){const v=WK.voces[+d.i];if(v)WK.reproduce(v)},
+  jug(d){hojaJugador(d.p,d.n)},
+  bloquea(d){
+    const era=BLK.has(d.p);BLK.set(d.p,!era);
+    if(!era){for(const k in WK.ses)if(WK.ses[k].pid===d.p)delete WK.ses[k];WK.hablando(null)}
+    cerrarSheet();toast(era?'Jugador desbloqueado':'Jugador bloqueado');pinta();
+  },
+  reporta(d){cerrarSheet();reportarJugador(d.p,d.n)},
   /* modo pruebas: cada acción comprueba que de verdad lo es */
   botMas(){botAnade()},
   botQuita(){botsQuita()},

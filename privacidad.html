@@ -55,9 +55,17 @@ nav.f{margin-top:36px;padding-top:14px;border-top:1px solid var(--line);font-siz
 <li>Tu <b>correo electrónico</b> (si entras con Google o Apple, el que te facilitan ellos) y, si te registras con correo, tu contraseña protegida: nunca la vemos en claro.</li>
 <li>Tu <b>nombre de jugador</b> y el <b>aspecto de tu personaje</b>.</li>
 <li>Unos contadores de partidas jugadas, ganadas y como impostor.</li>
+<li>Solo si entras con Apple: el token que Apple nos entrega al iniciar sesión, que guardamos únicamente para poder revocarlo en Apple cuando borres tu cuenta. Nadie más puede leerlo y se borra con la cuenta.</li>
 </ul>
 <p>Tu nombre de jugador, tu personaje y esos contadores pueden verlos otras personas con cuenta; tu correo no lo ve nadie más.</p>
 <p><b>Durante una partida</b>, tu nombre, tu personaje, tu posición en el tablero (la sala de la casa donde estás, no tu ubicación GPS), tus acciones y los mensajes del walkie-talkie viajan en directo entre los móviles de la partida a través de servidores públicos de mensajería (MQTT). Todo va cifrado con una clave que sale del código de la partida, así que quien no esté en ella no puede leerlo, y no se almacena: al acabar la partida, desaparece.</p>
+
+<h2>Chat entre amigos, bloquear y reportar</h2>
+<p>El chat de voz y de texto es entre amigos y <b>no está moderado</b>: nadie lo revisa ni lo guarda. Si alguien te molesta puedes:</p>
+<ul>
+<li><b>Bloquearlo</b> (botón «Bloquear» en la lista de jugadores, o ⚑ junto a sus mensajes): dejas de oír su voz y de ver sus mensajes en esa partida. El bloqueo se guarda solo en tu móvil, no lo ve nadie más y puedes deshacerlo.</li>
+<li><b>Reportarlo</b>: se abre un correo a soporte con el nombre del jugador, el código de la partida y la fecha. Ese correo lo envías tú y solo lo usamos para atender el reporte.</li>
+</ul>
 
 <h2>Micrófono y walkie-talkie</h2>
 <p>El micrófono solo se pide cuando entras en la llamada del walkie-talkie y pulsas el botón de hablar, y solo está abierto mientras hablas. Tu voz se envía en directo, cifrada, a los demás jugadores de la partida. <b>No se graba ni se guarda en ningún servidor.</b> Una de las tareas del juego («soplar al móvil») también puede usar el micrófono un momento para medir el soplido: el sonido se analiza en tu móvil y no sale de él; si prefieres no dar permiso, la tarea se hace tocando la pantalla. Puedes retirar el permiso cuando quieras desde los ajustes de tu móvil o navegador.</p>
@@ -81,7 +89,7 @@ nav.f{margin-top:36px;padding-top:14px;border-top:1px solid var(--line);font-siz
 <li>Abre tu perfil (tu personaje, en el menú).</li>
 <li>Toca <b>Eliminar cuenta</b> y confirma (con tu contraseña, o escribiendo BORRAR si entraste con Google o Apple).</li>
 </ol>
-<p>Se borran de inmediato tu correo, tu nombre, tu personaje y tus contadores. <b>No se puede deshacer.</b> La cuenta es la misma que usa Punto Falso, otro juego del mismo autor, así que también se borra allí. Si no puedes entrar en la app, escríbenos a <a href="mailto:javivalmich@gmail.com">javivalmich@gmail.com</a> desde la dirección con la que te registraste y la borramos nosotros.</p>
+<p>Se borran de inmediato tu correo, tu nombre, tu personaje y tus contadores. Si entraste con Apple, también revocamos en Apple el acceso de la app a tu cuenta. <b>No se puede deshacer.</b> <b>Es una cuenta compartida: es la misma que usa Punto Falso, otro juego del mismo autor, así que al borrarla aquí también se borra allí</b>, con tu personaje, tu nombre y tus estadísticas de los dos juegos. Si no puedes entrar en la app, escríbenos a <a href="mailto:javivalmich@gmail.com">javivalmich@gmail.com</a> desde la dirección con la que te registraste y la borramos nosotros.</p>
 
 <h2>Menores</h2>
 <p>El juego es para mayores de 13 años. No pedimos edad ni datos personales para jugar. Si eres madre, padre o tutor y crees que un menor ha creado una cuenta, escríbenos y la eliminamos.</p>

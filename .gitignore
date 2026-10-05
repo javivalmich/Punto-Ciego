@@ -29,3 +29,4 @@ fuentes/
 # Claves privadas de Apple (Sign in with Apple): nunca al repositorio
 *.p8
 secrets/
+tienda/vista-previa-recortes.png
