@@ -32,12 +32,11 @@ al repositorio (`.gitignore`).
 ## Dependencias de terceros
 
 La única dependencia de terceros de todo el proyecto es el generador de códigos QR con el que
-se puede entrar en una partida escaneando en vez de escribir el código: `beta/assets/qr.js`,
+se puede entrar en una partida escaneando en vez de escribir el código: `assets/qr.js`,
 vendorizado (el archivo copiado tal cual en el repo, no instalado como paquete) a partir de
 [`qrcode-generator`](https://github.com/kazuhikoarase/qrcode-generator) de Kazuhiko Arase
 (licencia MIT). No hace ninguna llamada a internet ni a ningún servicio externo: el QR se calcula
-entero en el propio móvil, igual que el resto de la app. Por ahora vive solo en `beta/`; si esa
-carpeta pasa a ser la versión principal, esta nota debería moverse o actualizarse con ella.
+entero en el propio móvil, igual que el resto de la app.
 
 ## Cómo se juega
 
@@ -115,20 +114,31 @@ http://localhost:8080/beta/?supa=http://localhost:9999&supakey=local&pruebas=1
 Los datos de prueba se guardan en `.mocksb-data.json` (no se sube a git); bórralo para
 empezar de cero.
 
-## Cómo actualizar el juego
+## Cómo actualizar el juego: beta → principal
 
-Edita `index.html` (y `assets/` si cambias el personaje), y luego:
+Hay dos copias de la web:
+
+- **Principal** (raíz: `index.html` y `assets/`): `https://javivalmich.github.io/Punto-Ciego/`. La usan los jugadores.
+- **Beta** (`beta/`): `https://javivalmich.github.io/Punto-Ciego/beta/`. Zona de pruebas permanente, con una etiqueta roja
+  «BETA» y «(beta)» en el título. Comparte cuentas y base de datos con la principal.
+
+Flujo de trabajo: los cambios se hacen siempre en `beta/`, se prueban en el iPhone y, cuando están bien, se pasan a la raíz:
 
 ```bash
-git add index.html assets
-git commit -m "Describe el cambio"
-git push
+git tag antes-beta-AAAA-MM-DD && git push origin antes-beta-AAAA-MM-DD   # punto de vuelta atrás
+cp beta/index.html index.html && cp -r beta/assets/. assets/ && cp beta/NOTAS_ESQUELETO.md NOTAS_ESQUELETO.md
+# en index.html: quita <div id="betaTag"...> y el «(beta)» del <title>
+git add -A index.html assets NOTAS_ESQUELETO.md && git commit -m "Describe el cambio" && git push
 ```
 
-GitHub Pages se actualiza solo en uno o dos minutos.
+Si cambias `assets/personaje.bin`, `personaje3d.js`, `qr.js` o las imágenes, sube su `?v=` en `index.html` (y el `bin:` de
+`personaje3d.js`) para que los móviles no se queden con la versión vieja en caché.
+
+Para volver a una versión anterior: `git revert <commit>` (o restaurar los archivos de la etiqueta con
+`git checkout <etiqueta> -- index.html assets`) y push.
 
 Para probar en local, sirve la carpeta con cualquier servidor estático, por ejemplo
-`python -m http.server 8000`, y abre `http://localhost:8000`.
+`python -m http.server 8000`, y abre `http://localhost:8000` (principal) o `http://localhost:8000/beta/`.
 
 ## Avisos
 
