@@ -224,6 +224,8 @@ body.en-over .ov{padding-bottom:28px}
 html.capa{overscroll-behavior:none}
 body.capa{position:fixed;left:0;right:0;width:100%;overflow:hidden}
 .apagon{overscroll-behavior:none;touch-action:none}
+#bloqueo{position:fixed;inset:0;z-index:100000;background:var(--acero);display:flex;align-items:center;justify-content:center;padding:24px;overscroll-behavior:none;touch-action:none}
+.bq-c{max-width:380px;text-align:center}.bq-c h1{font-size:clamp(34px,10vw,48px);margin-bottom:10px}.bq-c .b-ancho{margin:18px 0 12px}
 .sh-caja{position:absolute;left:0;right:0;bottom:0;max-height:92vh;overflow:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;background:var(--acero);border-top:3px solid var(--tiza);border-radius:16px 16px 0 0;padding:18px 18px calc(22px + env(safe-area-inset-bottom,0px))}
 #shBody{max-width:560px;margin:0 auto}
 .sh-sala{font-family:var(--disp);font-size:19px;font-weight:700;color:var(--baliza);margin:0}
@@ -614,6 +616,7 @@ async function onRaw(topic,payload){
 /* ============ estado local ============ */
 let ME={code:null,pid:null,name:''};
 let S=null;
+let BLOQUEO=null; /* {vieja:true} si la versión de este móvil es anterior a la de la partida */
 let OFF=0,OFFS=[];
 const ahora=()=>Date.now()+OFF;
 let HECHAS=new Set();
@@ -860,9 +863,12 @@ function limpiaCfg(c,old){
   o.camRoom=typeof c.camRoom==='string'&&(c.camRoom===''||on.some(r=>r.id===c.camRoom))?c.camRoom:(on.some(r=>r.id===old.camRoom)?old.camRoom:'');
   return o;
 }
+/* versión del protocolo de partida: súbela cuando un cambio haga que dos versiones no puedan jugar juntas.
+   Todo móvil con otra versión que la de la partida se bloquea con un aviso para recargar (ver bloqueo()) */
+const APP_V=2;
 function nuevaPartida(hostId,name,look){
   const now=ahora();look=limpiaLook(look);
-  return {v:1,hb:now,hostId,gid:uid(6),phase:'lobby',cfg:cfgDefecto('piso'),players:[{id:hostId,name,color:look.hood,look,seen:now}],
+  return {v:1,app:APP_V,hb:now,hostId,gid:uid(6),phase:'lobby',cfg:cfgDefecto('piso'),players:[{id:hostId,name,color:look.hood,look,seen:now}],
     chat:[],ackd:[],log:[],notice:null,meet:null,sab:null,locks:[],sabCd:0,end:null,...(PRUEBAS?{pruebas:true,pr:{rol:'azar',vel:'normal'}}:{})};
 }
 const maxImp=n=>Math.max(1,Math.floor((n-1)/3));
@@ -1369,7 +1375,7 @@ function vAtajos(){
 /* ============ red de la partida ============ */
 function publicarEstado(bump){
   if(!S||!soyHost())return;
-  if(bump)S.v++;S.hb=ahora();
+  if(bump)S.v++;S.hb=ahora();S.app=APP_V;
   const me=mine();if(me)me.seen=S.hb;
   LS.set('imp.st.'+ME.code,S);
   if(Date.now()<HOST_PAUSA)return;
@@ -1383,6 +1389,11 @@ function mejor(st,cur){
 function recibeEstado(st){
   if(!st||!Array.isArray(st.players))return;
   if(!mejor(st,S))return;
+  if(st.app!==APP_V){ /* partida de otra versión (o anterior a este control): no se adopta, se bloquea hasta recargar */
+    if(st.hostId===ME.pid)return;
+    BLOQUEO={vieja:st.app>APP_V};pinta();return;
+  }
+  if(BLOQUEO){BLOQUEO=null;pinta()}
   const eraHost=soyHost(),otroHost=!S||S.hostId!==st.hostId;
   S=st;
   if(S.hostId===ME.pid){if(!eraHost)HECHAS=new Set(S.ackd||[])}
@@ -1398,8 +1409,17 @@ function recibeEstado(st){
 }
 function recibeAccion(a){
   if(!soyHost()||!a||!a.id||HECHAS.has(a.id))return;
+  if(a.app!==APP_V){avisaAjeno(a.pid);return} /* acción de un móvil con otra versión: no se aplica, se le avisa */
   if(String(a.pid).startsWith('bot-'))return; /* los bots solo los genera el propio anfitrión; nadie puede hacerse pasar por uno */
   aplicar(a,false);
+}
+const AVISADOS=new Map();
+function avisaAjeno(pid){
+  const t=Date.now();if(t-(AVISADOS.get(pid)||0)<8000)return;AVISADOS.set(pid,t);
+  /* los móviles que aún no tienen el control de versión solo entienden este aviso: el toast de las notas dirigidas a ellos */
+  S.notice={pid,t:ahora(),txt:'Hay una versión nueva: recarga la página'};
+  publicarEstado(true);eventos();pinta();
+  if(t-(AVISADOS.get('host')||0)>30000){AVISADOS.set('host',t);toast('Alguien con otra versión intenta jugar: que recargue la página')}
 }
 function aplicar(a,local){
   HECHAS.add(a.id);
@@ -1409,7 +1429,8 @@ function aplicar(a,local){
   publicarEstado(true);eventos();pinta();
 }
 function accion(t,data={}){
-  const a={id:uid(12),pid:ME.pid,gid:S&&S.gid,t,...data};
+  if(BLOQUEO)return;
+  const a={id:uid(12),pid:ME.pid,gid:S&&S.gid,app:APP_V,t,...data};
   if(soyHost()){aplicar(a,true);return}
   PEND.set(a.id,{a,n:0});enviar('a',a);
 }
@@ -1423,7 +1444,7 @@ setInterval(()=>{
   if(!S||!mine())return;
   const act=miAct();
   if(soyHost()){const me=mine();me.seen=ahora();me.act=act}
-  else enviar('a',{id:uid(12),pid:ME.pid,t:'ping',act});
+  else enviar('a',{id:uid(12),pid:ME.pid,app:APP_V,t:'ping',act});
 },3000);
 setInterval(()=>{if(soyHost()&&tick(S,ahora())){publicarEstado(true);eventos()}},400);
 setInterval(()=>{if(soyHost())publicarEstado(false)},4000);
@@ -1820,7 +1841,20 @@ function pintaTop(){
   const p=mine();const n=redOk();
   setHTML($('#top'),`<div class="tb"><span class="marca">PUNT<i></i>CIEGO</span>${ME.code?`<span class="tb-cod">${esc(ME.code)}</span><span class="red ${n?'ok':''}" title="${n} de ${NET.cons.length} servidores"></span>`:''}${p?`<span class="yo">${dot(p,26)}${esc(p.name)}</span>`:''}</div>`);
 }
+/* pantalla que tapa todo cuando este móvil y la partida tienen versiones distintas */
+function bloqueo(){
+  let e=$('#bloqueo');
+  if(!BLOQUEO){if(e)e.remove();return}
+  if(!e){e=document.createElement('div');e.id='bloqueo';e.setAttribute('role','alertdialog');e.setAttribute('aria-modal','true');document.body.appendChild(e);
+    e.addEventListener('click',ev=>{if(ev.target.closest('#bloqueoRecarga'))location.reload()})}
+  const h=`<div class="bq-c"><h1>Hay una versión nueva</h1><p>Recarga la página para seguir jugando.</p>
+    <button class="b-baliza b-ancho" id="bloqueoRecarga">Recargar la página</button>
+    <p class="tenue">${BLOQUEO.vieja?'Esta partida usa una versión más reciente que la de tu móvil.':'Esta partida usa una versión más antigua: el anfitrión también tiene que recargar la página.'}</p></div>`;
+  if(e._h!==h){e._h=h;e.innerHTML=h}
+}
 function pinta(){
+  bloqueo();
+  if(BLOQUEO){capas();return}
   pintaTop();
   let h='',b='',o='';
   if(!ME.code)h=vHome();
@@ -1850,12 +1884,12 @@ function pinta(){
    corta los deslizamientos que no tienen nada que desplazar (o que ya están arriba/abajo del todo). */
 let CAPA_Y=null;
 function capas(){
-  const sheet=!$('#sheet').hidden,wk=!$('#wk').hidden,ov=!$('#over').hidden;
-  const abierta=sheet||wk||ov||!!document.querySelector('.apagon');
+  const bq=!!$('#bloqueo'),sheet=!$('#sheet').hidden,wk=!$('#wk').hidden,ov=!$('#over').hidden;
+  const abierta=bq||sheet||wk||ov||!!document.querySelector('.apagon');
   const marca=(el,v)=>{if(!el)return;if(el.inert!==v)el.inert=v;if(v)el.setAttribute('aria-hidden','true');else el.removeAttribute('aria-hidden')};
-  const tapa=sheet||wk||ov;
+  const tapa=bq||sheet||wk||ov;
   marca($('#top'),tapa);marca($('#app'),tapa);marca($('#bar'),tapa);
-  marca($('#over'),sheet||wk);marca($('#wk'),sheet);marca($('#wkFab'),sheet||wk);
+  marca($('#over'),bq||sheet||wk);marca($('#wk'),bq||sheet);marca($('#sheet'),bq);marca($('#wkFab'),bq||sheet||wk);
   const b=document.body,h=document.documentElement;
   if(abierta&&CAPA_Y===null){
     CAPA_Y=window.scrollY||h.scrollTop||0;
