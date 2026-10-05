@@ -5,6 +5,8 @@ tripulantes y hacen tareas por las habitaciones; otros son impostores y sabotean
 sin que los vean. Cuando alguien encuentra un cuerpo, o pulsa la emergencia, se abre una
 reunión y se vota a quién expulsar.
 
+Un juego de Punto Studio, hermano de [Punto Falso](https://javivalmich.github.io/el-impostor/).
+
 Es una web estática: `index.html` (HTML, CSS y JS) más una carpeta `assets/` con el personaje.
 No tiene paso de compilación ni dependencias que instalar.
 

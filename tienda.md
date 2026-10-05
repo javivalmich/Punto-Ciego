@@ -5,6 +5,7 @@
 | Campo | Texto | Límite |
 |---|---|---|
 | Nombre | **Punto Ciego** | 30 (ambas) |
+| Nombre del desarrollador | **Punto Studio** | |
 | Subtítulo (App Store) | **Among Us en tu propia casa** (26) | 30 |
 | Descripción breve (Google Play) | **Tareas, sabotajes e impostores por las habitaciones de tu casa, con el móvil.** (78) | 80 |
 | Texto promocional (App Store, opcional) | Un juego de traición para jugar de verdad por la casa: haz tareas, sabotea y descubre quién miente. Gratis y sin anuncios. | 170 |
@@ -82,7 +83,7 @@ Iconos en `assets/icons/`: `icon-512.png` (Google Play) e `icon-1024.png` (App S
 
 - [ ] Gráfico de funciones de Google Play (1024×500): no está hecho.
 - [ ] Capturas de iPad y tablet si la app va a ser compatible (si no, restringe a iPhone/teléfono).
-- [ ] Nombre del desarrollador / titular legal y dirección postal.
+- [ ] Datos legales de las cuentas de desarrollador: el nombre visible del desarrollador en las fichas será **Punto Studio**, pero Apple y Google piden además datos verificables del titular real y, si te declaras «comerciante» (trader) en la UE, publican su dirección y teléfono. Como el juego es gratis y sin anuncios ni cobros, valora declararte como no comerciante; decídelo al abrir cada cuenta.
 - [ ] Cuentas de desarrollador: Google Play Console (25 USD, una vez) y Apple Developer Program (99 USD/año).
 - [ ] Activar Sign in with Apple en Supabase (`docs/APPLE_SIGNIN.md`): Apple lo exige si ofreces «Entrar con Google». Hoy el botón solo aparece si Supabase lo tiene activo. Después, desplegar la revocación del token al borrar la cuenta (`docs/BORRADO_APPLE.md`).
 - [ ] Credenciales de revisión para Apple/Google: una cuenta de prueba (correo + contraseña) y cómo probarlo (hacen falta varios móviles; valora preparar un vídeo corto).
