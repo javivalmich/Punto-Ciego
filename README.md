@@ -134,6 +134,19 @@ git add -A index.html assets NOTAS_ESQUELETO.md && git commit -m "Describe el ca
 Si cambias `assets/personaje.bin`, `personaje3d.js`, `qr.js` o las imágenes, sube su `?v=` en `index.html` (y el `bin:` de
 `personaje3d.js`) para que los móviles no se queden con la versión vieja en caché.
 
+### Versión de la partida (`APP_V`)
+
+`APP_V` (en `index.html`, junto a `nuevaPartida`) es el número de versión de la partida compartida. Un móvil cuya
+versión no coincide con la de la partida se bloquea con el aviso «Hay una versión nueva, recarga la página».
+
+- **Súbelo** cuando el cambio afecte a la partida compartida: acciones nuevas o cambiadas, campos nuevos o cambiados en
+  el estado de la partida, o reglas del juego. Dos versiones distintas no podrían jugar bien juntas.
+- **No hace falta** en cambios solo visuales o de textos (estilos, maquetación, mensajes, el personaje...).
+- **En la duda, súbelo:** el coste es que todos tengan que recargar; el riesgo de no subirlo es una partida
+  corrupta o móviles que se quedan colgados sin aviso.
+- Se sube **a la vez en `beta/` y en la raíz** al pasar a la principal, y al pasarlo hay que avisar a los jugadores de que recarguen.
+- Los móviles anteriores al control de versión (antes de `APP_V=2`) no pueden mostrar el bloqueo: solo reciben un aviso breve.
+
 Para volver a una versión anterior: `git revert <commit>` (o restaurar los archivos de la etiqueta con
 `git checkout <etiqueta> -- index.html assets`) y push.
 
