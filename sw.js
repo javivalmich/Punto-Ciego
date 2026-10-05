@@ -2,7 +2,7 @@
    y caché como respaldo sin conexión. Las partidas necesitan internet de todas formas.
    Al publicar una versión nueva, sube VERSION: el móvil descarga el sw.js nuevo, borra las cachés viejas
    y la página se recarga sola si está en la portada (ver el registro en index.html). */
-const VERSION='3';
+const VERSION='4';
 const CACHE='punto-ciego-v'+VERSION;
 const SHELL=['./','index.html','manifest.json','privacidad.html','soporte.html','terminos.html','assets/logo.webp','assets/icons/icon-192.png','assets/icons/icon-512.png','assets/icons/apple-touch-icon.png'];
 self.addEventListener('install',e=>{
