@@ -4,6 +4,15 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#0C0C0C">
+<meta name="description" content="Punto Ciego: Among Us en vida real. Tareas por las habitaciones de tu casa, sabotajes e impostores, con el móvil.">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="assets/icons/apple-touch-icon.png">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
+<meta name="apple-mobile-web-app-title" content="Punto Ciego">
+<meta name="application-name" content="Punto Ciego">
+<meta name="format-detection" content="telephone=no">
 <title>Punto Ciego (beta)</title>
 <link rel="icon" href="data:image/webp;base64,UklGRsgHAABXRUJQVlA4ILwHAADQJQCdASpwAHIAPmEokEUkIqGXKpYQQAYEoA0QY73L6L0cPjuUiP9YS9T33VeqN0svMd+xX7Ve85/kv0z97v+e9QD+tdRt6DHlv+y7+3npKOTN2rzdHxnmvpoce/onaTPrc+3DKXL5O//3rWd3ZyCTrJ+V1gPQpXM5hwOstWG+JqM4XmcD0MQbh8923GVRX0/BxEnO3jgWElwgefSim+u5eeQpyGgu73DHSowbhBfOtlHJF/pOxvq8p2NkAFGees6mUEFjmkIoSSOLqHVSZvXKbThipReLSZf15GKZ+yteBQfIiNWsrouVtkuKMRL4N0oTDMOs1UXjLJRU99sC1H6Y5RBxvdsPQvAANYsmbDtPAMU3m1AdJJUJCH8WrAvg3DT+u9QpHMSoemXBYAFUsdo1zGJ3zO5/WAD+/RDFrg3Maxdzhzz0d4LP+33YQGspdihb6xz9UuoEDB/lnB4IeEzqBN6xg8EnwQnotUmi5CM98978VsSvVWX2yjqgSAKgp2RPBDvwY7yvGG1tqjVDhpNXeMtbgCrOrKDunl5SHrgmNou+3rx1C9+zym6zMj2ivVlyJ12+AxxgwwR3tI4FSFtUYrh1uV9s2+k/Q7k5OmU7ESemFg1cRWtgf/S4SfXa0Of18xz5mI2UhORBKcSW02P/8oLLtgCXuISywixsLinVjvkln/uXHxqBMf1ZBmhrW6vPHwPZA+JuQBvBUS+BwWRhJprofG/9RRFLGXxFtK7uBo80l4/x+VQIaWYdaJOodXw30QdVQJOXNuIJVsOH1G0KKUbjBexswtPa8eHg60HU497o/FzqyM7LOMUFQH0jKVgM8iRI5s14R88P+PQKPeCnVli0jZjzpuckKwZ5wqj6oq1IkcswdEFjfYy6qSbY3CCdCTdpWXnA6A9yldwwWqKSPLhiHbKIotrgGlpjTnTHbAy8rvojTkzgdrCBsBrW3YG+2yK6dDrmYLbalx3FlMh8iMihw0oocGzYc6fWn3LSQIG+G2akxcVCCqr11LV7ZxjctsHSMkDp+AaGACKbCBmby0vlMAYh709PEk9DnLvVXh18puU+Vcxqp7WZJq+722mLQsBBTOtqpOexi5x+vdswNA8LfewfJg6jEJsmT91y5gSuBcmWO9tZOH4ooNlTxK8F5ptNLKF5+8HBlzVpnE5GOxE/ihEy4sFZrdfWl//OUbkiM/nMZu1QKIFWhrIZeV9L2qzF7fsDBSK6y4LjGBGh3c++kkf/tXH/lM+zybIt81hNvNGGLv8ibQNHw2rc9O5/KVKmhYfL9QuuyQa5cS/9MV/6c//NP0o+Lj79+/T/sm7fIjFabxhwtj3de6zPi0d5UNQ8n0jNEk2q/KmRrFKzxpXPTJ6Ecw2nefpbcdgGmygbR+2B8dNmBEVFb8c/xw2cCnE8lNoNX72R3ZR3Aoc0PdodQnVCV82G01OtwoyYIlRhsbM3xDCra89jav7GVziM+n69cnPip62yAi5A9+DxXX8iLiO+hNLYnooIaKjIcu70Ds7V/UJTY2JdPi6gqsgXr7PV1BFL7YoiHcpcJYL0S2GhmzkBuQ9/SoE7647Vf8XQefAcitwYkDesvStmE3Z3noig/yCn8/duJyXEc3QfyKcYgaWDmlvbs3ALtlPcduMcvYO/x/jOq8Ed+jGlandZEtLun0mzT8FjyoG4kzfQT9E8cYzPZuwA+MF5JsnStZheDsSlbdPeO03et7feYUOXsGLPwFCVZWbvOplcPHj56ZXOuWUxQCvfO++Hn+fzRIByDjYHIt4oCUpze7sVk5L/ReMrYCAWiZ/iQHgFM5hs49zXLUtWKJasFmPzOx+65nOB2p4qPcadCMVAwKYH4JBmBOmsTmqHYQFYNBpGg6RpuJ5Hd3dE3FHjcFwhhzu7Xm/iHLL3ft2/zVvComzLI9UnhUVF21NCLRyyR+omcUEx2DpyoyiKFYP2Su8i7d9+kD8/3PWt/92mmefw2Z1XMpqq+ApKukw3eDPJAEwvoAxOepNRV3bceof9/xBdRSw18chTab9rYYpAF3eOOqoyTSyT5DHN5Wm52f33EXj6asijfW3xee7leBJvq6MkV0gROOViJ8DEovf3+X8PQsC/oAcPD9PyH0gbFeRUDk1Qy6+md6nAsMoKpoIxmAnxbMh4/2EbOypwltQPYSAGN4xi2T/z/ADUIDQOCSPME6jVAnr1OGDgzMiUE1VHyDNnbi7j2i45GoPN8rkw4r72X8rrCUVTuYXsawFrl55vHVKHd6GqEW1QqZmh0++KS+z74t7/vn4kutL95vT7y8ugHr2D1e9fTTRFf6Eg2J7hsK45gXJ8Omt18n66au1wr/GmTw0AqfAp1pG/V2u3QkFwxNUPZQ5a17mmq5Nw/V3R9wJ44vOTmhIeKxBmdq56vqNN17PaSGgHKEdaekN1EXE84ZuRPEpd5iYhjt/6NMELJXF9EtwLmmOtjubqyd8UibVeLq1RjmLvl/a+ZfcwEdGqgHiUJtluQNhcKxvbSPiET+BsZr3EBCKZ+UCIv8sbz0RJvbeO5VwqS+2046DuIsShzCCZu54c7EQKC9qLZTMsflyLP+IIzKda2t6CLcbH0X9XRBO9Ab2KuHqMUsxt5TJzWbFyacAYwIKIAucUAAAAAAA=">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -20,7 +29,7 @@
   padding-bottom:env(safe-area-inset-bottom,0px);
 }
 *,*::before,*::after{box-sizing:inherit}
-html{scroll-padding-top:env(safe-area-inset-top,0px);-webkit-text-size-adjust:100%}
+html{overscroll-behavior-y:none;scroll-padding-top:env(safe-area-inset-top,0px);-webkit-text-size-adjust:100%}
 body{margin:0;background:var(--acero);color:var(--tiza);font-family:var(--txt);font-size:16px;line-height:1.45;-webkit-font-smoothing:antialiased;min-height:100vh}
 h1,h2,h3{font-family:var(--disp);font-weight:700;margin:0;line-height:1.08;letter-spacing:-.01em}
 h2{font-size:24px}
@@ -377,6 +386,10 @@ body.capa{position:fixed;left:0;right:0;width:100%;overflow:hidden}
 .stats b{color:var(--tiza);font-size:22px;margin-right:4px}
 .sep{margin:0 4px}
 .pie{font-size:13.5px}
+.legal{text-align:center;font-size:13.5px;color:var(--niebla);margin:10px 0 0}
+.legal a{color:var(--niebla);text-decoration:underline;text-underline-offset:3px;display:inline-block;padding:8px 6px}
+#wkMicNota{font-size:12.5px;color:var(--niebla);margin:8px auto 0;line-height:1.35}
+#wkMicNota[hidden]{display:none}
 .bot-tag{font-family:var(--txt);font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--sonar);border:1px solid var(--sonar);border-radius:999px;padding:1px 7px;margin-left:6px;line-height:1.4;white-space:nowrap}
 .prueba{border:1px dashed var(--sonar);border-radius:12px;padding:14px}
 .prueba h2{font-size:22px;display:flex;align-items:center;gap:8px}
@@ -402,6 +415,7 @@ body.capa{position:fixed;left:0;right:0;width:100%;overflow:hidden}
     <div id="wkLista"></div>
     <div class="wk-escribe"><input id="wkTxt" maxlength="200" placeholder="Escribe un mensaje" autocomplete="off"><button id="wkEnviar">Enviar</button></div>
     <button id="wkPtt"><span id="wkPttTxt">Mantén para hablar</span><i id="wkNivel"></i></button>
+    <p id="wkMicNota">🎤 El micrófono solo se activa mientras mantienes pulsado el botón de hablar. Tu voz se envía al grupo en directo, cifrada, y no se graba ni se guarda. La primera vez, tu móvil te pedirá permiso.</p>
     <p id="wkEstado"></p>
     <p id="wkDiag"></p>
     <button id="wkVolver" class="b-sec b-ancho" style="margin-top:6px">Volver</button>
@@ -1517,7 +1531,8 @@ function vPortada(){
   return `<section class="portada"><img class="logo" src="${IMG.logo}" width="634" height="728" alt="Punto Ciego. No puedes confiar en lo que ves">
   <ul class="rasgos"><li><b>Tareas</b>en salas de verdad de tu casa</li><li><b>Sabotajes</b>gas, apagones, puertas cerradas</li><li><b>Un traidor</b>que nadie ha visto venir</li><li><b>Walkie</b>para hablar entre móviles</li></ul>
   <button class="b-jugar" data-a="jugar">Jugar</button>
-  <details class="reglas"><summary>Cómo se juega</summary>${REGLAS}</details></section>`;
+  <details class="reglas"><summary>Cómo se juega</summary>${REGLAS}</details>
+  <p class="legal"><a href="privacidad.html">Privacidad</a> · <a href="soporte.html">Soporte</a></p></section>`;
 }
 function vEditor(){
   const nuevo=!PERFIL,l=limpiaLook(EDIT.look);
@@ -1561,7 +1576,8 @@ function vAcceso(){
   ${a.err?`<p class="motivo" role="alert">${esc(a.err)}</p>`:''}${a.msg?`<p class="aviso-ok" role="status">${esc(a.msg)}</p>`:''}
   <button class="b-baliza b-ancho" data-a="${crear?'crearCuenta':'entrarCuenta'}" ${a.busy?'disabled':''}>${a.busy?'Un momento…':crear?'Crear cuenta':'Entrar'}</button>
   ${crear?'':`<p><button class="b-link" data-a="olvido">He olvidado la contraseña</button></p>`}
-  <p><button class="b-link" data-a="aPortada">Volver</button></p></section>`;
+  <p><button class="b-link" data-a="aPortada">Volver</button></p>
+  <p class="legal">Al crear una cuenta aceptas la <a href="privacidad.html" target="_blank" rel="noopener">política de privacidad</a>.</p></section>`;
 }
 function campoBorrar(){
   const ver=!!BORRAR.ver;
@@ -1608,7 +1624,8 @@ function vHome(){
   ${PRUEBAS?`<div class="bloque"><button class="b-link" data-a="galeria">Galería de minijuegos (pruebas)</button></div>`:''}
   <p><button class="b-link" data-a="aPortada">Pantalla de inicio</button>${CUENTAS&&USER?` <span class="tenue sep">·</span> <button class="b-link" data-a="salirCuenta">Cerrar sesión</button>`:''}</p>
   <p class="tenue pie">${CUENTAS&&USER?`Sesión iniciada con ${esc(USER.email||'')}.`:'Tu perfil se guarda solo en este móvil.'}</p>
-  ${CUENTAS&&USER?`<p><button class="b-link peligro" data-a="aBorrarCuenta">Eliminar cuenta</button></p>`:''}`;
+  ${CUENTAS&&USER?`<p><button class="b-link peligro" data-a="aBorrarCuenta">Eliminar cuenta</button></p>`:''}
+  <p class="legal"><a href="privacidad.html" target="_blank" rel="noopener">Privacidad</a> · <a href="soporte.html" target="_blank" rel="noopener">Soporte</a></p>`;
 }
 function vBuscando(){
   const lento=Date.now()-BUSCA_T>7000;
@@ -2498,11 +2515,16 @@ const JUEGOS={
     SHEET.limpia=()=>{vivo=false;clearInterval(dren)};
   },
   soplar(el,ok){
-    el.innerHTML=`<p class="g-ayuda">Comprobando el micro…</p>`;
     if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){JUEGOS._soplarT(el,ok);return}
-    navigator.mediaDevices.getUserMedia({audio:true}).then(stream=>{
-      if(!el.isConnected){stream.getTracks().forEach(t=>t.stop());return}JUEGOS._soplarS(el,ok,stream);
-    }).catch(()=>{if(el.isConnected)JUEGOS._soplarT(el,ok)});
+    el.innerHTML=`<p class="g-ayuda">Esta tarea se puede hacer soplando al móvil. Para eso necesita oír el micrófono un momento: el sonido se analiza en el móvil, no se graba ni se envía.</p>
+      <button class="b-sec b-ancho" id="gMic">Soplar (usar el micrófono)</button><button class="b-baliza b-ancho" id="gTap" style="margin-top:8px">Hacerlo tocando la pantalla</button>`;
+    el.querySelector('#gTap').onclick=()=>JUEGOS._soplarT(el,ok);
+    el.querySelector('#gMic').onclick=()=>{
+      el.innerHTML=`<p class="g-ayuda">Comprobando el micro…</p>`;
+      navigator.mediaDevices.getUserMedia({audio:true}).then(stream=>{
+        if(!el.isConnected){stream.getTracks().forEach(t=>t.stop());return}JUEGOS._soplarS(el,ok,stream);
+      }).catch(()=>{if(el.isConnected)JUEGOS._soplarT(el,ok)});
+    };
   },
   _soplarS(el,ok,stream){
     el.innerHTML=`<p class="g-ayuda">Sopla al móvil hasta despejarlo.</p><div class="g-vaho" id="gV"></div><p class="g-cuenta" id="gC">0%</p>`;
@@ -2793,6 +2815,7 @@ const AUTO={
   },
   async soplar(el,estado){
     await dormir(500);if(!estado.vivo||!el.isConnected)return;
+    const tap=el.querySelector('#gTap');if(tap){tap.click();await dormir(200);if(!estado.vivo||!el.isConnected)return}
     const btn=el.querySelector('.b-baliza');
     if(btn)btn.dispatchEvent(new PointerEvent('pointerdown',{bubbles:true,pointerId:1030}));
     /* si hay micro de verdad no se puede fingir soplar: lo termina la red de seguridad general */
@@ -2874,6 +2897,7 @@ const WK={
     if(this.stream&&this.stream.active&&this.stream.getAudioTracks().some(t=>t.readyState==='live'))return;
     if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia)throw new Error('este navegador no deja usar el micro');
     this.stream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true,autoGainControl:true}});this.src=null;
+    LS.set('imp.micok',1);$('#wkMicNota').hidden=true;
   },
   async empieza(){
     const no=this.noPuede();if(no){this.estado(no);return}
@@ -3205,6 +3229,7 @@ document.addEventListener('keydown',e=>{if(e.key!=='Enter')return;if(e.target.id
 document.addEventListener('pointerdown',()=>{WK.ctx()},{once:true});
 
 WK.init();
+if(LS.get('imp.micok'))$('#wkMicNota').hidden=true;
 if(PRUEBAS){const f=document.createElement('button');f.id='prFab';f.hidden=true;f.textContent='⚡ Atajos';f.dataset.a='atajos';document.body.appendChild(f)}
 (function arranque(){
   const q=(new URLSearchParams(location.search).get('c')||'').toUpperCase();
@@ -3213,6 +3238,18 @@ if(PRUEBAS){const f=document.createElement('button');f.id='prFab';f.hidden=true;
   if(q&&q===ult&&PERFIL){entrar(q,PERFIL.name,false);return}
   pinta();
 })();
+if('serviceWorker' in navigator)window.addEventListener('load',()=>{
+  const tenia=!!navigator.serviceWorker.controller;let recargado=false;
+  /* Versión nueva instalada: si estás en la portada se recarga sola; en otra pantalla espera a la próxima apertura */
+  navigator.serviceWorker.addEventListener('controllerchange',()=>{
+    if(!tenia||recargado)return;
+    if(VISTA==='portada'&&!(ME&&ME.code)){recargado=true;location.reload()}
+  });
+  navigator.serviceWorker.register('sw.js',{updateViaCache:'none'}).then(reg=>{
+    /* Una app instalada puede pasar días en segundo plano: busca versión nueva cada vez que vuelves a ella */
+    document.addEventListener('visibilitychange',()=>{if(!document.hidden)reg.update().catch(()=>{})});
+  }).catch(()=>{});
+});
 </script>
 <div id="betaTag" aria-hidden="true" style="position:fixed;left:8px;bottom:calc(6px + env(safe-area-inset-bottom,0px));z-index:9999;font:700 10px/1 system-ui,sans-serif;letter-spacing:.14em;color:#fff;background:#ff4637;padding:3px 6px;border-radius:4px;opacity:.85;pointer-events:none">BETA</div>
 </body>

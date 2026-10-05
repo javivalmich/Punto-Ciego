@@ -64,6 +64,13 @@ no existe nada de esto: ni panel, ni botón, ni código activo.
 - Las partidas con bots **no** cuentan para las estadísticas de Supabase, y el walkie solo funciona entre personas.
 - El enlace de *Compartir* no lleva `pruebas=1`, y las acciones que llegan por la red con id de bot se descartan.
 
+## Instalable y fichas de tienda
+
+- Es instalable (PWA): `manifest.json`, iconos en `assets/icons/` y etiquetas de iOS (pantalla completa, barra de estado oscura). La beta tiene su propio `manifest.json` y `sw.js` (copias en `beta/`).
+- `sw.js` tiene la caché versionada (`VERSION`): **sube `VERSION` al pasar cambios a la principal**. Red primero con revalidación, precarga de lo básico y recarga automática si estás en la portada.
+- `privacidad.html` y `soporte.html` (en la raíz y en `beta/`) se enlazan desde la portada, el acceso y el perfil. Al pasar la beta a la principal no hace falta tocarlos.
+- `tienda.md` y `tienda/capturas/` son el material de las fichas; las capturas se regeneran con `tienda/capturar.js`.
+
 ## Cómo se publica (GitHub Pages)
 
 1. Sube el repositorio a GitHub (rama `main`).
