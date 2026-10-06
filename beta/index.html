@@ -181,11 +181,12 @@ body.en-juego #bar{padding-top:60px}
 body.en-juego main{padding-bottom:calc(var(--bar-h,130px) + 24px)}
 body.en-juego #wkFab{right:16px;bottom:calc(var(--bar-h,130px) - 53px);width:46px;height:46px;font-size:21px;box-shadow:none}
 body.en-juego #prFab{left:16px;bottom:calc(var(--bar-h,130px) - 48px);opacity:.75}
-/* reunión, muerte, final...: la pantalla termina encima de una franja con el walkie y «Atajos» */
-body.en-over #over{bottom:calc(78px + env(safe-area-inset-bottom,0px));border-bottom:1px solid var(--remache)}
-body.en-over #wkFab{right:16px;bottom:calc(14px + env(safe-area-inset-bottom,0px));width:50px;height:50px;font-size:22px;box-shadow:none}
-body.en-over #prFab{left:16px;bottom:calc(21px + env(safe-area-inset-bottom,0px))}
-body.en-over .ov{padding-bottom:28px}
+/* pantallas completas: la barra de la partida no se ve nunca debajo.
+   Revelado del papel y muerte (pleno): sin walkie ni «Atajos» (hay que estar callado y quieto).
+   Reunión y final (tira): walkie y «Atajos» en una franja propia al pie, que forma parte de la pantalla */
+body.ov-pleno #wkFab,body.ov-pleno #prFab{display:none}
+body.ov-tira #wkFab{right:16px;bottom:calc(9px + env(safe-area-inset-bottom,0px));width:46px;height:46px;font-size:21px;box-shadow:none}
+body.ov-tira #prFab{left:60px;bottom:calc(14px + env(safe-area-inset-bottom,0px))}
 .pn-tit{margin:18px 0 8px}
 .panel-salas{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .ps{position:relative;display:flex;flex-direction:column;align-items:flex-start;justify-content:space-between;gap:10px;min-height:96px;padding:14px;text-align:left;background:var(--casco);border-radius:14px}
@@ -210,8 +211,15 @@ body.en-over .ov{padding-bottom:28px}
 .apagon h2{font-size:44px;color:#4a5866}
 .apagon p{color:#5d6d7c;max-width:28ch}
 
-#over{position:fixed;inset:0;z-index:40;overflow:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;background:var(--acero)}
-.ov{max-width:560px;margin:0 auto;padding:calc(20px + env(safe-area-inset-top,0px)) 18px calc(110px + env(safe-area-inset-bottom,0px));min-height:100%}
+/* --vh = altura real visible (la mide el JS con la barra de Safari); el pie con el botón principal va siempre fuera del desplazamiento */
+#over{position:fixed;left:0;right:0;top:0;bottom:0;height:var(--vh,auto);z-index:40;overflow:hidden;background:var(--acero)}
+.ov{max-width:560px;margin:0 auto;height:100%;display:flex;flex-direction:column;padding-top:calc(16px + env(safe-area-inset-top,0px));min-height:0}
+.ov-cuerpo{flex:1 1 auto;min-height:0;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;padding:0 18px 12px}
+.ov-cuerpo.fit{display:flex;flex-direction:column}
+.ov-pie{flex:0 0 auto;padding:10px 18px calc(12px + env(safe-area-inset-bottom,0px));background:var(--acero);border-top:1px solid var(--remache)}
+.ov-pie button{width:100%}
+.ov-pie .b-link{display:block;margin:8px auto 0;width:auto}
+.ov-tira{flex:0 0 auto;height:calc(64px + env(safe-area-inset-bottom,0px));background:var(--casco);border-top:1px solid var(--remache)}
 .ov-franja{height:3px;background:var(--baliza);margin:0 -18px 18px}
 .ov .pose,.ov .v3d{margin:4px auto 6px}
 .ov h1{font-size:clamp(46px,14vw,72px);font-weight:800}
@@ -225,19 +233,25 @@ body.en-over .ov{padding-bottom:28px}
 .voto.muerto{opacity:.35;text-decoration:line-through}
 .voto .n{margin-left:auto;font-family:var(--disp);font-size:20px;color:var(--baliza)}
 .salta{grid-column:1/-1;background:transparent}
-.ov-muerto{background:#1a0808;min-height:100vh}
+.ov-muerto{background:#1a0808}
+.ov-muerto .ov-pie{background:#1a0808}
 .ov-muerto h1{color:#ff8f86}
 .revela[data-hold]{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;touch-action:none;-webkit-tap-highlight-color:transparent;cursor:pointer}
 .revela[data-hold] *{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;-webkit-user-drag:none}
 .revela[data-hold] img{pointer-events:none}
 .revela[data-hold]:focus-visible{outline:2px solid var(--tiza);outline-offset:3px}
-.revela{margin-top:26px;border-radius:14px;min-height:470px;display:flex;flex-direction:column;justify-content:center;align-items:center;gap:10px;text-align:center;padding:22px;border:1px solid var(--remache);background:var(--casco);width:100%}
+.revela{margin-top:12px;border-radius:14px;flex:1 1 auto;min-height:0;display:flex;flex-direction:column;justify-content:center;align-items:center;gap:10px;text-align:center;padding:16px;border:1px solid var(--remache);background:var(--casco);width:100%}
+/* si falta sitio encoge el personaje, nunca el texto ni el botón */
+.revela .v3d{flex:0 1 220px;min-height:40px;width:auto!important;height:auto!important;aspect-ratio:170/220;max-width:100%}
+.revela img.pose{flex:0 1 auto;min-height:0;max-height:calc(var(--vh,600px)*.24);width:auto}
+.revela .mira-caja{flex:0 1 210px;min-height:40px;width:auto;height:auto;aspect-ratio:1}
+.mira-caja .v3d{width:62%!important;aspect-ratio:130/170;flex:none}
 .revela.tapa{background:var(--casco);border:1px dashed var(--remache)}
 .revela.tapa span{font-family:var(--disp);font-size:20px;font-weight:600;letter-spacing:.02em}
-.mira-caja{position:relative;width:210px;height:210px}
+.mira-caja{position:relative;width:210px;height:210px;max-height:100%}
 .mira-caja .mira{position:absolute;inset:0}
-.mira-caja .pose{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:120px}
-.revela h1{font-size:60px}
+.mira-caja .pose{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:57%;max-height:none}
+.revela h1{font-size:clamp(40px,8.5vh,60px)}
 .fin-w{font-size:clamp(50px,15vw,84px)}
 .fin-w.imp{color:#ff8f86}
 .fin-w.crew{color:var(--ok)}
@@ -1370,7 +1384,9 @@ function botsJuego(now,v){
       else{p.act=null;for(const t of p.tasks||[])if(t.done<t.steps.length){p.act={e:'y',room:t.steps[t.done].room};break}}
       const cad=!p.dead&&S.phase==='play'&&S.players.find(x=>x.body);
       if(cad){
-        if(mm.repDe!==cad.id){mm.repDe=cad.id;mm.rep=Math.random()<.7?now+entre(4000,18000)*v:0}
+        if(mm.repDe!==cad.id){mm.repDe=cad.id;
+          /* si el cuerpo es el del probador (quieto y callado en su pantalla de muerte) todos los bots lo reportan, y pronto aunque vayan en modo lento */
+          mm.rep=cad.id===ME.pid?now+entre(3000,12000)*Math.min(v,1):Math.random()<.7?now+entre(4000,18000)*v:0}
         if(mm.rep&&now>=mm.rep){mm.rep=0;botAccion(p.id,'report',{target:cad.id})}
       }
     }else if(p.role==='imp'&&!p.dead){
@@ -1862,7 +1878,8 @@ function vReunion(){
   const cabecera=ejectado
     ?vivo('reunion',{look:ejectado.look,hood:ejectado.color,anim:'expulsado',est:'rojo',k:S.gid+'-eject-'+ejectado.id,w:150,h:190,ph:'espalda',alt:`${ejectado.name} ha sido expulsado`})
     :(()=>{const q=P(S,m.by);return vivo('reunion',{look:q?q.look:LOOK0,hood:q?q.color:BLANCO,anim:'salto',k:S.gid+(m.body?'c':'r'),w:150,h:190,ph:'salta',alt:'Saltando: reunión'})})();
-  let h=`<div class="ov"><div class="ov-franja"></div>${cabecera}<h1>${m.body?'Cadáver':'Reunión'}</h1>
+  let pie='';
+  let h=`<div class="ov-franja"></div>${cabecera}<h1>${m.body?'Cadáver':'Reunión'}</h1>
   <p class="sub">${m.body?`${esc(nombreDe(m.by))} ha encontrado el cuerpo de ${esc(nombreDe(m.body))}.`:`${esc(nombreDe(m.by))} ha convocado una reunión de emergencia.`}</p>
   <p class="dondes">Todos a <b>${esc(mr.name)}</b>. Los muertos pueden levantarse y venir, pero en silencio.</p>`;
   const vivos=S.players.filter(x=>!x.dead);
@@ -1870,8 +1887,8 @@ function vReunion(){
     const l=m.listos||{},nl=vivos.filter(x=>l[x.id]).length,yo=p&&!p.dead;
     h+=`<div class="fase"><span>Debate</span><b data-until="${m.until}"></b></div><p class="tenue">Hablad. La votación se abre cuando acabe el tiempo o cuando todos estéis listos.</p>
     <p class="listos" role="status"><b>${nl} de ${vivos.length}</b> listos</p>`;
-    if(yo)h+=l[p.id]?`<button class="b-sec b-ancho" disabled>Listo ✓ · esperando al resto</button>`:`<button class="b-baliza b-ancho" data-a="listoVotar">Listo para votar</button>`;
-    if(soyHost())h+=`<button class="b-sec b-ancho" style="margin-top:8px" data-a="pasarVotar">Pasar a votar</button>`;
+    if(yo)pie+=l[p.id]?`<button class="b-sec b-ancho" disabled>Listo ✓ · esperando al resto</button>`:`<button class="b-baliza b-ancho" data-a="listoVotar">Listo para votar</button>`;
+    if(soyHost())pie+=`<button class="b-sec b-ancho" style="margin-top:8px" data-a="pasarVotar">Pasar a votar</button>`;
     h+=`<div class="votos" style="margin-top:14px">${S.players.map(x=>`<div class="voto ${x.dead?'muerto':''}">${dot(x)}${esc(x.name)}${bt(x)}${!x.dead&&l[x.id]?'<span class="ok-listo" title="Listo">✓</span>':''}</div>`).join('')}</div>`;
   }else if(m.fase==='vote'){
     const nv=Object.keys(m.votes).length;
@@ -1887,33 +1904,33 @@ function vReunion(){
     else h+=`<h2 style="font-size:34px;margin-top:10px">${r.empate?'Empate: nadie sale.':'Nadie ha sido expulsado.'}</h2>`;
     h+=`<div class="votos">${Object.entries(r.cuenta).sort((a,b)=>b[1]-a[1]).map(([k,n])=>`<div class="voto">${k==='skip'?'Saltar':dot(P(S,k)||{color:0})+esc(nombreDe(k))}<span class="n">${n}</span></div>`).join('')}</div>`;
   }
-  return h+'</div>';
+  return `<div class="ov"><div class="ov-cuerpo">${h}</div>${pie?`<div class="ov-pie">${pie}</div>`:''}<div class="ov-tira"></div></div>`;
 }
 function vMuerto(){
-  return `<div class="ov ov-muerto"><div class="ov-franja"></div>${(()=>{const q=mine();return vivo('muerte',{look:q?q.look:LOOK0,hood:q?q.color:BLANCO,anim:'muerte',k:S.gid,w:300,h:190,ph:'agachado',alt:'Tu personaje ha caído'})})()}<h1>Te han matado</h1>
+  return `<div class="ov ov-muerto"><div class="ov-cuerpo"><div class="ov-franja"></div>${(()=>{const q=mine();return vivo('muerte',{look:q?q.look:LOOK0,hood:q?q.color:BLANCO,anim:'muerte',k:S.gid,w:300,h:190,ph:'agachado',alt:'Tu personaje ha caído'})})()}<h1>Te han matado</h1>
   <p class="sub">Túmbate o siéntate justo donde estás. No hables ni hagas señas hasta que alguien encuentre tu cuerpo y suene la reunión.</p>
-  <p class="tenue">Después seguirás jugando como fantasma.</p></div>`;
+  <p class="tenue">Después seguirás jugando como fantasma.</p>
+  <details class="reglas"><summary>Cómo se juega</summary>${REGLAS}</details></div></div>`;
 }
 function vRevela(){
   const p=mine(),imp=p.role==='imp',socios=S.players.filter(x=>x.role==='imp'&&x.id!==p.id);
-  let h=`<div class="ov"><h2>La partida ha empezado</h2><p class="tenue">Que nadie vea tu pantalla.</p>`;
+  let h=`<h2>La partida ha empezado</h2><p class="tenue">Que nadie vea tu pantalla.</p>`;
   if(!REVELA)h+=`<div class="revela tapa" role="button" tabindex="0" data-hold="papel"><div class="mira-caja">${mira()}${vivo('revela',{look:p.look,hood:p.color,anim:'reposo',k:'tapa',yaw:3.14,w:130,h:170,ph:'espalda',alt:'Tu personaje, de espaldas'})}</div><span>Mantén pulsado para ver tu papel</span></div>`;
   else h+=`<div class="revela" data-hold="papel" role="button" tabindex="0" aria-label="Papel visible mientras mantienes pulsado">${vivo('revela',{look:p.look,hood:p.color,anim:'giro',est:'',k:'papel',w:170,h:220,ph:'feliz',alt:'Tu personaje'})}<h1>${imp?'Punto':'Ciego'}</h1>
     <p>${imp?`Mata sin que te vean y sabotea. Tus tareas son de mentira: hazlas para disimular.${socios.length?' Tu compañero: '+socios.map(x=>esc(x.name)).join(' y ')+'.':''}`:'Haz tus tareas, no vayas solo y descubre quién es el Punto.'}</p></div>`;
-  if(VISTO)h+=`<button class="b-baliza b-ancho" style="margin-top:16px" data-a="entendido">Entendido</button>`;
-  return h+'</div>';
+  return `<div class="ov"><div class="ov-cuerpo fit">${h}</div>${VISTO?`<div class="ov-pie"><button class="b-baliza b-ancho" data-a="entendido">Entendido</button></div>`:''}</div>`;
 }
 function vFin(){
   const e=S.end||{};const imps=S.players.filter(x=>x.role==='imp');
   const q=e.w==='imp'&&imps[0]?imps[0]:mine();
   const cara=e.w?vivo('fin',{look:q?q.look:LOOK0,hood:q?q.color:BLANCO,anim:'victoria',est:e.w==='imp'?'rojo':'',k:S.gid+'-'+e.w,w:190,h:230,ph:e.w==='imp'?'tresq':'feliz',alt:e.w==='imp'?'El Punto celebra':'Los Ciegos celebran'}):pose('frente',150,'',mine());
-  let h=`<div class="ov"><div class="ov-franja"></div>${cara}${e.w?`<h1 class="fin-w ${e.w}">${e.w==='imp'?(imps.length>1?'Ganan los Puntos':'Gana el Punto'):'Ganan los Ciegos'}</h1>`:'<h1>Partida terminada</h1>'}
+  let h=`<div class="ov-franja"></div>${cara}${e.w?`<h1 class="fin-w ${e.w}">${e.w==='imp'?(imps.length>1?'Ganan los Puntos':'Gana el Punto'):'Ganan los Ciegos'}</h1>`:'<h1>Partida terminada</h1>'}
   <p class="sub">${esc(e.why||'')}</p>
   ${imps.length?`<p class="dondes">${imps.length>1?'Los Puntos eran':'El Punto era'} <b>${imps.map(x=>esc(x.name)).join(' y ')}</b>.</p>`:''}
   <ul class="gente roles">${S.players.map(x=>`<li>${dot(x)}<span class="${x.role==='imp'?'imp':''}">${esc(x.name)}</span>${bt(x)}<em>${x.role==='imp'?'Punto':'Ciego'}${x.ejected?', expulsado':x.dead?', muerto':''}</em></li>`).join('')}</ul>
   <details class="reglas"><summary>Qué pasó</summary>${(S.log||[]).map(l=>`<p class="log">${mmss(l.t-(S.t0||l.t))} ${esc(l.txt)}</p>`).join('')}</details>`;
-  h+=soyHost()?`<button class="b-baliza b-ancho" data-a="aLobby">Otra partida con los mismos</button>`:`<p class="tenue">El anfitrión puede empezar otra partida con el mismo grupo.</p>`;
-  return h+`<p><button class="b-link" data-a="salir">Salir</button></p></div>`;
+  const pie=(soyHost()?`<button class="b-baliza b-ancho" data-a="aLobby">Otra partida con los mismos</button>`:`<p class="tenue" style="margin:0">El anfitrión puede empezar otra partida con el mismo grupo.</p>`)+`<button class="b-link" data-a="salir">Salir</button>`;
+  return `<div class="ov"><div class="ov-cuerpo">${h}</div><div class="ov-pie">${pie}</div><div class="ov-tira"></div></div>`;
 }
 function vOver(){
   const p=mine();if(!p)return '';
@@ -1949,11 +1966,12 @@ function pinta(){
     const p=mine();
     if(!p)h=S.phase==='lobby'?vEntrando():vFuera();
     else if(S.phase==='lobby')h=vLobby();
-    else{h=vJuego();b=vBarra();o=vOver()}
+    else{h=vJuego();o=vOver();b=o?'':vBarra()} /* con una pantalla completa encima la barra de la partida no existe */
   }
   const app=$('#app'),bar=$('#bar'),over=$('#over');
   setHTML(app,h);setHTML(bar,b);bar.hidden=!b;setHTML(over,o);over.hidden=!o;
   document.body.classList.toggle('en-juego',!!b);document.body.classList.toggle('en-over',!!o);
+  document.body.classList.toggle('ov-pleno',!!o&&!over.querySelector('.ov-tira'));document.body.classList.toggle('ov-tira',!!o&&!!over.querySelector('.ov-tira'));
   if(b)document.documentElement.style.setProperty('--bar-h',bar.getBoundingClientRect().height+'px');
   $('#wkFab').classList.toggle('solo',!b);
   const pf=$('#prFab');if(pf){const q=mine();pf.hidden=!(enPruebas()&&q&&(S.phase==='play'||S.phase==='meeting'));pf.classList.toggle('solo',!b)}
@@ -1969,6 +1987,9 @@ function pinta(){
    devolverlo exacto al cerrar), lo de debajo se marca inert/aria-hidden, y un respaldo de touchmove
    corta los deslizamientos que no tienen nada que desplazar (o que ya están arriba/abajo del todo). */
 let CAPA_Y=null;
+/* altura realmente visible (con la barra de Safari): 100vh en iPhone es la teórica, innerHeight la real */
+function mideVh(){const h=(window.visualViewport&&window.visualViewport.height)||window.innerHeight;document.documentElement.style.setProperty('--vh',Math.round(h)+'px')}
+mideVh();addEventListener('resize',mideVh);addEventListener('orientationchange',()=>setTimeout(mideVh,200));if(window.visualViewport)visualViewport.addEventListener('resize',mideVh);
 function capas(){
   const bq=!!$('#bloqueo'),sheet=!$('#sheet').hidden,wk=!$('#wk').hidden,ov=!$('#over').hidden;
   const abierta=bq||sheet||wk||ov||!!document.querySelector('.apagon');
