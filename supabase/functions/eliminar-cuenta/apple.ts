@@ -33,7 +33,7 @@ export async function clientSecret(cfg: AppleCfg, clientId: string, ahoraMs = Da
   const iat = Math.floor(ahoraMs / 1000);
   const cab = b64url(JSON.stringify({ alg: 'ES256', kid: cfg.keyId, typ: 'JWT' }));
   const cuerpo = b64url(JSON.stringify({ iss: cfg.teamId, iat, exp: iat + 300, aud: 'https://appleid.apple.com', sub: clientId }));
-  const clave = await crypto.subtle.importKey('pkcs8', pemToDer(cfg.privateKey), { name: 'ECDSA', namedCurve: 'P-256' }, false, ['sign']);
+  const clave = await crypto.subtle.importKey('pkcs8', pemToDer(cfg.privateKey) as BufferSource, { name: 'ECDSA', namedCurve: 'P-256' }, false, ['sign']);
   // WebCrypto devuelve la firma en formato r||s (P1363), que es justo lo que exige JWT
   const firma = new Uint8Array(await crypto.subtle.sign({ name: 'ECDSA', hash: 'SHA-256' }, clave, enc.encode(`${cab}.${cuerpo}`)));
   return `${cab}.${cuerpo}.${b64url(firma)}`;
