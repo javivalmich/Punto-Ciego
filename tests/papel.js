@@ -40,6 +40,16 @@ const ok = (c, m) => { console.log((c ? 'OK   ' : 'FALLA ') + m); if (!c) fallos
   await p.focus('[data-hold=papel]'); await p.keyboard.down('Space'); await p.waitForTimeout(300);
   ok(await visible(), 'con teclado (Espacio) también se ve'); await p.keyboard.up('Space'); await p.waitForTimeout(300);
   ok(!(await visible()), 'y se oculta al soltar la tecla');
+  // «Ver mi papel» del menú de la partida: también mantener pulsado
+  await p.click('[data-a=entendido]'); await p.waitForSelector('[data-hold=rol]'); await p.waitForTimeout(500);
+  const rolTexto = () => p.evaluate(() => { const e = document.querySelector('[data-hold=rol]'); return e ? e.textContent : ''; });
+  ok(/Mantén pulsado/.test(await rolTexto()), 'el menú no enseña el papel sin pulsar');
+  const r = await p.locator('[data-hold=rol]').boundingBox();
+  await toque('touchStart', [{ x: r.x + r.width / 2, y: r.y + r.height / 2 }]); await p.waitForTimeout(600);
+  ok(/^(Ciego|Punto)/.test(await rolTexto()), 'manteniendo pulsado el menú enseña el papel');
+  ok(await p.locator('.rol-b.imp').count() === 0, 'sin estilo distinto para el impostor');
+  await toque('touchEnd', []); await p.waitForTimeout(400);
+  ok(/Mantén pulsado/.test(await rolTexto()), 'al soltar el menú vuelve a taparlo');
   ok(errs.length === 0, 'sin errores de JS' + (errs.length ? ': ' + errs[0] : ''));
   await br.close(); process.exit(fallos ? 1 : 0);
 })().catch(e => { console.error(e); process.exit(1); });

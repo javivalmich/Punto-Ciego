@@ -147,8 +147,9 @@ ul.gente em{font-style:normal;color:var(--niebla);font-size:13.5px}
 .bt{height:12px;background:var(--casco);border:1px solid var(--remache);border-radius:3px;overflow:hidden;margin-top:4px}
 .bt i{display:block;height:100%;background:var(--ok);transition:width .6s ease}
 .rol-b{display:block;width:100%;text-align:left;background:var(--casco);font-weight:500;color:var(--niebla)}
-.rol-b.ver{color:var(--tiza)}
-.rol-b.ver.imp{border-color:var(--alarma);background:#2a1110}
+.rol-b.ver{color:var(--tiza);min-height:96px}
+.rol-b[data-hold]{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;touch-action:none;-webkit-tap-highlight-color:transparent;cursor:pointer}
+.rol-b[data-hold] *{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
 .rol-b.ver b{font-family:var(--disp);font-size:22px}
 .fantasma{border:1px dashed var(--sonar);color:var(--sonar);border-radius:10px;padding:10px 12px;margin:10px 0;font-size:15px}
 
@@ -660,7 +661,7 @@ let HECHAS=new Set();
 const PEND=new Map();
 const OPT=new Set();
 const optK=(tid,step)=>S.gid+'|'+tid+'|'+step;   /* clave ligada a la partida: los ids de tarea (t0, t1…) se repiten en cada una */
-let JOIN_SENT=false,BUSCA_T=0,HOST_PAUSA=0,ROLVIS=0,REVELA=false,VISTO=false,SHEET=null,MODO={m:'menu'},PREV=null;
+let JOIN_SENT=false,BUSCA_T=0,HOST_PAUSA=0,ROLVER=false,REVELA=false,VISTO=false,SHEET=null,MODO={m:'menu'},PREV=null;
 let ACT_CONGELADA=null; /* {room,txt,hasta}: última tarea que tuve abierta, sigue contando como "dónde estoy" un rato tras cerrarla */
 
 const urlPartida=()=>location.origin+location.pathname+'?c='+ME.code;
@@ -1557,7 +1558,7 @@ function eventos(){
   if(!S||!ME.pid)return;const p=mine(),pr=PREV;
   PREV={phase:S.phase,mn:S.meet?S.meet.n:0,mf:S.meet?S.meet.fase:'',sab:S.sab?S.sab.kind+S.sab.rooms.join():'',dead:!!(p&&p.dead),gid:S.gid,notice:S.notice?S.notice.t:0};
   if(pr&&pr.gid!==S.gid){ /* partida nueva: nada del estado local de la anterior sigue vivo */
-    OPT.clear();REVELA=false;VISTO=false;ROLVIS=0;cerrarSheet();
+    OPT.clear();REVELA=false;VISTO=false;ROLVER=false;cerrarSheet();
     for(const [id,q] of PEND)if(q.a.t!=='join')PEND.delete(id);   /* reenvíos pendientes de la partida anterior (el join sí se conserva) */
     if(S.phase!=='lobby'&&WK.abierto)WK.cerrar();
   }
@@ -1794,10 +1795,10 @@ function camEstado(p,now){
   return{disp,cd:0,abiertas:!!c.openSince};
 }
 function vRol(p){
-  const ver=Date.now()<ROLVIS,imp=p.role==='imp';
-  if(!ver)return `<button class="rol-b" data-a="verPapel">Ver mi papel</button>`;
+  const ver=ROLVER,imp=p.role==='imp';
+  if(!ver)return `<div class="rol-b" role="button" tabindex="0" data-hold="rol">Mantén pulsado para ver mi papel</div>`;
   const socios=S.players.filter(x=>x.role==='imp'&&x.id!==p.id);
-  return `<button class="rol-b ver ${imp?'imp':''}" data-a="verPapel"><b>${imp?'Punto':'Ciego'}</b><br>${imp?(socios.length?'Con '+socios.map(x=>esc(x.name)).join(' y ')+'. ':'')+'Tus tareas son de mentira.':'Haz tus tareas y descubre al Punto.'}</button>`;
+  return `<div class="rol-b ver" role="button" tabindex="0" data-hold="rol"><b>${imp?'Punto':'Ciego'}</b><br>${imp?(socios.length?'Con '+socios.map(x=>esc(x.name)).join(' y ')+'. ':'')+'Tus tareas son de mentira.':'Haz tus tareas y descubre al Punto.'}</div>`;
 }
 function vAlertas(p){
   let h='';const t=ahora();
@@ -3246,7 +3247,6 @@ const ACT={
   puertaA(d){accion('sab',{kind:'door',room:d.r});cerrarSheet()},
   fix(d){hojaFix(+d.panel||0,SHEET&&SHEET.sala)},
   votar(d){accion('vote',{target:d.p})},
-  verPapel(){ROLVIS=Date.now()<ROLVIS?0:Date.now()+3500},
   galeria(){abrirSheet(vGaleria(),{})},
   galeriaAbre(d){galeriaJuego(d.g)},
   galeriaOtra(d){galeriaJuego(d.g)},
@@ -3300,12 +3300,17 @@ document.addEventListener('keydown',e=>{if(e.key!=='Enter')return;if(e.target.id
   if(e.target.id==='pw'||e.target.id==='em'){const b=document.querySelector('[data-a=entrarCuenta],[data-a=crearCuenta],[data-a=nuevaClave]');if(b&&!b.disabled)b.click()}
   if(e.target.id==='bpw'||e.target.id==='bpal'){const b=document.querySelector('[data-a=confirmarBorrado]');if(b&&!b.disabled)b.click()}
   if(e.target.id==='nuevaSala')ACT.addSala()});
-/* Papel: se ve solo mientras se mantiene pulsado y se oculta al soltar (táctil, ratón y teclado) */
-function papelVisible(on){if(REVELA===on)return;REVELA=on;if(on){VISTO=true;vibra(30)}pinta()}
-document.addEventListener('pointerdown',e=>{if(!e.target.closest('[data-hold=papel]'))return;e.preventDefault();papelVisible(true)});
+/* Papel: se ve solo mientras se mantiene pulsado y se oculta al soltar (táctil, ratón y teclado). Vale para el revelado
+   del principio (data-hold=papel) y para «Ver mi papel» del menú (data-hold=rol) */
+function papelVisible(on,que){
+  if(on){if(que==='papel'){if(REVELA)return;REVELA=true;VISTO=true}else{if(ROLVER)return;ROLVER=true}vibra(30)}
+  else{if(!REVELA&&!ROLVER)return;REVELA=false;ROLVER=false}
+  pinta();
+}
+document.addEventListener('pointerdown',e=>{const h=e.target.closest('[data-hold]');if(!h)return;e.preventDefault();papelVisible(true,h.dataset.hold)});
 ['pointerup','pointercancel'].forEach(ev=>document.addEventListener(ev,()=>papelVisible(false)));
-document.addEventListener('contextmenu',e=>{if(e.target.closest('[data-hold=papel]'))e.preventDefault()});
-document.addEventListener('keydown',e=>{if((e.key===' '||e.key==='Enter')&&!e.repeat&&e.target.closest&&e.target.closest('[data-hold=papel]')){e.preventDefault();papelVisible(true)}});
+document.addEventListener('contextmenu',e=>{if(e.target.closest('[data-hold]'))e.preventDefault()});
+document.addEventListener('keydown',e=>{const h=(e.key===' '||e.key==='Enter')&&!e.repeat&&e.target.closest&&e.target.closest('[data-hold]');if(h){e.preventDefault();papelVisible(true,h.dataset.hold)}});
 document.addEventListener('keyup',e=>{if(e.key===' '||e.key==='Enter')papelVisible(false)});
 addEventListener('blur',()=>papelVisible(false));
 document.addEventListener('visibilitychange',()=>{if(document.hidden)papelVisible(false)});
