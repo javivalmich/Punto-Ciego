@@ -12,10 +12,10 @@
 | Palabras clave (App Store) | impostor,among us,fiesta,amigos,traidor,tareas,sabotaje,casa,party,social,walkie | 100 |
 | Categoría | Juegos › Fiesta / Aventura (Apple: Juegos › Acción o Familia) | |
 | Idioma principal | Español (España) | |
-| URL de privacidad | https://javivalmich.github.io/Punto-Ciego/privacidad.html | |
-| URL de soporte | https://javivalmich.github.io/Punto-Ciego/soporte.html | |
-| Correo de contacto | javivalmich@gmail.com | |
-| Borrado de cuenta (Google exige URL) | https://javivalmich.github.io/Punto-Ciego/soporte.html#borrar-cuenta | |
+| URL de privacidad | https://puntostudio.es/privacidad/ | |
+| URL de soporte | https://puntostudio.es/soporte/ | |
+| Correo de contacto | soporte@puntostudio.es | |
+| Borrado de cuenta (Google exige URL) | https://puntostudio.es/soporte/#borrar-cuenta | |
 
 ## Descripción larga (máx. 4000)
 

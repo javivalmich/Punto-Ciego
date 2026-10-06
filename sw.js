@@ -7,9 +7,9 @@
 const NUEVA='https://puntostudio.es/punto-ciego/';
 const vivo=()=>fetch(NUEVA+'manifest.json',{cache:'no-store'}).then(r=>r.ok).catch(()=>false);
 const mudar=()=>Promise.all([caches.keys().then(k=>Promise.all(k.map(x=>caches.delete(x)))),self.registration.unregister()]).then(()=>self.clients.matchAll({type:'window'})).then(cs=>cs.forEach(c=>c.postMessage('mudanza'))).catch(()=>{});
-const VERSION='9';
+const VERSION='10';
 const CACHE='punto-ciego-v'+VERSION;
-const SHELL=['./','index.html','manifest.json','privacidad.html','soporte.html','terminos.html','assets/logo.webp','assets/icons/icon-192.png','assets/icons/icon-512.png','assets/icons/apple-touch-icon.png'];
+const SHELL=['./','index.html','manifest.json','privacidad.html','soporte.html','terminos.html','fonts/outfit-latin.woff2','assets/logo.webp','assets/icons/icon-192.png','assets/icons/icon-512.png','assets/icons/apple-touch-icon.png'];
 self.addEventListener('install',e=>{
   e.waitUntil(caches.open(CACHE).then(c=>Promise.all(SHELL.map(u=>c.add(new Request(u,{cache:'reload'})).catch(()=>{})))).then(()=>self.skipWaiting()));
 });

@@ -158,11 +158,11 @@ enabled = true
 enabled = true
 # The base URL of your website. Used as an allow-list for redirects and for constructing URLs used
 # in emails.
-site_url = "https://javivalmich.github.io/Punto-Ciego/"
+site_url = "https://puntostudio.es/punto-ciego/"
 # The public URL that Auth serves on. Defaults to the API external URL with `/auth/v1` appended.
 # external_url = ""
 # A list of *exact* URLs that auth providers are permitted to redirect to post authentication.
-additional_redirect_urls = ["https://javivalmich.github.io/Punto-Ciego/", "https://javivalmich.github.io/Punto-Ciego/beta/"]
+additional_redirect_urls = ["https://puntostudio.es/punto-ciego/", "https://puntostudio.es/punto-ciego/beta/", "https://puntostudio.es/punto-falso/", "https://puntostudio.es/punto-falso/beta/", "https://javivalmich.github.io/Punto-Ciego/", "https://javivalmich.github.io/Punto-Ciego/beta/", "https://javivalmich.github.io/el-impostor/"]
 # How long tokens are valid for, in seconds. Defaults to 3600 (1 hour), maximum 604,800 (1 week).
 jwt_expiry = 3600
 # JWT issuer URL. If not set, defaults to auth.external_url.

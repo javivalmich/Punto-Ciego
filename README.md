@@ -5,7 +5,7 @@ tripulantes y hacen tareas por las habitaciones; otros son impostores y sabotean
 sin que los vean. Cuando alguien encuentra un cuerpo, o pulsa la emergencia, se abre una
 reunión y se vota a quién expulsar.
 
-Un juego de Punto Studio, hermano de [Punto Falso](https://javivalmich.github.io/el-impostor/).
+Un juego de Punto Studio, hermano de [Punto Falso](https://puntostudio.es/punto-falso/).
 
 Es una web estática: `index.html` (HTML, CSS y JS) más una carpeta `assets/` con el personaje.
 No tiene paso de compilación ni dependencias que instalar.
@@ -54,7 +54,7 @@ Las partidas y el walkie viajan por MQTT cifrado a través de brokers públicos;
 
 ## Modo pruebas (jugar solo con bots)
 
-Abre la web con `?pruebas=1` (por ejemplo `https://javivalmich.github.io/Punto-Ciego/?pruebas=1`). Sin ese parámetro
+Abre la web con `?pruebas=1` (por ejemplo `https://puntostudio.es/punto-ciego/?pruebas=1`). Sin ese parámetro
 no existe nada de esto: ni panel, ni botón, ni código activo.
 
 - **Sala de espera** (solo el anfitrión): panel *Pruebas* para añadir o quitar bots, elegir tu papel en la próxima
@@ -135,8 +135,8 @@ empezar de cero.
 
 Hay dos copias de la web:
 
-- **Principal** (raíz: `index.html` y `assets/`): `https://javivalmich.github.io/Punto-Ciego/`. La usan los jugadores.
-- **Beta** (`beta/`): `https://javivalmich.github.io/Punto-Ciego/beta/`. Zona de pruebas permanente, con una etiqueta roja
+- **Principal** (raíz: `index.html` y `assets/`): `https://puntostudio.es/punto-ciego/`. La usan los jugadores.
+- **Beta** (`beta/`): `https://puntostudio.es/punto-ciego/beta/`. Zona de pruebas permanente, con una etiqueta roja
   «BETA» y «(beta)» en el título. Comparte cuentas y base de datos con la principal.
 
 Flujo de trabajo: los cambios se hacen siempre en `beta/`, se prueban en el iPhone y, cuando están bien, se pasan a la raíz:
