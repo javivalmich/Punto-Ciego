@@ -25,10 +25,17 @@ Deno.serve(async (req) => {
   });
 
   // Quién llama: solo se puede borrar la propia cuenta (el id sale del token, nunca del cuerpo)
-  const jwt = (req.headers.get('Authorization') ?? '').replace(/^Bearer\s+/i, '');
-  const { data: u, error: eu } = await admin.auth.getUser(jwt);
-  if (eu || !u?.user) return json(401, { ok: false, error: 'sesión no válida' });
-  const user = u.user;
+  // No depende solo de verify_jwt: sin token, o con uno que no sea de un usuario (la clave anon/publicable), responde 401 y no toca nada.
+  const jwt = (req.headers.get('Authorization') ?? '').replace(/^Bearer\s+/i, '').trim();
+  if (!jwt) return json(401, { ok: false, error: 'sesión no válida' });
+  let user;
+  try {
+    const { data: u, error: eu } = await admin.auth.getUser(jwt);
+    if (eu || !u?.user) return json(401, { ok: false, error: 'sesión no válida' });
+    user = u.user;
+  } catch (_) {
+    return json(401, { ok: false, error: 'sesión no válida' });
+  }
 
   const conApple = (user.identities ?? []).some((i) => i.provider === 'apple') || user.app_metadata?.provider === 'apple';
   let revocado = false;
