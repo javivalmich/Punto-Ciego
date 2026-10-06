@@ -756,7 +756,7 @@ function errorCuenta(e){
   const m=((e&&(e.code||''))+' '+(e&&e.message||'')).toLowerCase();
   if(m.includes('invalid')&&m.includes('credential'))return 'Correo o contraseña incorrectos.';
   if(m.includes('already')&&m.includes('regist'))return 'Ya hay una cuenta con ese correo. Entra con ella.';
-  if(m.includes('weak')||m.includes('at least'))return 'La contraseña tiene que tener al menos 6 caracteres.';
+  if(m.includes('weak')||m.includes('at least'))return 'La contraseña tiene que tener al menos 8 caracteres.';
   if(m.includes('not confirmed'))return 'Tienes que confirmar el correo antes de entrar. Mira tu bandeja de entrada.';
   if(m.includes('not authorized'))return 'Supabase no puede enviar correos a esa dirección. Hay que desactivar la confirmación de correo en el proyecto.';
   if(m.includes('rate')||m.includes('too many')||m.includes('security purposes'))return 'Demasiados intentos seguidos. Espera un minuto y vuelve a probar.';
@@ -1616,7 +1616,7 @@ function vAcceso(){
   ${GOOGLE||APPLE?`<div class="o-sep" aria-hidden="true">o con tu correo</div>`:''}
   <p class="tenue">${crear?'Con tu cuenta tu personaje y tus partidas te siguen a cualquier móvil.':'Entra con el correo y la contraseña de tu cuenta.'}</p>
   <p><label class="lbl" for="em">Correo</label><input id="em" type="email" autocomplete="email" inputmode="email" value="${esc(a.email)}" placeholder="tu@correo.com"></p>
-  <p><label class="lbl" for="pw">Contraseña</label>${campoClave(crear?'new-password':'current-password',a.pw,crear?'Mínimo 6 caracteres':'')}</p>
+  <p><label class="lbl" for="pw">Contraseña</label>${campoClave(crear?'new-password':'current-password',a.pw,crear?'Mínimo 8 caracteres':'')}</p>
   ${a.err?`<p class="motivo" role="alert">${esc(a.err)}</p>`:''}${a.msg?`<p class="aviso-ok" role="status">${esc(a.msg)}</p>`:''}
   <button class="b-baliza b-ancho" data-a="${crear?'crearCuenta':'entrarCuenta'}" ${a.busy?'disabled':''}>${a.busy?'Un momento…':crear?'Crear cuenta':'Entrar'}</button>
   ${crear?'':`<p><button class="b-link" data-a="olvido">He olvidado la contraseña</button></p>`}
@@ -1640,7 +1640,7 @@ function vBorrarCuenta(){
 }
 function vNuevaClave(){
   return `<section class="bloque"><h2>Nueva contraseña</h2><p class="tenue">Escribe la contraseña que quieres usar a partir de ahora.</p>
-  <p><label class="lbl" for="pw">Contraseña nueva</label>${campoClave('new-password',ACCESO.pw,'Mínimo 6 caracteres')}</p>
+  <p><label class="lbl" for="pw">Contraseña nueva</label>${campoClave('new-password',ACCESO.pw,'Mínimo 8 caracteres')}</p>
   ${ACCESO.err?`<p class="motivo">${esc(ACCESO.err)}</p>`:''}
   <button class="b-baliza b-ancho" data-a="nuevaClave" ${ACCESO.busy?'disabled':''}>Guardar contraseña</button></section>`;
 }
@@ -3116,7 +3116,7 @@ const ACT={
     a.busy=false;if(error)a.err=errorCuenta(error);else VISTA='menu';pinta()},
   async crearCuenta(){
     const a=ACCESO;a.err='';a.msg='';if(!a.email||!a.pw){a.err='Escribe el correo y una contraseña.';return}
-    if(a.pw.length<6){a.err='La contraseña tiene que tener al menos 6 caracteres.';return}
+    if(a.pw.length<8){a.err='La contraseña tiene que tener al menos 8 caracteres.';return}
     a.busy=true;pinta();
     const {data,error}=await SB.auth.signUp({email:a.email.trim(),password:a.pw,options:{emailRedirectTo:location.origin+location.pathname}});
     a.busy=false;
@@ -3129,7 +3129,7 @@ const ACT={
     a.busy=true;pinta();const {error}=await SB.auth.resetPasswordForEmail(a.email.trim(),{redirectTo:location.origin+location.pathname});
     a.busy=false;if(error)a.err=errorCuenta(error);else a.msg='Si hay una cuenta con ese correo, te llegará un enlace para poner una contraseña nueva.';pinta()},
   async nuevaClave(){
-    const pw=(($('#pw')||{}).value||'');ACCESO.err='';if(pw.length<6){ACCESO.err='Mínimo 6 caracteres.';return}
+    const pw=(($('#pw')||{}).value||'');ACCESO.err='';if(pw.length<8){ACCESO.err='Mínimo 8 caracteres.';return}
     ACCESO.busy=true;pinta();const {error}=await SB.auth.updateUser({password:pw});ACCESO.busy=false;
     if(error)ACCESO.err=errorCuenta(error);else{toast('Contraseña cambiada');VISTA='menu';ACCESO.pw='';ACCESO.ver=false}pinta()},
   async salirCuenta(){if(SB)await SB.auth.signOut();USER=null;PERFIL=null;SES_ID='';EDIT=null;VISTA='portada';pinta()},
