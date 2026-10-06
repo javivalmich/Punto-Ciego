@@ -695,7 +695,7 @@ const QS=new URLSearchParams(location.search);
 const PRUEBAS=QS.get('pruebas')==='1'; /* modo pruebas (bots y atajos): sin este parámetro nada de eso existe */
 const EN_LOCAL=/^(localhost|127\.0\.0\.1)$/.test(location.hostname);
 if(EN_LOCAL&&QS.get('supa')){SUPA.url=QS.get('supa');SUPA.key=QS.get('supakey')||''}
-const SB_LIB=(EN_LOCAL&&QS.get('sblib'))||'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.116.0/dist/umd/supabase.js';
+const SB_LIB=(EN_LOCAL&&QS.get('sblib'))||'assets/vendor/supabase-js/supabase.js';
 const CUENTAS=!!(SUPA.url&&SUPA.key);
 let SB=null,USER=null,SB_ESTADO=CUENTAS?'cargando':'off',PERFIL_CARGANDO=false,GUARDANDO=false,PEND_ENTRAR=null;
 let ACCESO={modo:'entrar',email:'',pw:'',err:'',msg:'',busy:false};
@@ -1025,11 +1025,14 @@ function elegeImpostores(st,nImp){
   }
   return orden;
 }
+/* Modo pruebas (?pruebas=1): solo vale mientras en la sala no haya más personas que el anfitrión (el resto, bots).
+   Con otra persona dentro no hay elección de papel, ni atajos, ni bots: nadie puede sacar ventaja en una partida real. */
+const soloBots=st=>st.players.every(x=>x.id===st.hostId||x.bot);
 function empezar(st,now){
   const rooms=salas(st);if(st.players.length<4||rooms.length<2)return;
   const n=st.players.length,nImp=Math.min(st.cfg.imp,maxImp(n));
   const orden=elegeImpostores(st,nImp);
-  if(st.pruebas&&st.pr&&st.pr.rol!=='azar')ajustaPapel(st,orden);
+  if(st.pruebas&&st.pr&&st.pr.rol!=='azar'&&soloBots(st))ajustaPapel(st,orden);
   const rachas=st.racha||(st.racha={});
   const crewIds=st.players.map(p=>p.id).filter(id=>!orden.includes(id));
   const gafasId=crewIds.length?elige(crewIds):null; /* el Ciego con gafas: uno solo, al azar, cada partida */
@@ -1098,6 +1101,7 @@ function reducir(st,a,now,local){
     const lc=s=>s.toLowerCase();
     if(st.players.some(x=>lc(x.name)===lc(nombre))){let k=2;while(st.players.some(x=>lc(x.name)===lc(nombre+' '+k)))k++;nombre+=' '+k}
     let c=look.hood;if(!libre(c)){c=0;while(!libre(c))c++}
+    if(!bot&&st.pruebas){st.pruebas=false;st.pr=null;st.players=st.players.filter(x=>!x.bot)} /* entra una persona: se acabaron las pruebas y se van los bots */
     st.players.push({id:a.pid,name:nombre,color:c,look,seen:now,...(bot?{bot:true}:{})});return true;
   }
   case 'leave':
@@ -1194,12 +1198,12 @@ function reducir(st,a,now,local){
     return true;
   }
   case 'pruebas':{ /* modo pruebas: ajustes del anfitrión */
-    if(!(local&&esHost&&st.pruebas))return true;
+    if(!(local&&esHost&&st.pruebas&&soloBots(st)))return true;
     const r=st.pr||(st.pr={rol:'azar',vel:'normal'});
     if(['azar','crew','imp'].includes(a.rol))r.rol=a.rol;if(a.vel in BOT_VEL)r.vel=a.vel;return true;
   }
   case 'atajo':{ /* modo pruebas: fuerza una situación sin esperar. Solo el anfitrión, en local y en una partida de pruebas */
-    if(!(local&&esHost&&st.pruebas))return true;const m=st.meet;
+    if(!(local&&esHost&&st.pruebas&&soloBots(st)))return true;const m=st.meet;
     if(a.k==='reunion'){if(st.phase==='play')reunion(st,now,st.hostId,null)}
     else if(a.k==='debate'){if(st.phase==='meeting'&&m&&m.fase==='disc'){m.fase='vote';m.until=now+st.cfg.vote*1000}}
     else if(a.k==='resolver'){if(st.phase==='meeting'&&m&&m.fase==='vote')resolver(st,now)}
@@ -1252,7 +1256,7 @@ const entre=(a,b)=>a+Math.random()*(b-a);
 const elige=a=>a[Math.floor(Math.random()*a.length)];
 const velBots=()=>BOT_VEL[(S&&S.pr&&S.pr.vel)||'normal']||1;
 const bt=p=>esBot(p)?'<span class="bot-tag">bot</span>':'';
-const enPruebas=()=>!!(PRUEBAS&&S&&S.pruebas&&soyHost());
+const enPruebas=()=>!!(PRUEBAS&&S&&S.pruebas&&soyHost()&&soloBots(S));
 function botAccion(pid,t,data){aplicar({id:uid(12),pid,t,...data},true)}
 function botAnade(){
   if(!enPruebas()||S.phase!=='lobby'||S.players.length>=15)return;
