@@ -5,9 +5,10 @@
 /* Mudanza a puntostudio.es: cuando la dirección nueva ya responde, el SW limpia cachés, se desregistra y avisa a las páginas
    para que salten allí (un SW no puede navegar a otro origen, lo hace la página conservando query y hash). */
 const NUEVA='https://puntostudio.es/punto-ciego/';
-const vivo=()=>fetch(NUEVA+'manifest.json',{cache:'no-store'}).then(r=>r.ok).catch(()=>false);
-const mudar=()=>Promise.all([caches.keys().then(k=>Promise.all(k.map(x=>caches.delete(x)))),self.registration.unregister()]).then(()=>self.clients.matchAll({type:'window'})).then(cs=>cs.forEach(c=>c.postMessage('mudanza'))).catch(()=>{});
-const VERSION='10';
+const vivo=()=>!(location.hostname==='javivalmich.github.io')?Promise.resolve(false):fetch(NUEVA+'manifest.json',{cache:'no-store'}).then(r=>r.ok).catch(()=>false);
+const ORIGEN_VIEJO=location.hostname==='javivalmich.github.io'; /* en puntostudio.es el destino siempre responde: la mudanza solo se hace desde la dirección antigua */
+const mudar=()=>!ORIGEN_VIEJO?Promise.resolve():Promise.all([caches.keys().then(k=>Promise.all(k.map(x=>caches.delete(x)))),self.registration.unregister()]).then(()=>self.clients.matchAll({type:'window'})).then(cs=>cs.forEach(c=>c.postMessage('mudanza'))).catch(()=>{});
+const VERSION='11';
 const CACHE='punto-ciego-v'+VERSION;
 const SHELL=['./','index.html','manifest.json','privacidad.html','soporte.html','terminos.html','fonts/outfit-latin.woff2','assets/logo.webp','assets/icons/icon-192.png','assets/icons/icon-512.png','assets/icons/apple-touch-icon.png'];
 self.addEventListener('install',e=>{
