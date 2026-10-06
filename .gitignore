@@ -30,3 +30,4 @@ fuentes/
 *.p8
 secrets/
 tienda/vista-previa-recortes.png
+.claude/
