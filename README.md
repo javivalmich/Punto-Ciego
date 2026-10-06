@@ -82,7 +82,7 @@ no existe nada de esto: ni panel, ni botón, ni código activo.
 
 1. Sube el repositorio a GitHub (rama `main`).
 2. En **Settings > Pages**, elige *Deploy from a branch*, rama `main`, carpeta `/ (root)`.
-3. La web queda en `https://USUARIO.github.io/punto-ciego/`.
+3. La web se sirve desde GitHub Pages; la dirección pública es `https://puntostudio.es/punto-ciego/` (la antigua de github.io redirige sola).
 
 El archivo `.nojekyll` hace que GitHub Pages sirva `index.html` tal cual.
 
