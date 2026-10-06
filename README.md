@@ -99,8 +99,11 @@ configura, el juego funciona igualmente y guarda el perfil solo en cada móvil.
    ```
    O pégala entera en **SQL Editor > New query > Run**.
    Crea la tabla `profiles`, sus políticas RLS y la función `sumar_partida`.
-3. En **Authentication > Sign In / Providers > Email**, desactiva **Confirm email**
-   (el correo gratuito de Supabase solo envía a miembros del equipo y con un límite muy bajo).
+3. En **Authentication > Sign In / Providers > Email**, deja activado **Confirm email**: quien se registra con
+   correo no abre sesión hasta pulsar el enlace (Google y Apple entran directamente). El correo gratuito de
+   Supabase solo envía a miembros del equipo y con un límite muy bajo, así que hace falta un **SMTP propio**
+   (Authentication > Emails > SMTP Settings, p. ej. un remitente de puntostudio.es). Las plantillas con la marca
+   están en `supabase/templates/` (`confirmar.html`, `recuperar.html`) y se pegan en Authentication > Emails > Templates.
 4. En **Authentication > URL Configuration**, pon como *Site URL* la URL de GitHub Pages
    y añádela también a *Redirect URLs*.
 5. En **Project Settings > API Keys** copia la *Project URL* y la clave **publishable**

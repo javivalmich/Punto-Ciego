@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="es" xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<meta name="supported-color-schemes" content="light dark">
+<title>Confirma tu cuenta de Punto Studio</title>
+<style>
+  :root { color-scheme: light dark; supported-color-schemes: light dark; }
+  @media (prefers-color-scheme: dark) {
+    .fondo { background-color: #0b0b0d !important; }
+    .tarjeta { background-color: #17171c !important; border-color: #2a2a31 !important; }
+    .texto { color: #f3eee6 !important; }
+    .suave { color: #a3a3ad !important; }
+    .enlace { color: #ff6b66 !important; }
+    .boton { background-color: #ff4a44 !important; }
+    .boton a { color: #0b0b0d !important; }
+    .linea { border-color: #2a2a31 !important; }
+  }
+  @media only screen and (max-width: 620px) {
+    .tarjeta-td { padding: 28px 20px !important; }
+    .titulo { font-size: 24px !important; }
+  }
+</style>
+</head>
+<body class="fondo" style="margin:0;padding:0;background-color:#f3f3f5;">
+<div style="display:none;max-height:0;overflow:hidden;opacity:0;mso-hide:all;">Un toque para activar tu cuenta. El enlace caduca en 1 hora.</div>
+<table role="presentation" class="fondo" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#f3f3f5" style="background-color:#f3f3f5;">
+  <tr>
+    <td align="center" style="padding:24px 12px;">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:600px;width:100%;">
+        <tr>
+          <td class="tarjeta tarjeta-td" bgcolor="#ffffff" align="center" style="background-color:#ffffff;border:1px solid #dcdce0;border-radius:22px;padding:36px 32px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
+            <img src="https://javivalmich.github.io/email/mascota-punto-studio.png" width="240" height="240" alt="La mascota de Punto Studio, con el móvil en la mano" style="display:block;width:240px;height:240px;max-width:100%;border:0;outline:none;text-decoration:none;margin:0 auto 20px auto;">
+            <h1 class="texto titulo" style="margin:0 0 12px 0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:28px;line-height:1.2;font-weight:800;color:#0e0e11;">¡Bienvenido a Punto Studio!</h1>
+            <p class="texto" style="margin:0 0 24px 0;font-size:16px;line-height:1.6;color:#0e0e11;">Te has registrado con <strong>{{ .Email }}</strong>. Pulsa el botón para confirmar tu cuenta y empezar a jugar.</p>
+            <table role="presentation" cellpadding="0" cellspacing="0" border="0" align="center" style="margin:0 auto 24px auto;">
+              <tr>
+                <td class="boton" align="center" bgcolor="#e0120f" style="background-color:#e0120f;border-radius:14px;">
+                  <a href="{{ .ConfirmationURL }}" style="display:inline-block;padding:16px 32px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:18px;line-height:1.2;font-weight:700;color:#ffffff;text-decoration:none;border-radius:14px;">Confirmar mi cuenta</a>
+                </td>
+              </tr>
+            </table>
+            <p class="suave" style="margin:0 0 6px 0;font-size:14px;line-height:1.5;color:#5f5f69;">¿No funciona el botón? Copia y pega este enlace en tu navegador:</p>
+            <p style="margin:0 0 24px 0;font-size:13px;line-height:1.5;word-break:break-all;"><a class="enlace" href="{{ .ConfirmationURL }}" style="color:#c20f0c;text-decoration:underline;">{{ .ConfirmationURL }}</a></p>
+            <p class="suave" style="margin:0;font-size:14px;line-height:1.5;color:#5f5f69;">El enlace caduca en 1 hora y solo sirve una vez. Si no te has registrado, ignora este correo: no se creará ninguna cuenta activa.</p>
+          </td>
+        </tr>
+        <tr>
+          <td align="center" style="padding:20px 16px 0 16px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
+            <p class="suave" style="margin:0 0 4px 0;font-size:13px;line-height:1.5;color:#5f5f69;"><strong>Punto Studio</strong> · <a class="enlace" href="https://puntostudio.es" style="color:#c20f0c;text-decoration:none;">puntostudio.es</a></p>
+            <p class="suave" style="margin:0;font-size:13px;line-height:1.5;color:#5f5f69;">¿Dudas? Escríbenos a <a class="enlace" href="mailto:soporte@puntostudio.es" style="color:#c20f0c;text-decoration:none;">soporte@puntostudio.es</a></p>
+          </td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+</table>
+</body>
+</html>

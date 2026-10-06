@@ -3,7 +3,11 @@
    cuentas, perfiles y el borrado de cuenta en local, sin tocar el Supabase real.
 
    Uso:
-     node mocksb.js [puerto]        (por defecto 9999)
+     node mocksb.js [puerto] [--confirmar]   (puerto por defecto 9999)
+
+   Con --confirmar imita la confirmación de correo activada (como el proyecto real):
+   el registro no abre sesión y el «correo» se escribe en la consola con el enlace de
+   verificación, que redirige a emailRedirectTo con la sesión en el hash.
 
    Luego abre la beta apuntando a este servidor, por ejemplo:
      http://localhost:8080/beta/?supa=http://localhost:9999&supakey=local&pruebas=1
@@ -17,7 +21,10 @@ const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
 
-const PORT = process.argv[2] ? +process.argv[2] : 9999;
+const ARGS = process.argv.slice(2);
+const CONFIRMAR = ARGS.includes('--confirmar');
+const PORT = +(ARGS.find(a => /^\d+$/.test(a)) || 9999);
+const PENDIENTES = {}; // token de confirmación -> id de usuario
 const DB_FILE = path.join(__dirname, '.mocksb-data.json');
 
 function cargaDB() {
@@ -94,8 +101,23 @@ const server = http.createServer(async (req, res) => {
       if (b.password.length < 6) return envia(res, 422, { msg: 'Password should be at least 6 characters.', error_code: 'weak_password' });
       if (DB.users.some(u => u.email === email)) return envia(res, 422, { msg: 'User already registered', error_code: 'user_already_exists' });
       const user = { id: uid(), email, password: b.password, provider: 'email', user_metadata: b.data || {}, created_at: new Date().toISOString() };
+      if (CONFIRMAR) {
+        user.sin_confirmar = true; DB.users.push(user); guardaDB();
+        const tk = crypto.randomBytes(12).toString('hex'); PENDIENTES[tk] = user.id;
+        const dest = url.searchParams.get('redirect_to') || '';
+        console.log(`CORREO a ${email}: ${`http://localhost:${PORT}/auth/v1/verify?token=${tk}&type=signup&redirect_to=${encodeURIComponent(dest)}`}`);
+        return envia(res, 200, Object.assign(usuarioPublico(user), { email_confirmed_at: undefined, confirmed_at: undefined })); // sin sesión
+      }
       DB.users.push(user); guardaDB();
-      return envia(res, 200, creaSesion(user)); // confirmación de correo desactivada, como en el proyecto real
+      return envia(res, 200, creaSesion(user));
+    }
+    if (p === '/auth/v1/verify' && req.method === 'GET') {
+      const user = DB.users.find(u => u.id === PENDIENTES[url.searchParams.get('token')]);
+      if (!user) { res.writeHead(400); return res.end('Enlace no válido'); }
+      delete user.sin_confirmar; const ses = creaSesion(user);
+      const h = new URLSearchParams({ access_token: ses.access_token, refresh_token: ses.refresh_token, expires_in: '3600', expires_at: String(ses.expires_at), token_type: 'bearer', type: 'signup' });
+      res.writeHead(302, { Location: (url.searchParams.get('redirect_to') || '/') + '#' + h });
+      return res.end();
     }
     if (p === '/auth/v1/token' && req.method === 'POST') {
       const grant = url.searchParams.get('grant_type');
@@ -104,6 +126,7 @@ const server = http.createServer(async (req, res) => {
         const email = (b.email || '').trim().toLowerCase();
         const user = DB.users.find(u => u.email === email);
         if (!user || user.password !== b.password) return envia(res, 400, { msg: 'Invalid login credentials', error_code: 'invalid_credentials' });
+        if (user.sin_confirmar) return envia(res, 400, { msg: 'Email not confirmed', error_code: 'email_not_confirmed' });
         return envia(res, 200, creaSesion(user));
       }
       if (grant === 'refresh_token') {

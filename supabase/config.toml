@@ -225,6 +225,7 @@ enable_signup = true
 # addresses. If disabled, only the new email is required to confirm.
 double_confirm_changes = true
 # If enabled, users need to confirm their email address before signing in.
+# Decisión del titular: la confirmación de correo se queda ACTIVADA (Google y Apple entran sin pedirla).
 enable_confirmations = true
 # If enabled, users will need to reauthenticate or have logged in recently to change their password.
 secure_password_change = false
@@ -245,7 +246,17 @@ otp_expiry = 3600
 # admin_email = "admin@email.com"
 # sender_name = "Admin"
 
-# Uncomment to customize email template
+# Plantillas de correo con la marca de Punto Studio. En el proyecto en la nube NO se aplican
+# desde este archivo: se pegan a mano en Authentication > Emails > Templates (esto es documentación).
+[auth.email.template.recovery]
+subject = "Restablece tu contraseña de Punto Studio"
+content_path = "./supabase/templates/recuperar.html"
+
+[auth.email.template.confirmation]
+subject = "Confirma tu cuenta de Punto Studio"
+content_path = "./supabase/templates/confirmar.html"
+
+# Plantilla de ejemplo de Supabase:
 # [auth.email.template.invite]
 # subject = "You have been invited"
 # content_path = "./supabase/templates/invite.html"
