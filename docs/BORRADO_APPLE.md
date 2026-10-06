@@ -27,6 +27,12 @@ Por eso **nada se rompe mientras no haya credenciales de Apple**: hoy el borrado
 Pega entero `supabase/migrations/20261005120000_revocar_apple.sql`. Se puede ejecutar más de una vez. Crea `apple_tokens`,
 `borrados_log`, `guardar_token_apple()` y actualiza `eliminar_mi_cuenta()` (sigue borrando igual).
 
+### 1b. Conservación de `borrados_log` (12 meses)
+
+La política de privacidad promete que `borrados_log` se conserva 12 meses. Ejecuta también, en el SQL Editor,
+`supabase/migrations/20261006130000_purgar_borrados_log.sql`: crea `purgar_borrados_log()`, la ejecuta una vez y la programa cada día
+con pg_cron (si no se puede activar la extensión, actívala en Database → Extensions → pg_cron y vuelve a ejecutarla).
+
 ### 2. Desplegar la Edge Function
 
 Con la CLI de Supabase (`npm i -g supabase` o `npx supabase`), desde la raíz del repo de Punto Ciego:

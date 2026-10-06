@@ -14,7 +14,7 @@
 | Idioma principal | Español (España) | |
 | URL de privacidad | https://puntostudio.es/privacidad/ | |
 | URL de soporte | https://puntostudio.es/soporte/ | |
-| Correo de contacto | javivalmich@gmail.com | |
+| Correo de contacto | soporte@puntostudio.es | |
 | Borrado de cuenta (Google exige URL) | https://puntostudio.es/soporte/#borrar-cuenta | |
 
 ## Descripción larga (máx. 4000)
