@@ -3,6 +3,19 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<script>/* Mudanza a puntostudio.es: solo actúa en github.io y solo cuando el destino nuevo ya responde */
+(function(){
+var M={'/el-impostor/':'/punto-falso/','/Punto-Ciego/':'/punto-ciego/','/Punto-Ciego/beta/':'/punto-ciego/beta/'};
+if(location.hostname!=='javivalmich.github.io')return;
+var t=M[location.pathname.replace(/index.html$/,'')];if(!t)return;
+var D='https://puntostudio.es'+t,fin=false;
+function ir(){var n=0;function f(){if(fin)return;fin=true;location.replace(D+location.search+location.hash)}function h(){if(++n===2)f()}
+try{navigator.serviceWorker.getRegistrations().then(function(r){r.forEach(function(x){x.unregister()});h()},h)}catch(e){h()}
+try{caches.keys().then(function(k){k.forEach(function(x){caches.delete(x)});h()},h)}catch(e){h()}
+setTimeout(f,1500)}
+fetch(D+'manifest.json',{cache:'no-store'}).then(function(r){if(r.ok)ir()}).catch(function(){});
+if(navigator.serviceWorker)navigator.serviceWorker.addEventListener('message',function(e){if(e.data==='mudanza')ir()});
+})();</script>
 <meta name="theme-color" content="#0C0C0C">
 <meta name="description" content="Punto Ciego: Among Us en vida real. Tareas por las habitaciones de tu casa, sabotajes e impostores, con el móvil.">
 <link rel="manifest" href="manifest.json">
