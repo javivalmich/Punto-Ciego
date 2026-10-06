@@ -13,10 +13,11 @@ const DESTINOS = [
   { dir: 'apple-5.5-1242x2208', width: 414, height: 736 },
 ];
 const NOMBRES = ['Ana', 'Luis', 'Marta'];
+const JUGADORES = ['Javi', 'Lucía', 'Pablo', 'Irene'];
 
 (async () => {
   const br = await chromium.launch();
-  for (const d of DESTINOS) {
+  for (const [i, d] of DESTINOS.entries()) {
     const out = path.join(__dirname, 'capturas', d.dir);
     fs.mkdirSync(out, { recursive: true });
     const ctx = await br.newContext({ viewport: { width: d.width, height: d.height }, deviceScaleFactor: 3, isMobile: true, hasTouch: true });
@@ -28,9 +29,11 @@ const NOMBRES = ['Ana', 'Luis', 'Marta'];
       let n; while ((n = w.nextNode())) {
         if (/Bot (Ana|Luis|Marta)/.test(n.nodeValue)) n.nodeValue = n.nodeValue.replace(/Bot (Ana|Luis|Marta)/g, '$1');
         if (/Ana\d{4}/.test(n.nodeValue)) n.nodeValue = n.nodeValue.replace(/Ana\d{4}/g, 'Javi');
+        if (/@/.test(n.nodeValue)) n.nodeValue = n.nodeValue.replace(/Sesión iniciada con \S+@\S+/g, 'Sesión iniciada').replace(/\S+@\S+/g, 'javi'); /* en las capturas de la tienda no se ve ningún correo */
       }
     }, NOMBRES);
-    const shot = async (n) => { await limpia(); await p.waitForTimeout(250); await limpia(); await p.screenshot({ path: path.join(out, n + '.png') }); await p.evaluate(() => { const s = document.getElementById('estiloTienda'); if (s) s.textContent = ''; }); };
+    const sinCorreos = async (n) => { const c = await p.evaluate(() => { const t = document.body.innerText + ' ' + [...document.querySelectorAll('input,textarea')].map((i) => i.value).join(' '); const m = t.match(/\S+@\S+/); return m && m[0]; }); if (c) throw new Error('La captura ' + n + ' enseña un correo: ' + c); };
+    const shot = async (n) => { await limpia(); await p.waitForTimeout(250); await limpia(); await sinCorreos(n); await p.screenshot({ path: path.join(out, n + '.png') }); await p.evaluate(() => { const s = document.getElementById('estiloTienda'); if (s) s.textContent = ''; }); };
     const q = '?supa=http://localhost:9999&supakey=local&pruebas=1';
     await p.goto(BASE + q); await p.waitForTimeout(1500);
     await shot('01-portada');
@@ -38,7 +41,7 @@ const NOMBRES = ['Ana', 'Luis', 'Marta'];
     await p.click('[data-a=modoAcceso][data-m=crear]');
     await p.fill('#em', 'tienda' + Date.now() + '@ejemplo.com'); await p.fill('#pw', 'clave1234');
     await p.click('[data-a=crearCuenta]'); await p.waitForSelector('#nom', { timeout: 10000 });
-    await p.fill('#nom', 'Ana' + String(Date.now()).slice(-4));
+    await p.fill('#nom', JUGADORES[i]); /* un nombre real y distinto por tamaño (el servidor de pruebas no admite repetidos) */
     await p.waitForTimeout(1500);
     await shot('02-crea-tu-personaje');
     await p.click('[data-a=guardarPerfil]'); await p.waitForSelector('[data-a=crear]', { timeout: 10000 }); await p.waitForTimeout(1500);
