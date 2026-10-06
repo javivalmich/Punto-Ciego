@@ -47,9 +47,9 @@ const NOMBRES = ['Ana', 'Luis', 'Marta'];
     for (let i = 0; i < 3; i++) { await p.click('[data-a=botMas]'); await p.waitForTimeout(350); }
     await p.click('[data-a=prRol]:has-text("Ciego")');
     await p.evaluate(() => scrollTo(0, 0)); await shot('04-sala-de-espera');
-    await p.click('[data-a=empezar]'); await p.waitForSelector('[data-a=verPapel]', { timeout: 15000 }); await p.waitForTimeout(1500);
+    await p.click('[data-a=empezar]'); await p.waitForSelector('[data-hold=papel]', { timeout: 15000 }); await p.waitForTimeout(1500);
     await shot('05-partida');
-    await p.click('[data-a=revelar]'); await p.waitForTimeout(900); await shot('06-tu-papel');
+    const cp = await p.locator('[data-hold=papel]').boundingBox(); await p.mouse.move(cp.x + cp.width / 2, cp.y + cp.height / 2); await p.mouse.down(); await p.waitForTimeout(1200); await shot('06-tu-papel'); await p.mouse.up(); await p.mouse.move(cp.x + cp.width / 2, cp.y + cp.height / 2); await p.mouse.down(); await p.waitForTimeout(600); await p.mouse.up();
     await p.evaluate(() => { const b = document.querySelector('[data-a=entendido]'); if (b) b.click(); }); await p.waitForTimeout(800);
     await p.locator('[data-a=irSala]').filter({ hasText: /\d/ }).first().click(); await p.waitForTimeout(800); await shot('07-sala-y-tareas');
     const tarea = p.locator('[data-a=tarea]').first();

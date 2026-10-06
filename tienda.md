@@ -77,7 +77,7 @@ Generadas con Playwright (`tienda/capturar.js`, ver su cabecera), 10 pantallas p
 
 Las fichas admiten 8 (Google) o 10 (Apple) capturas: elige las mejores. Nota: el emoji 🪵 de «Casa rural» sale como un cuadrado en las capturas por falta de fuente en el navegador de pruebas; en un móvil real se ve bien.
 
-Iconos en `assets/icons/`: `icon-512.png` (Google Play) e `icon-1024.png` (App Store, sin transparencia), más `icon-maskable-*.png` (con margen para recortes redondos). Están **redibujados como vector** (reticle + personaje, a partir de las formas del logo): el fuente es `assets/icons/icono.svg` / `icono-maskable.svg` y se regeneran con `tienda/generar-iconos.js`, sin ampliar ningún original pequeño. `tienda/vista-previa-recortes.png` muestra cómo queda recortado en círculo y en cuadrado redondeado.
+Iconos en `assets/icons/`: `icon-512.png` (Google Play) e `icon-1024.png` (App Store, sin transparencia), más `icon-maskable-*.png` (la imagen reducida al 86 % sobre el color del borde, para que el anillo quede dentro de la zona segura de los recortes redondos). Salen directamente del original `punto-ciego.png` (1254 px, en `assets/marca/originales/` del repo del hub), reducido y nunca ampliado; ya no hay icono redibujado como vector. `tienda/vista-previa-recortes.png` (no se versiona) muestra cómo queda recortado en círculo y en cuadrado redondeado, grande y a 60 px, junto a Punto Falso.
 
 ## Pendiente de que rellenes tú
 
