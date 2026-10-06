@@ -616,7 +616,7 @@ class Mq{
   close(){this.dead=true;clearInterval(this.ping);clearTimeout(this.rt);clearTimeout(this.tmo);try{this.ws&&this.ws.close()}catch(e){}}
 }
 const DEF_BROKERS=['wss://broker.hivemq.com:8884/mqtt','wss://broker.emqx.io:8084/mqtt','wss://public:public@public.cloud.shiftr.io','wss://mqtt.eclipseprojects.io:443/mqtt'];
-const BROKERS=(new URLSearchParams(location.search).get('broker')||'').split(',').filter(Boolean);
+const BROKERS=(/^(localhost|127\.0\.0\.1)$/.test(location.hostname)?(new URLSearchParams(location.search).get('broker')||''):'').split(',').filter(Boolean); /* solo en localhost: servidores MQTT de pruebas; en producción un enlace no puede cambiarlos */
 if(!BROKERS.length)BROKERS.push(...DEF_BROKERS);
 const NET={cons:[],topic:null,key:null,seen:new Map()};
 async function netStart(code){
@@ -3089,7 +3089,7 @@ const WK={
 };
 
 /* ============ acciones de la interfaz ============ */
-const qsExtra=()=>[location.search.includes('broker=')?'broker='+encodeURIComponent(BROKERS.join(',')):'',PRUEBAS?'pruebas=1':''].filter(Boolean);
+const qsExtra=()=>[PRUEBAS?'pruebas=1':''].filter(Boolean);
 async function entrar(code,name,crear){
   ME={code,pid:pidPara(code),name};LS.set('imp.pid.'+code,ME.pid);LS.set('imp.ultima',code);
   JOIN_SENT=false;PEND.clear();OPT.clear();PREV=null;OFF=0;OFFS=[];S=null;BUSCA_T=Date.now();HECHAS=new Set();
