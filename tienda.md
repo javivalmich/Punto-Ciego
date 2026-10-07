@@ -19,7 +19,7 @@
 
 ## Descripción larga (máx. 4000)
 
-Punto Ciego es un Among Us en vida real: se juega por tu casa, con el móvil en la mano. Unos jugadores son Ciegos y hacen tareas por las habitaciones; otros son Puntos, los impostores, que sabotean y eliminan sin que los vean. Cuando alguien encuentra un cuerpo o pulsa la emergencia, se abre una reunión y se vota a quién expulsar.
+Punto Ciego es un juego en el que No puedes confiar en lo que ves: se juega por tu casa, con el móvil en la mano. Unos jugadores son Ciegos y hacen tareas por las habitaciones; otros son Puntos, los impostores, que sabotean y eliminan sin que los vean. Cuando alguien encuentra un cuerpo o pulsa la emergencia, se abre una reunión y se vota a quién expulsar.
 
 CÓMO SE JUEGA
 • Cada jugador abre el juego en su móvil y entra con su cuenta.

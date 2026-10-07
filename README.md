@@ -1,6 +1,6 @@
 # Punto Ciego
 
-Juego tipo *Among Us* en vida real: se juega por la casa con el móvil. Unos jugadores son
+No puedes confiar en lo que ves: se juega por la casa con el móvil. Unos jugadores son
 tripulantes y hacen tareas por las habitaciones; otros son impostores y sabotean y eliminan
 sin que los vean. Cuando alguien encuentra un cuerpo, o pulsa la emergencia, se abre una
 reunión y se vota a quién expulsar.
