@@ -1493,8 +1493,8 @@ function vAtajos(){
 }
 
 /* ============ red de la partida ============ */
-function publicarEstado(bump){
-  if(!S||!soyHost())return;
+function publicarEstado(bump,forzar){
+  if(!S||(!soyHost()&&!forzar))return;
   if(bump)S.v++;S.hb=ahora();S.app=APP_V;
   const me=mine();if(me)me.seen=S.hb;
   LS.set('imp.st.'+ME.code,S);
@@ -1546,13 +1546,13 @@ function aplicar(a,local){
   const pub=reducir(S,a,ahora(),!!local);
   if(a.t==='ping'||pub===false)return;
   S.ackd=[...(S.ackd||[]).slice(-90),a.id];
-  publicarEstado(true);eventos();pinta();
+  publicarEstado(true,a.t==='leave'&&!!local);eventos();pinta();
 }
 function accion(t,data={}){
   if(BLOQUEO)return;
   const a={id:uid(12),pid:ME.pid,gid:S&&S.gid,app:APP_V,t,...data};
-  if(soyHost()){aplicar(a,true);return}
-  PEND.set(a.id,{a,n:0});enviar('a',a);
+  if(soyHost()){aplicar(a,true);return a}
+  PEND.set(a.id,{a,n:0});enviar('a',a);return a;
 }
 setInterval(()=>{
   for(const [id,p] of PEND){if(++p.n>25){PEND.delete(id);continue}if(p.n%2===0)enviar('a',p.a)}
@@ -1949,7 +1949,7 @@ function vFin(){
   const e=S.end||{};const imps=S.players.filter(x=>x.role==='imp');
   const q=e.w==='imp'&&imps[0]?imps[0]:mine();
   const cara=e.w?vivo('fin',{look:q?q.look:LOOK0,hood:q?q.color:BLANCO,anim:'victoria',est:e.w==='imp'?'rojo':'',k:S.gid+'-'+e.w,w:190,h:230,ph:e.w==='imp'?'tresq':'feliz',alt:e.w==='imp'?'El Punto celebra':'Los Ciegos celebran'}):pose('frente',150,'',mine());
-  let h=`<div class="ov-franja"></div>${cara}${e.w?`<h1 class="fin-w ${e.w}">${e.w==='imp'?(imps.length>1?'Ganan los Puntos':'Gana el Punto'):'Ganan los Ciegos'}</h1>`:'<h1>Partida terminada</h1>'}
+  let h=`<div class="ov-franja"></div><button class="b-link" data-a="salir">‹ Volver</button>${cara}${e.w?`<h1 class="fin-w ${e.w}">${e.w==='imp'?(imps.length>1?'Ganan los Puntos':'Gana el Punto'):'Ganan los Ciegos'}</h1>`:'<h1>Partida terminada</h1>'}
   <p class="sub">${esc(e.why||'')}</p>
   ${imps.length?`<p class="dondes">${imps.length>1?'Los Puntos eran':'El Punto era'} <b>${imps.map(x=>esc(x.name)).join(' y ')}</b>.</p>`:''}
   <ul class="gente roles">${S.players.map(x=>`<li>${dot(x)}<span class="${x.role==='imp'?'imp':''}">${esc(x.name)}</span>${bt(x)}<em>${x.role==='imp'?'Punto':'Ciego'}${x.ejected?', expulsado':x.dead?', muerto':''}</em></li>`).join('')}</ul>
@@ -2059,7 +2059,7 @@ setInterval(pinta,250);
 /* ============ hojas ============ */
 /* los minijuegos que usan sensores, micro o temporizadores propios dejan aquí cómo pararse (SHEET.limpia) */
 function pararSheet(){if(SHEET&&SHEET.limpia){try{SHEET.limpia()}catch(e){}}}
-function abrirSheet(h,extra={}){pararSheet();$('#shBody').innerHTML=h;$('#sheet').hidden=false;SHEET={...extra};$('.sh-caja').scrollTop=0;capas();
+function abrirSheet(h,extra={}){pararSheet();$('#shBody').innerHTML=(S&&mine()&&(S.phase==='play'||S.phase==='meeting')?'':'<button class="b-link" data-a="cerrarSheet">‹ Volver</button>')+h;$('#sheet').hidden=false;SHEET={...extra};$('.sh-caja').scrollTop=0;capas();
   /* toda hoja tiene abajo una forma clara de volver, además de la ✕: a la sala si se abrió desde ella, si no al panel */
   const r=extra.sala&&!extra.esSala&&sala(extra.sala);
   $('#shPie').innerHTML=r?`<button class="b-sec b-ancho" data-a="volverSala">Volver a ${esc(r.name)}</button>`
@@ -3179,7 +3179,7 @@ async function entrar(code,name,crear){
   despierto();pinta();
 }
 function salir(){
-  if(S&&mine()&&S.phase==='lobby')accion('leave');
+  if(S&&mine()&&S.phase==='lobby'){const a=accion('leave');if(a)setTimeout(()=>enviar('a',a),250)} /* salida a propósito: se avisa dos veces y el anfitrión la aplica y publica al momento */
   const code=ME.code,cons=NET.cons;setTimeout(()=>{if(NET.cons===cons)netStop()},600);
   ME={code:null,pid:null,name:ME.name};S=null;VISTA='menu';PEND.clear();cerrarSheet();WK.cerrar();WK.reco=false;WK.suelta();LS.del('imp.ultima');
   if(code)LS.del('imp.st.'+code);
@@ -3438,6 +3438,6 @@ if('serviceWorker' in navigator)window.addEventListener('load',()=>{
   }).catch(()=>{});
 });
 </script>
-<div id="betaTag" aria-hidden="true" style="position:fixed;left:8px;bottom:calc(6px + env(safe-area-inset-bottom,0px));z-index:9999;font:700 10px/1 system-ui,sans-serif;letter-spacing:.14em;color:#fff;background:#ff4637;padding:3px 6px;border-radius:4px;opacity:.85;pointer-events:none">BETA v27</div>
+<div id="betaTag" aria-hidden="true" style="position:fixed;left:8px;bottom:calc(6px + env(safe-area-inset-bottom,0px));z-index:9999;font:700 10px/1 system-ui,sans-serif;letter-spacing:.14em;color:#fff;background:#ff4637;padding:3px 6px;border-radius:4px;opacity:.85;pointer-events:none">BETA v28</div>
 </body>
 </html>
