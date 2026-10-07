@@ -441,10 +441,14 @@ body.capa{position:fixed;left:0;right:0;width:100%;overflow:hidden}
 #prFab{position:fixed;left:14px;bottom:calc(84px + env(safe-area-inset-bottom,0px));z-index:45;min-height:36px;padding:4px 12px;border-radius:999px;font-size:13px;opacity:.6;background:var(--casco);border-style:dashed}
 #prFab.solo{bottom:calc(18px + env(safe-area-inset-bottom,0px))}
 #prFab[hidden]{display:none}
-/* Botones: efecto 3D con sombra dura gris desplazada (sin desenfoque); al pulsar se hunden y la sombra desaparece */
-.b-baliza,.b-alarma,.b-jugar,.b-sec,.b-google,.b-apple,#bar .barra button,button[data-a="unirme"]{box-shadow:4px 4px 0 #3b3a37;transition:transform .12s ease-out,box-shadow .12s ease-out}
-.b-baliza:active:not([disabled]),.b-alarma:active:not([disabled]),.b-jugar:active:not([disabled]),.b-sec:active:not([disabled]),.b-google:active:not([disabled]),.b-apple:active:not([disabled]),#bar .barra button:active:not([disabled]),button[data-a="unirme"]:active:not([disabled]){transform:translate(4px,4px);box-shadow:none}
-.b-baliza[disabled],.b-alarma[disabled],.b-jugar[disabled],.b-sec[disabled],.b-google[disabled],.b-apple[disabled],#bar .barra button[disabled],button[data-a="unirme"][disabled]{box-shadow:none}
+/* Botones: al pulsar, los rojos pasan a un rojo más oscuro y los demás se oscurecen un poco (Google y Apple quedan como en la pública) */
+.b-alarma:active:not([disabled]),.b-jugar:active:not([disabled]){filter:none;background:#c4281c;border-color:#c4281c}
+.b-baliza:active:not([disabled]),.b-sec:active:not([disabled]),#bar .barra button:not(.b-alarma):active:not([disabled]),button[data-a="unirme"]:active:not([disabled]){filter:brightness(.82)}
+/* PRUEBA ANTERIOR, desactivada: sombra dura gris que se hunde al pulsar. Para volver a ella, quita este comentario y borra las dos reglas de arriba.
+.b-baliza,.b-alarma,.b-jugar,.b-sec,#bar .barra button,button[data-a="unirme"]{box-shadow:4px 4px 0 #3b3a37;transition:transform .12s ease-out,box-shadow .12s ease-out}
+.b-baliza:active:not([disabled]),.b-alarma:active:not([disabled]),.b-jugar:active:not([disabled]),.b-sec:active:not([disabled]),#bar .barra button:active:not([disabled]),button[data-a="unirme"]:active:not([disabled]){transform:translate(4px,4px);box-shadow:none}
+.b-baliza[disabled],.b-alarma[disabled],.b-jugar[disabled],.b-sec[disabled],#bar .barra button[disabled],button[data-a="unirme"][disabled]{box-shadow:none}
+*/
 </style>
 </head>
 <body>
