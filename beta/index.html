@@ -1767,7 +1767,7 @@ function vPruebas(){
 }
 function vLobby(){
   const host=soyHost(),c=S.cfg,ps=S.players,on=salas(S),V=VENUES[c.venue],mx=maxImp(ps.length);
-  let h=`<section class="codigo"><p class="lbl">Código de la partida</p><div class="cod-grande">${[...ME.code].map(ch=>`<span>${ch}</span>`).join('')}</div>
+  let h=`<button class="b-link" data-a="salir">‹ Volver</button><section class="codigo"><p class="lbl">Código de la partida</p><div class="cod-grande">${[...ME.code].map(ch=>`<span>${ch}</span>`).join('')}</div>
   <button class="b-sec" data-a="compartir">Compartir enlace</button>
   <div class="qr-invita">${qrSVG(urlPartida())}</div><p class="tenue" style="margin-top:6px">O que escaneen este código con la cámara del móvil</p></section>
   <section class="bloque"><h2>${ps.length} a bordo</h2><p class="tenue" style="font-size:13.5px">El chat es entre amigos y no está moderado. Bloquea o reporta a cualquiera desde esta lista.</p><ul class="gente">${ps.map(p=>`<li>${dot(p)}<span>${esc(p.name)}</span>${bt(p)}${p.id===S.hostId?'<em>anfitrión</em>':''}${p.id===ME.pid?'<em>tú</em>':''}${p.id!==ME.pid?`<button class="b-mini${BLK.has(p.id)?' on':''}" data-a="jug" data-p="${p.id}" data-n="${esc(p.name)}" aria-label="Bloquear o reportar a ${esc(p.name)}">${BLK.has(p.id)?'Bloqueado':'Bloquear'}</button>`:''}${host&&p.id!==ME.pid?`<button class="b-mini" data-a="kick" data-p="${p.id}" style="margin-left:6px">Quitar</button>`:''}</li>`).join('')}</ul></section>`;
@@ -3438,6 +3438,6 @@ if('serviceWorker' in navigator)window.addEventListener('load',()=>{
   }).catch(()=>{});
 });
 </script>
-<div id="betaTag" aria-hidden="true" style="position:fixed;left:8px;bottom:calc(6px + env(safe-area-inset-bottom,0px));z-index:9999;font:700 10px/1 system-ui,sans-serif;letter-spacing:.14em;color:#fff;background:#ff4637;padding:3px 6px;border-radius:4px;opacity:.85;pointer-events:none">BETA v26</div>
+<div id="betaTag" aria-hidden="true" style="position:fixed;left:8px;bottom:calc(6px + env(safe-area-inset-bottom,0px));z-index:9999;font:700 10px/1 system-ui,sans-serif;letter-spacing:.14em;color:#fff;background:#ff4637;padding:3px 6px;border-radius:4px;opacity:.85;pointer-events:none">BETA v27</div>
 </body>
 </html>
