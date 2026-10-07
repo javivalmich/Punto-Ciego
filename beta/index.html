@@ -1632,7 +1632,7 @@ const REGLAS=`<p>Todos sois Ciegos menos uno o varios Puntos. Nadie sabe quién 
 <p>Los muertos son fantasmas: siguen haciendo tareas y tienen su propio canal de walkie, pero no votan ni hablan en las reuniones.</p>
 <p>Los Puntos ganan si igualan en número a los Ciegos o si nadie para la fuga a tiempo.</p>`;
 
-let VISTA='portada',EDIT=null,REGLAS_ABIERTAS=false;
+let VISTA='portada',PORT_VOL=false,EDIT=null,REGLAS_ABIERTAS=false;
 const reglasHTML=()=>`<details class="reglas"${REGLAS_ABIERTAS?' open':''}><summary>Cómo se juega</summary>${REGLAS}</details>`;
 document.addEventListener('toggle',e=>{if(e.target.matches&&e.target.matches('details.reglas'))REGLAS_ABIERTAS=e.target.open},true);
 function vPortada(){
@@ -1719,7 +1719,7 @@ function vHome(){
     if(PERFIL_CARGANDO&&!PERFIL)return vEsperaCuentas('Cargando tu personaje…');
     if(VISTA==='borrarCuenta')return vBorrarCuenta();
   }
-  if(VISTA==='portada'&&!(CUENTAS&&USER&&!PERFIL))return vPortada();
+  if(VISTA==='portada'&&!(CUENTAS&&USER&&!PERFIL&&!PORT_VOL))return vPortada();
   if(!PERFIL||VISTA==='editor'){if(!EDIT)EDIT={name:PERFIL?PERFIL.name:'',look:{...limpiaLook(PERFIL?PERFIL.look:LOOK0)}};return vEditor()}
   const ult=LS.get('imp.ultima');
   const q=(new URLSearchParams(location.search).get('c')||'').toUpperCase().slice(0,5);
@@ -3188,7 +3188,7 @@ function salir(){
 }
 function cambiaCfg(fn){if(!soyHost())return;const c=JSON.parse(JSON.stringify(S.cfg));fn(c);accion('cfg',{cfg:c})}
 const ACT={
-  jugar(){WK.ctx();VISTA=PERFIL?'menu':'editor';EDIT=null;scrollTo(0,0)},
+  jugar(){WK.ctx();PORT_VOL=false;VISTA=PERFIL?'menu':'editor';EDIT=null;scrollTo(0,0)},
   modoAcceso(d){ACCESO.modo=d.m;ACCESO.err='';ACCESO.msg=''},
   verClave(){ACCESO.ver=!ACCESO.ver},
   async google(){
@@ -3220,7 +3220,7 @@ const ACT={
     const pw=(($('#pw')||{}).value||'');ACCESO.err='';if(pw.length<8){ACCESO.err='Mínimo 8 caracteres.';return}
     ACCESO.busy=true;pinta();const {error}=await SB.auth.updateUser({password:pw});ACCESO.busy=false;
     if(error)ACCESO.err=errorCuenta(error);else{toast('Contraseña cambiada');VISTA='portada';ACCESO.pw='';ACCESO.ver=false}pinta()},
-  async salirCuenta(){if(SB)await SB.auth.signOut();USER=null;PERFIL=null;SES_ID='';EDIT=null;VISTA='portada';olvidaInvitacion();pinta()},
+  async salirCuenta(){PORT_VOL=false;if(SB)await SB.auth.signOut();USER=null;PERFIL=null;SES_ID='';EDIT=null;VISTA='portada';olvidaInvitacion();pinta()},
   aBorrarCuenta(){BORRAR={pw:'',palabra:'',err:'',busy:false,ver:false};VISTA='borrarCuenta';scrollTo(0,0)},
   verClaveBorrar(){BORRAR.ver=!BORRAR.ver},
   async confirmarBorrado(){
@@ -3251,7 +3251,7 @@ const ACT={
     if(n===base.name&&JSON.stringify(limpiaLook(EDIT.look))===JSON.stringify(base.look))return ACT.editorSalirOk();
     abrirSheet(`<h2>¿Salir sin guardar los cambios?</h2><p class="tenue">Se perderán los cambios que has hecho en tu personaje.</p><button class="b-alarma b-ancho" data-a="editorSalirOk">Salir sin guardar</button><p><button class="b-link" data-a="cerrarSheet">Seguir editando</button></p>`);
   },
-  editorSalirOk(){cerrarSheet();return !PERFIL?(CUENTAS&&USER?ACT.salirCuenta():ACT.aPortada()):ACT.aMenu()},
+  editorSalirOk(){cerrarSheet();if(!PERFIL){PORT_VOL=!!(CUENTAS&&USER);return ACT.aPortada()}return ACT.aMenu()}, /* con sesión iniciada vuelve a la portada sin cerrarla (PORT_VOL deja ver la portada aunque aún no haya personaje) */
   aPortada(){VISTA='portada';EDIT=null;scrollTo(0,0)},
   aMenu(){VISTA='menu';EDIT=null;scrollTo(0,0)},
   editar(){VISTA='editor';EDIT=null;scrollTo(0,0)},
@@ -3445,6 +3445,6 @@ if('serviceWorker' in navigator)window.addEventListener('load',()=>{
   }).catch(()=>{});
 });
 </script>
-<div id="betaTag" aria-hidden="true" style="position:fixed;left:8px;bottom:calc(6px + env(safe-area-inset-bottom,0px));z-index:9999;font:700 10px/1 system-ui,sans-serif;letter-spacing:.14em;color:#fff;background:#ff4637;padding:3px 6px;border-radius:4px;opacity:.85;pointer-events:none">BETA v30</div>
+<div id="betaTag" aria-hidden="true" style="position:fixed;left:8px;bottom:calc(6px + env(safe-area-inset-bottom,0px));z-index:9999;font:700 10px/1 system-ui,sans-serif;letter-spacing:.14em;color:#fff;background:#ff4637;padding:3px 6px;border-radius:4px;opacity:.85;pointer-events:none">BETA v31</div>
 </body>
 </html>
