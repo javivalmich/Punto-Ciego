@@ -1253,7 +1253,7 @@ function reducir(st,a,now,local){
   case 'chat':{
     if(!p)return true;const txt=String(a.txt||'').trim().slice(0,200);if(!txt)return true;
     if(p.dead&&p.body&&st.phase==='play')return true;
-    if(!p.dead&&st.phase==='play'&&((st.sab&&st.sab.kind==='coms')||!st.cfg.walkie))return true;
+    if(!st.cfg.walkie)return true;if(!p.dead&&st.phase==='play'&&st.sab&&st.sab.kind==='coms')return true;
     st.chat.push({id:a.id,t:now,pid:p.id,ch:p.dead?'g':'v',txt});if(st.chat.length>60)st.chat=st.chat.slice(-60);return true;
   }
   }
@@ -1787,7 +1787,7 @@ function vLobby(){
     ${paso('Tiempo de votación','vote',v=>v+' s')}
     ${paso('Reuniones de emergencia','emerg')}
     <div class="paso"><span>Decir si el expulsado era Punto</span><button class="tog ${c.confirm?'on':''}" data-a="tog" data-k="confirm">${c.confirm?'Sí':'No'}</button></div>
-    <div class="paso"><span>Walkie para los vivos durante la ronda</span><button class="tog ${c.walkie?'on':''}" data-a="tog" data-k="walkie">${c.walkie?'Sí':'No'}</button></div>
+    <div class="paso"><span>Walkie</span><button class="tog ${c.walkie?'on':''}" data-a="tog" data-k="walkie">${c.walkie?'Sí':'No'}</button></div>
     </section>`;
     const motivo=ps.length<4?'Hacen falta al menos 4 personas.':on.length<2?'Pon al menos 2 salas.':'';
     h+=`<section class="bloque">${motivo?`<p class="motivo">${motivo}</p>`:''}<button class="b-baliza b-ancho" data-a="empezar" ${motivo?'disabled':''}>Empezar partida</button></section>`;
@@ -2983,12 +2983,12 @@ const WK={
   canal(){const p=mine();return p&&p.dead?'g':'v'},
   cuerpo(){const p=mine();return !!(S&&S.phase==='play'&&p&&p.dead&&p.body)},
   atasco(){const p=mine();return !!(S&&S.phase==='play'&&S.sab&&S.sab.kind==='coms'&&p&&!p.dead)},
-  cerrado(){const p=mine();return !!(S&&S.phase==='play'&&!S.cfg.walkie&&p&&!p.dead)},
+  cerrado(){const p=mine();return !!(S&&!S.cfg.walkie&&p)},
   noPuede(){
     if(!S||!mine())return 'Entra en una partida para usar el walkie';
     if(this.cuerpo())return 'Estás muerto: silencio hasta que encuentren tu cuerpo';
     if(this.atasco())return 'Interferencias: hay que reparar las comunicaciones';
-    if(this.cerrado())return 'Durante la ronda los vivos no usan el walkie';
+    if(this.cerrado())return 'El walkie está desactivado en esta partida';
     return '';
   },
   oye(ch){const p=mine();if(!p)return false;if(ch==='g')return !!p.dead;return !this.atasco()},
@@ -3123,7 +3123,7 @@ const WK={
     return txt.concat(voz).sort((a,b)=>a.t-b.t).slice(-80);
   },
   pinta(){
-    this.vigila();
+    this.vigila();if(this.abierto&&this.cerrado())this.cerrar();
     const p=mine(),fab=$('#wkFab');fab.hidden=!(S&&p&&ME.code)||this.cerrado();
     const els=this.elementos();
     if(this.abierto)this.visto=ahora();
