@@ -441,6 +441,15 @@ body.capa{position:fixed;left:0;right:0;width:100%;overflow:hidden}
 #prFab{position:fixed;left:14px;bottom:calc(84px + env(safe-area-inset-bottom,0px));z-index:45;min-height:36px;padding:4px 12px;border-radius:999px;font-size:13px;opacity:.6;background:var(--casco);border-style:dashed}
 #prFab.solo{bottom:calc(18px + env(safe-area-inset-bottom,0px))}
 #prFab[hidden]{display:none}
+/* Botones: al pulsar, los rojos pasan a un rojo más oscuro y los demás se oscurecen un poco (Google y Apple quedan como en la pública) */
+/* La clase .pulsado la pone el JS al tocar (en iOS :active no siempre se aplica); Google, Apple, enlaces, chips, interruptores, − / +, pestañas, ✕ y cuadros de minijuegos no la reciben */
+button.pulsado:not([disabled]){filter:brightness(.82)}
+button.pulsado.b-alarma:not([disabled]),button.pulsado.b-jugar:not([disabled]){filter:none;background:#c4281c;border-color:#c4281c}
+/* PRUEBA ANTERIOR, desactivada: sombra dura gris que se hunde al pulsar. Para volver a ella, quita este comentario y borra las dos reglas de arriba.
+.b-baliza,.b-alarma,.b-jugar,.b-sec,#bar .barra button,button[data-a="unirme"]{box-shadow:4px 4px 0 #3b3a37;transition:transform .12s ease-out,box-shadow .12s ease-out}
+.b-baliza:active:not([disabled]),.b-alarma:active:not([disabled]),.b-jugar:active:not([disabled]),.b-sec:active:not([disabled]),#bar .barra button:active:not([disabled]),button[data-a="unirme"]:active:not([disabled]){transform:translate(4px,4px);box-shadow:none}
+.b-baliza[disabled],.b-alarma[disabled],.b-jugar[disabled],.b-sec[disabled],#bar .barra button[disabled],button[data-a="unirme"][disabled]{box-shadow:none}
+*/
 </style>
 </head>
 <body>
@@ -462,7 +471,8 @@ body.capa{position:fixed;left:0;right:0;width:100%;overflow:hidden}
     <p id="wkMicNota">🎤 El micrófono solo se activa mientras mantienes pulsado el botón de hablar. Tu voz se envía al grupo en directo, cifrada, y no se graba ni se guarda. La primera vez, tu móvil te pedirá permiso.</p>
     <p id="wkEstado"></p>
     <p id="wkDiag"></p>
-    <button id="wkVolver" class="b-sec b-ancho" style="margin-top:6px">Volver</button>
+    <button id="wkVolver" class="b-sec b-ancho" style="margin-top:6px">Volver con walkie abierto</button>
+    <button id="wkDesc" class="b-sec b-ancho" style="margin-top:6px">Desconectar walkie</button>
   </div>
 </section>
 <div id="toast"></div>
@@ -1248,7 +1258,7 @@ function reducir(st,a,now,local){
   case 'chat':{
     if(!p)return true;const txt=String(a.txt||'').trim().slice(0,200);if(!txt)return true;
     if(p.dead&&p.body&&st.phase==='play')return true;
-    if(!p.dead&&st.phase==='play'&&((st.sab&&st.sab.kind==='coms')||!st.cfg.walkie))return true;
+    if(!st.cfg.walkie)return true;if(!p.dead&&st.phase==='play'&&st.sab&&st.sab.kind==='coms')return true;
     st.chat.push({id:a.id,t:now,pid:p.id,ch:p.dead?'g':'v',txt});if(st.chat.length>60)st.chat=st.chat.slice(-60);return true;
   }
   }
@@ -1782,7 +1792,7 @@ function vLobby(){
     ${paso('Tiempo de votación','vote',v=>v+' s')}
     ${paso('Reuniones de emergencia','emerg')}
     <div class="paso"><span>Decir si el expulsado era Punto</span><button class="tog ${c.confirm?'on':''}" data-a="tog" data-k="confirm">${c.confirm?'Sí':'No'}</button></div>
-    <div class="paso"><span>Walkie para los vivos durante la ronda</span><button class="tog ${c.walkie?'on':''}" data-a="tog" data-k="walkie">${c.walkie?'Sí':'No'}</button></div>
+    <div class="paso"><span>Walkie</span><button class="tog ${c.walkie?'on':''}" data-a="tog" data-k="walkie">${c.walkie?'Sí':'No'}</button></div>
     </section>`;
     const motivo=ps.length<4?'Hacen falta al menos 4 personas.':on.length<2?'Pon al menos 2 salas.':'';
     h+=`<section class="bloque">${motivo?`<p class="motivo">${motivo}</p>`:''}<button class="b-baliza b-ancho" data-a="empezar" ${motivo?'disabled':''}>Empezar partida</button></section>`;
@@ -2961,7 +2971,7 @@ function disimulaJuego(el,game){
 function comp(x){x=Math.max(-1,Math.min(1,x));const m=Math.round(Math.log1p(255*Math.abs(x))/Math.log(256)*127);return x<0?128|m:m}
 function decomp(b){const v=(Math.pow(256,(b&127)/127)-1)/255;return b&128?-v:v}
 const WK={
-  abierto:false,visto:0,voces:[],ses:{},blobs:{},rec:null,modo:LS.get('imp.wkmodo','pcm'),suenan:0,
+  abierto:false,off:false,reco:false,gen:0,visto:0,voces:[],ses:{},blobs:{},rec:null,modo:LS.get('imp.wkmodo','pcm'),suenan:0,
   ctx(){
     if(!this._c){const C=window.AudioContext||window.webkitAudioContext;if(!C)return null;this._c=new C();this.bus=this.radio(this._c)}
     if(this._c.state==='suspended')this._c.resume().catch(()=>{});return this._c;
@@ -2978,12 +2988,12 @@ const WK={
   canal(){const p=mine();return p&&p.dead?'g':'v'},
   cuerpo(){const p=mine();return !!(S&&S.phase==='play'&&p&&p.dead&&p.body)},
   atasco(){const p=mine();return !!(S&&S.phase==='play'&&S.sab&&S.sab.kind==='coms'&&p&&!p.dead)},
-  cerrado(){const p=mine();return !!(S&&S.phase==='play'&&!S.cfg.walkie&&p&&!p.dead)},
+  cerrado(){const p=mine();return !!(S&&!S.cfg.walkie&&p)},
   noPuede(){
     if(!S||!mine())return 'Entra en una partida para usar el walkie';
     if(this.cuerpo())return 'Estás muerto: silencio hasta que encuentren tu cuerpo';
     if(this.atasco())return 'Interferencias: hay que reparar las comunicaciones';
-    if(this.cerrado())return 'Durante la ronda los vivos no usan el walkie';
+    if(this.cerrado())return 'El walkie está desactivado en esta partida';
     return '';
   },
   oye(ch){const p=mine();if(!p)return false;if(ch==='g')return !!p.dead;return !this.atasco()},
@@ -3001,16 +3011,34 @@ const WK={
   async micro(){
     if(this.stream&&this.stream.active&&this.stream.getAudioTracks().some(t=>t.readyState==='live'))return;
     if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia)throw new Error('este navegador no deja usar el micro');
-    this.stream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true,autoGainControl:true}});this.src=null;
+    const g=this.gen,s=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true,autoGainControl:true}});
+    if(g!==this.gen){s.getTracks().forEach(t=>{try{t.stop()}catch(e){}});const e=new Error('micro soltado');e.soltado=true;throw e}
+    this.stream=s;this.src=null;
     LS.set('imp.micok',1);$('#wkMicNota').hidden=true;
   },
+  /* suelta el micro de verdad (el punto naranja de iOS desaparece) y cierra el audio; se vuelve a abrir al pedirlo */
+  suelta(){
+    this.gen++;if(this.rec)this.para(true);
+    const s=this.stream;this.stream=null;if(s)s.getTracks().forEach(t=>{try{t.stop()}catch(e){}});
+    if(this.src){try{this.src.disconnect()}catch(e){}this.src=null}
+    const c=this._c;this._c=null;this.bus=null;if(c){try{c.close()}catch(e){}}
+    this.nivel(0);this.diag();
+  },
+  /* sin micro cuando no se puede usar: sabotaje de comunicaciones o ronda con el walkie cerrado; tras el sabotaje se reabre solo */
+  vigila(){
+    const a=this.atasco(),c=this.cerrado();
+    if((a||c)&&this.stream){if(a)this.reco=true;this.suelta()}
+    if(!a&&this.reco){this.reco=false;if(!c&&!this.off&&S&&mine()){this.ctx();this.micro().then(()=>this.diag()).catch(e=>{if(!e.soltado)this.estado('Toca para activar el micro')})}}
+  },
+  desconectar(){this.off=true;this.reco=false;this.suelta();this.cerrar()},
   async empieza(){
     const no=this.noPuede();if(no){this.estado(no);return}
     if(this.rec)return;const c=this.ctx();
     const r=this.rec={id:uid(10),n:0,ch:this.canal(),t0:Date.now(),pico:0,partes:[],arrancando:true};
     this.btn(true);this.estado('Abriendo micro…');
     try{await this.micro()}catch(e){if(this.rec===r)this.rec=null;this.btn(false);this.nivel(0);
-      this.estado(this.inapp()?'Aquí el micro está bloqueado: abre la web en Chrome o Safari':'No hay acceso al micro: '+(e.message||e.name));this.diag();return}
+      if(e.soltado){this.diag();return}
+      this.estado(this.inapp()?'Aquí el micro está bloqueado: abre la web en Chrome o Safari':e.name==='NotAllowedError'?'Toca para activar el micro. Si no te pide permiso, actívalo en los ajustes del navegador.':'No hay acceso al micro: '+(e.message||e.name));this.diag();return}
     if(this.rec!==r)return;
     r.arrancando=false;r.t0=Date.now();this.ruido(.07,.1);this.diag();
     this.estado(r.latch?'Grabando… toca otra vez para enviar':'Hablando… suelta para enviar');this.btn(true);
@@ -3056,7 +3084,7 @@ const WK={
   subir(pcm){const c=this.ctx(),sr=c.sampleRate,n=Math.max(1,Math.floor(pcm.length*sr/8000)),b=c.createBuffer(1,n,sr),d=b.getChannelData(0),k=8000/sr;
     for(let i=0;i<n;i++){const x=i*k,i0=Math.floor(x),f=x-i0;d[i]=(pcm[i0]||0)*(1-f)+(pcm[i0+1]||pcm[i0]||0)*f}return b},
   recibe(m){
-    if(!m||m.pid===ME.pid||!S||BLK.has(m.pid))return;if(!this.oye(m.ch))return;
+    if(!m||m.pid===ME.pid||!S||BLK.has(m.pid)||this.off)return;if(!this.oye(m.ch))return;
     const c=this.ctx();if(!c)return;const nombre=nombreDe(m.pid);
     if(m.k==='pcm'){
       let s=this.ses[m.s];
@@ -3100,7 +3128,8 @@ const WK={
     return txt.concat(voz).sort((a,b)=>a.t-b.t).slice(-80);
   },
   pinta(){
-    const p=mine(),fab=$('#wkFab');fab.hidden=!(S&&p&&ME.code);
+    this.vigila();if(this.abierto&&this.cerrado())this.cerrar();
+    const p=mine(),fab=$('#wkFab');fab.hidden=!(S&&p&&ME.code)||this.cerrado();
     const els=this.elementos();
     if(this.abierto)this.visto=ahora();
     const nuevos=els.filter(e=>e.t>this.visto&&e.pid!==ME.pid).length;
@@ -3116,10 +3145,10 @@ const WK={
       :'<p class="wk-vacio">'+pose('movil',96)+'Aún no ha hablado nadie. Mantén el botón para hablar o escribe abajo.</p>';
     const L=$('#wkLista');if(L._h!==h){const abajo=L.scrollHeight-L.scrollTop-L.clientHeight<40;L._h=h;L.innerHTML=h;if(abajo||!L._ini){L.scrollTop=L.scrollHeight;L._ini=true}}
   },
-  abrir(){this.abierto=true;$('#wk').hidden=false;capas();$('#wkVolver').textContent=S&&S.phase==='play'?'Volver al panel':'Volver';this.ctx();this.diag();$('#wkLista')._ini=false;this.pinta()},
+  abrir(){this.abierto=true;this.off=false;$('#wk').hidden=false;capas();this.ctx();this.diag();$('#wkLista')._ini=false;this.pinta()},
   cerrar(){this.abierto=false;$('#wk').hidden=true;capas();if(this.rec)this.para(true);this.pinta()},
   init(){
-    $('#wkFab').onclick=()=>this.abrir();$('#wkCerrar').onclick=()=>this.cerrar();$('#wkVolver').onclick=()=>this.cerrar();$('#wkFondo').onclick=()=>this.cerrar();
+    $('#wkFab').onclick=()=>this.abrir();$('#wkCerrar').onclick=()=>this.cerrar();$('#wkVolver').onclick=()=>this.cerrar();$('#wkDesc').onclick=()=>this.desconectar();$('#wkFondo').onclick=()=>this.cerrar();
     const mandar=()=>{const i=$('#wkTxt'),t=i.value.trim();if(!t||this.noPuede())return;accion('chat',{txt:t});i.value=''};
     $('#wkEnviar').onclick=mandar;$('#wkTxt').onkeydown=e=>{if(e.key==='Enter')mandar()};
     const b=$('#wkPtt');let abajo=0,tocaParar=false;
@@ -3152,7 +3181,7 @@ async function entrar(code,name,crear){
 function salir(){
   if(S&&mine()&&S.phase==='lobby')accion('leave');
   const code=ME.code,cons=NET.cons;setTimeout(()=>{if(NET.cons===cons)netStop()},600);
-  ME={code:null,pid:null,name:ME.name};S=null;VISTA='menu';PEND.clear();cerrarSheet();WK.cerrar();LS.del('imp.ultima');
+  ME={code:null,pid:null,name:ME.name};S=null;VISTA='menu';PEND.clear();cerrarSheet();WK.cerrar();WK.reco=false;WK.suelta();LS.del('imp.ultima');
   if(code)LS.del('imp.st.'+code);
   try{const x=qsExtra();history.replaceState(null,'',location.pathname+(x.length?'?'+x.join('&'):''))}catch(e){}
   pinta();
@@ -3323,6 +3352,36 @@ const ACT={
   atajoPuertaA(d){if(enPruebas()){atajoSab('door',d.r);ATJ='menu'}},
   atajoTareas(){if(enPruebas())atajoTareas()}
 };
+/* Pulsación visible: al tocar un botón se le pone .pulsado (iOS no siempre aplica :active en táctil) y se mantiene al menos 120 ms.
+   En los botones que cambian de pantalla se espera hasta que el estado oscuro lleve ~100 ms visible antes de navegar. */
+const SIN_EFECTO=/(^|\s)(b-google|b-apple|b-link|chip|tog|sh-cerrar|g-[\w-]+)(\s|$)/;
+const NAVEGA=new Set(['jugar','crear','unirme','aMenu','aPortada','editar','guardarPerfil','salir','salirCuenta','volver','entendido','empezar','aLobby','galeria','galeriaAbre','galeriaOtra','galeriaLarga','entrarCuenta','crearCuenta','olvido','nuevaClave','aBorrarCuenta','confirmarBorrado','reintentarCuentas','soy','menu','irSala','tarea','reportar','emergencia','volverMenu','volverSala','salaVolver','cerrarSheet']);
+const pulsable=b=>b&&!b.disabled&&!SIN_EFECTO.test(b.className)&&!b.closest('.paso .ctl,.pestanas,#wkCerrar,.wk-cab');
+function pulsa(e){
+  const b=e.target.closest&&e.target.closest('button');if(!pulsable(b))return;
+  b.classList.add('pulsado');b._t0=Date.now();
+}
+function suelta(){
+  document.querySelectorAll('button.pulsado').forEach(b=>{
+    const t=Math.max(0,120-(Date.now()-(b._t0||0)));
+    setTimeout(()=>b.classList.remove('pulsado'),t);
+  });
+}
+document.addEventListener('touchstart',pulsa,{passive:true});
+document.addEventListener('pointerdown',pulsa,{passive:true});
+['touchend','touchcancel','pointerup','pointercancel'].forEach(ev=>document.addEventListener(ev,suelta,{passive:true}));
+document.addEventListener('click',e=>{
+  const b=e.target.closest&&e.target.closest('button[data-a]');
+  if(!b||b.disabled||!NAVEGA.has(b.dataset.a))return;
+  if(b._go){b._go=false;return}
+  const t=Date.now()-(b._t0||0);b._t0=0;
+  if(!b.classList.contains('pulsado')||t>=100)return;
+  e.stopImmediatePropagation();e.preventDefault();
+  setTimeout(()=>{
+    if(b.isConnected){b._go=true;b.click()}
+    else{const f=ACT[b.dataset.a];if(f){f(b.dataset,b);pinta()}}
+  },100-t);
+},true);
 document.addEventListener('click',e=>{
   const b=e.target.closest('[data-a]');if(!b||b.disabled)return;
   if(EDIT&&$('#nom'))EDIT.name=$('#nom').value;
@@ -3350,7 +3409,7 @@ document.addEventListener('keydown',e=>{const h=(e.key===' '||e.key==='Enter')&&
 document.addEventListener('keyup',e=>{if(e.key===' '||e.key==='Enter')papelVisible(false)});
 addEventListener('blur',()=>papelVisible(false));
 document.addEventListener('visibilitychange',()=>{if(document.hidden)papelVisible(false)});
-document.addEventListener('pointerdown',()=>{WK.ctx()},{once:true});
+document.addEventListener('pointerdown',()=>{WK.ctx()});
 
 WK.init();
 if(LS.get('imp.micok'))$('#wkMicNota').hidden=true;
