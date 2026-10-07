@@ -701,7 +701,7 @@ const P=(st,id)=>st.players.find(p=>p.id===id);
 const salas=st=>st.cfg.rooms.filter(r=>r.on);
 const sala=id=>S&&S.cfg.rooms.find(r=>r.id===id);
 const cerrada=id=>!!(S&&S.phase==='play'&&S.locks.some(l=>l.room===id&&l.until>ahora()));
-const ROPA=[['Negra',null],['Grafito','#4A4A52'],['Hueso','#E6DFD2'],['Oliva','#6B7A3A'],['Marino','#22406E'],['Burdeos','#7C1F2E'],['Camel','#B8894F'],['Roja','#FF4637'],['Rosa','#E58FB5'],['Lavanda','#9C8AD8']];
+const ROPA=[['Negra',null],['Grafito','#4A4A52'],['Hueso','#E6DFD2'],['Oliva','#6B7A3A'],['Marino','#22406E'],['Burdeos','#7C1F2E'],['Camel','#B8894F'],['Roja','#FF4637'],['Rosa','#E58FB5'],['Lavanda','#9C8AD8'],['Azul eléctrico','#2F6FE0'],['Cielo','#7FB7E6'],['Turquesa','#1FA3A0'],['Verde bosque','#1F6B3A'],['Lima','#A6D83A'],['Mostaza','#D9A21B'],['Naranja','#E8742A'],['Terracota','#B4533A'],['Berenjena','#5B2A6B'],['Fucsia','#D6338C']];
 const ESTAMPADOS=['Lisa','Rayas','Cuadros','Camuflaje'];
 const GUANTES=[['Blancos',null],['Negros','#2A2A2E'],['Rojos','#E5483A'],['Amarillos','#F2D23A'],['Azules','#2F6FE0'],['Verdes','#2FA05A']];
 const OJOS=[['Blancos',null],['Rojos','#FF4637'],['Cian','#5FE0F0'],['Amarillos','#FFD84A'],['Lima','#B6F24A'],['Rosas','#FF8FC8']];
@@ -3438,6 +3438,6 @@ if('serviceWorker' in navigator)window.addEventListener('load',()=>{
   }).catch(()=>{});
 });
 </script>
-<div id="betaTag" aria-hidden="true" style="position:fixed;left:8px;bottom:calc(6px + env(safe-area-inset-bottom,0px));z-index:9999;font:700 10px/1 system-ui,sans-serif;letter-spacing:.14em;color:#fff;background:#ff4637;padding:3px 6px;border-radius:4px;opacity:.85;pointer-events:none">BETA v28</div>
+<div id="betaTag" aria-hidden="true" style="position:fixed;left:8px;bottom:calc(6px + env(safe-area-inset-bottom,0px));z-index:9999;font:700 10px/1 system-ui,sans-serif;letter-spacing:.14em;color:#fff;background:#ff4637;padding:3px 6px;border-radius:4px;opacity:.85;pointer-events:none">BETA v29</div>
 </body>
 </html>
