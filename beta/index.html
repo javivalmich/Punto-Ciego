@@ -32,19 +32,21 @@ if(navigator.serviceWorker)navigator.serviceWorker.addEventListener('message',fu
 <link rel="preload" href="fonts/outfit-latin.woff2" as="font" type="font/woff2" crossorigin>
 <style>
 @font-face{font-family:'Outfit';font-style:normal;font-weight:400 900;font-display:swap;src:url(fonts/outfit-latin.woff2) format('woff2');unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD}
+@font-face{font-family:'Anton';font-style:normal;font-weight:100 900;font-display:swap;src:url(fonts/anton-latin.woff2) format('woff2');unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD}
+@font-face{font-family:'JetBrains Mono';font-style:normal;font-weight:400 800;font-display:swap;src:url(fonts/jetbrainsmono-latin.woff2) format('woff2');unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD}
 :root{
   /* ── Tokens Punto Studio (única fuente de verdad) ── */
   --ink:#0b0b0c; --paper:#f2efe8; --red:#e0261b; --red-dark:#9e140c; --red-btn:#c71f15;
-  --muted:#9a968d; --line-dark:#3b3a37; --surface:#151517; --surface-2:#1d1d20;
-  --ok-c:#63C283; --sonar-c:#9CC4D4; --danger-soft:#ff8f86;
+  --red-text:#ff4637; --muted:#9a968d; --line-dark:#3b3a37; --line-ui:#6a675f; --surface:#151517; --surface-2:#1d1d20;
+  --blood:#1a0808; --ok-c:#63C283; --sonar-c:#9CC4D4; --danger-soft:#ff8f86;
   --radius:3px; --border-w:2px; --border:var(--border-w) solid var(--paper);
   --shadow-hard:4px 4px 0 var(--red-dark); --shadow-paper:4px 4px 0 var(--ink);
   --t:140ms; --tap:44px;
   --mono:"JetBrains Mono","IBM Plex Mono",ui-monospace,"Cascadia Mono",Consolas,"Courier New",monospace;
   /* alias de los nombres antiguos: el resto del CSS sigue funcionando */
   --acero:var(--ink); --casco:var(--surface); --chapa:var(--surface-2); --remache:var(--line-dark);
-  --tiza:var(--paper); --niebla:var(--muted); --baliza:var(--red); --alarma:var(--red); --sonar:var(--sonar-c); --ok:var(--ok-c);
-  --disp:Outfit,"Avenir Next","Arial Narrow",sans-serif;
+  --tiza:var(--paper); --niebla:var(--muted); --baliza:var(--red-text); --alarma:var(--red); --sonar:var(--sonar-c); --ok:var(--ok-c);
+  --disp:Anton,Impact,"Arial Narrow",sans-serif;
   --txt:Outfit,"Avenir Next",system-ui,-apple-system,"Segoe UI",sans-serif;
   box-sizing:border-box;
   padding-top:env(safe-area-inset-top,0px);
@@ -461,7 +463,7 @@ h1,h2,h3{text-transform:uppercase;letter-spacing:-.005em;font-weight:800}
 .lbl{font-size:12px;letter-spacing:.12em;text-transform:uppercase}
 button{border:var(--border-w) solid var(--paper);background:transparent;border-radius:var(--radius);transition:transform var(--t) ease-out,box-shadow var(--t) ease-out,background var(--t) ease-out;min-height:var(--tap)}
 button:active:not([disabled]){filter:none}
-input,select{background:var(--surface);border:var(--border-w) solid var(--line-dark);border-radius:var(--radius);min-height:var(--tap);transition:border-color var(--t)}
+input,select{background:var(--surface);border:var(--border-w) solid var(--line-ui);border-radius:var(--radius);min-height:var(--tap);transition:border-color var(--t)}
 input:focus,select:focus{border-color:var(--paper)}
 input::placeholder{color:#6d6a63}
 .b-baliza,.b-alarma,.b-jugar,.b-sec{text-transform:uppercase;letter-spacing:.08em;font-weight:800;box-shadow:var(--shadow-hard)}
@@ -471,9 +473,9 @@ input::placeholder{color:#6d6a63}
 .b-baliza:active:not([disabled]),.b-alarma:active:not([disabled]),.b-jugar:active:not([disabled]),.b-sec:active:not([disabled]){transform:translate(4px,4px);box-shadow:none}
 button[disabled]{box-shadow:none;opacity:.4}
 .b-link{border:0;box-shadow:none;text-transform:none;min-height:var(--tap);font-family:var(--mono);font-size:14px}
-.b-mini,.b-peq{min-height:var(--tap);font-family:var(--mono);font-size:12px;text-transform:uppercase;letter-spacing:.06em;border-color:var(--line-dark);color:var(--muted)}
+.b-mini,.b-peq{min-height:var(--tap);font-family:var(--mono);font-size:12px;text-transform:uppercase;letter-spacing:.06em;border-color:var(--line-ui);color:var(--muted)}
 .b-mini.on{color:var(--paper);border-color:var(--red)}
-.chip{min-height:var(--tap);border-radius:var(--radius);font-family:var(--mono);font-size:13px;text-transform:uppercase;letter-spacing:.04em;border-color:var(--line-dark)}
+.chip{min-height:var(--tap);border-radius:var(--radius);font-family:var(--mono);font-size:13px;text-transform:uppercase;letter-spacing:.04em;border-color:var(--line-ui)}
 .chip.on{background:var(--paper);color:var(--ink);border-color:var(--paper)}
 .tog{min-height:var(--tap);border-radius:var(--radius);font-family:var(--mono);text-transform:uppercase;font-weight:800}
 .tog.on{background:var(--paper);border-color:var(--paper);color:var(--ink)}
@@ -485,13 +487,13 @@ details.reglas summary::after{font-family:var(--mono)}
 
 /* 2 · portada */
 .portada{position:relative;padding-top:34px}
-.portada::before{content:"EXP. 04 · CONFIDENCIAL";position:absolute;top:2px;left:0;font-family:var(--mono);font-size:11px;letter-spacing:.14em;color:var(--red);border:var(--border-w) solid var(--red);padding:3px 8px;border-radius:var(--radius);transform:rotate(-1deg)}
+.portada::before{content:"EXP. 04 · CONFIDENCIAL";position:absolute;top:2px;left:0;font-family:var(--mono);font-size:11px;letter-spacing:.14em;color:var(--red-text);border:var(--border-w) solid var(--red-text);padding:3px 8px;border-radius:var(--radius);transform:rotate(-1deg)}
 .portada .titulo{font-weight:900;letter-spacing:.02em;text-transform:uppercase}
 .titulo i{border-color:var(--paper)}
 .portada .lema{font-family:var(--mono);font-size:12px;letter-spacing:.16em;color:var(--muted)}
 .rasgos{display:block;counter-reset:ras;background:none;border:0;border-top:var(--border);border-radius:0;max-width:400px;margin:6px auto 26px}
 .rasgos li{counter-increment:ras;display:grid;grid-template-columns:34px 1fr;column-gap:10px;padding:12px 0;background:none;border-bottom:1px solid var(--line-dark);font-size:14px}
-.rasgos li::before{content:counter(ras,decimal-leading-zero);font-family:var(--mono);color:var(--red);font-size:13px;grid-row:1/3;padding-top:3px}
+.rasgos li::before{content:counter(ras,decimal-leading-zero);font-family:var(--mono);color:var(--red-text);font-size:13px;grid-row:1/3;padding-top:3px}
 .rasgos b{font-family:var(--disp);text-transform:uppercase;font-size:18px;letter-spacing:.02em;margin:0}
 .b-jugar{max-width:400px;min-height:64px;border-radius:var(--radius);font-size:26px;letter-spacing:.14em}
 .aviso-inv{border-radius:var(--radius);border:var(--border-w) solid var(--red);font-family:var(--mono);font-size:14px}
@@ -510,7 +512,7 @@ details.reglas summary::after{font-family:var(--mono)}
 ul.gente{counter-reset:jug;border-top:var(--border)}
 ul.gente li{counter-increment:jug;padding:6px 0;min-height:var(--tap);border-top:0;border-bottom:1px solid var(--line-dark)}
 ul.gente li::before{content:counter(jug,decimal-leading-zero);font-family:var(--mono);color:var(--muted);font-size:13px;min-width:22px}
-ul.gente em{font-family:var(--mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--red);border:1px solid var(--red);padding:0 5px;border-radius:var(--radius)}
+ul.gente em{font-family:var(--mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--red-text);border:1px solid var(--red-text);padding:0 5px;border-radius:var(--radius)}
 .sitios{grid-template-columns:1fr;gap:0;border-top:var(--border)}
 .sitio{flex-direction:row;flex-wrap:wrap;align-items:baseline;gap:2px 12px;border:0;border-bottom:1px solid var(--line-dark);border-left:4px solid transparent;border-radius:0;background:transparent;padding:12px 10px;min-height:var(--tap)}
 .sitio b{text-transform:uppercase}
@@ -533,6 +535,65 @@ body.en-juego #wkFab{box-shadow:var(--shadow-hard)}
 .ps-n,.wk-m button,.bot-tag{border-radius:var(--radius)}
 .ps-n{min-width:26px}
 .tog.on,.chip.on{box-shadow:none}
+
+/* 5 · partida: panel, alertas, barra */
+#bar{background:var(--ink);border-top:var(--border)}
+.barra-t .bt-cab{font-family:var(--mono);font-size:12px;letter-spacing:.1em;text-transform:uppercase}
+.bt{height:14px;border:var(--border-w) solid var(--paper);background:var(--ink);padding:1px}
+.bt i{background:repeating-linear-gradient(90deg,var(--ok) 0 8px,transparent 8px 10px)}
+.rol-b{border:var(--border-w) dashed var(--line-ui);font-family:var(--mono);font-size:13px;text-transform:uppercase;letter-spacing:.08em;background:var(--surface)}
+.rol-b.ver{background:var(--paper);color:var(--ink);border:var(--border);border-style:solid;box-shadow:var(--shadow-hard);font-family:var(--txt);text-transform:none;letter-spacing:0;font-size:15px}
+.rol-b.ver b{display:inline-block;font-family:var(--disp);font-weight:400;font-size:30px;letter-spacing:.08em;text-transform:uppercase;border:3px solid var(--ink);padding:0 .3em;border-radius:var(--radius);transform:rotate(-3deg);margin:2px 0 8px}
+.rol-b.ver.imp b{color:var(--red-dark);border-color:var(--red-dark)}
+.pn-tit{border-top:var(--border);padding-top:12px}
+.panel-salas{grid-template-columns:1fr;gap:0}
+.ps{display:grid;grid-template-columns:1fr auto;align-items:center;gap:0 12px;min-height:60px;padding:8px 10px;background:transparent;border:0;border-bottom:1px solid var(--line-dark);border-left:4px solid transparent;border-radius:0}
+.ps-nom{padding-right:0;font-size:22px;text-transform:uppercase}
+.ps-n{position:static;grid-column:2;grid-row:1/3;font-family:var(--mono);border:var(--border-w) solid var(--paper);background:transparent;min-width:36px;height:36px;font-size:16px}
+.ps-n.cero{border-color:var(--line-ui)}
+.ps-est{grid-column:1;min-height:0;font-family:var(--mono);font-size:12px;text-transform:uppercase;letter-spacing:.06em}
+.ps.cerr,.ps.sab{border-color:transparent;border-bottom-color:var(--line-dark);border-left-color:var(--red);background:var(--surface-2)}
+.tarea{border:var(--border-w) solid var(--line-ui)}
+.t-sala{font-family:var(--disp);font-weight:400;letter-spacing:.03em;text-transform:uppercase}
+.alerta{background:var(--blood);border:var(--border-w) solid var(--red);border-top:0;overflow:visible;box-shadow:var(--shadow-hard)}
+.alerta::before{content:"";display:block;height:10px;background:repeating-linear-gradient(-45deg,var(--red) 0 10px,var(--ink) 10px 20px)}
+.alerta h3 span{font-family:var(--mono)}
+.cerrada,.dondes{border-left:4px solid var(--red);border-radius:var(--radius);background:var(--surface)}
+.dondes{font-size:16px}
+
+/* 6 · pantallas completas */
+.ov-franja{height:6px;background:repeating-linear-gradient(-45deg,var(--red) 0 10px,var(--ink) 10px 20px)}
+.ov-pie,.ov-tira{border-top:var(--border);background:var(--ink)}
+.ov h1{font-weight:400;font-size:clamp(52px,16vw,84px);letter-spacing:.02em;line-height:1}
+.ov .fase{font-family:var(--disp);font-weight:400;text-transform:uppercase;border-top:var(--border);padding-top:10px}
+.ov .fase b{font-family:var(--mono);font-weight:800}
+.voto{border:var(--border-w) solid var(--line-ui);border-radius:var(--radius);transition:background var(--t)}
+button.voto:active{background:var(--surface-2);border-color:var(--paper)}
+.voto .n{font-family:var(--mono);font-weight:800}
+.salta{border-style:dashed}
+.ov-muerto,.ov-muerto .ov-pie{background:var(--blood)}
+.ov-muerto h1{display:inline-block;color:var(--red-text);border:.07em solid var(--red-text);padding:0 .2em;border-radius:var(--radius);--rot:-3deg;transform:rotate(var(--rot));margin:14px 0 18px;animation:sello 180ms ease-out,parpadeo 240ms steps(2) 180ms}
+.ov h1.fin-w{font-size:clamp(46px,14vw,76px);display:inline-block;border:.06em solid currentColor;padding:0 .2em;border-radius:var(--radius);--rot:-2.5deg;transform:rotate(var(--rot));margin:14px 0 10px;animation:sello 180ms ease-out}
+.fin-w.imp{color:var(--red-text)}
+.roles .imp{color:var(--red-text)}
+.ov-franja+.v3d,.ov-franja+img{margin-top:14px}
+
+/* 7 · revelado del papel: la nota clasificada */
+.revela.tapa{background:var(--surface);border:var(--border-w) dashed var(--line-ui);border-radius:var(--radius);position:relative;padding-top:34px}
+.revela.tapa::before{content:"CONFIDENCIAL · NO ENSEÑAR";position:absolute;top:10px;left:10px;font-family:var(--mono);font-size:10.5px;letter-spacing:.14em;color:var(--red-text);border:1.5px solid var(--red-text);padding:1px 6px;border-radius:var(--radius)}
+.revela.tapa span{font-family:var(--mono);font-size:14px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;background:var(--paper);color:var(--ink);padding:8px 12px;border-radius:var(--radius)}
+.revela:not(.tapa){position:relative;background:var(--paper);color:var(--ink);border:var(--border);border-radius:var(--radius);box-shadow:var(--shadow-hard);padding-top:34px}
+.revela:not(.tapa)::before{content:"EXP. 04 · TU PAPEL · NO ENSEÑAR";position:absolute;top:10px;left:10px;font-family:var(--mono);font-size:10.5px;letter-spacing:.14em;color:var(--red-dark);border:1.5px solid var(--red-dark);padding:1px 6px;border-radius:var(--radius)}
+.revela:not(.tapa) p{color:var(--ink);font-size:16px;max-width:34ch}
+.revela:not(.tapa) h1{display:inline-block;font-size:clamp(60px,17vw,100px);letter-spacing:.06em;line-height:1;padding:0 .2em;border:.07em solid var(--ink);border-radius:var(--radius);color:var(--ink);--rot:-7deg;transform:rotate(var(--rot));mix-blend-mode:multiply;animation:sello 180ms ease-out,parpadeo 240ms steps(2) 180ms}
+.revela.imp:not(.tapa) h1{color:var(--red-dark);border-color:var(--red-dark)}
+@keyframes sello{0%{transform:rotate(calc(var(--rot) - 7deg)) scale(2.1);opacity:0}70%{transform:rotate(calc(var(--rot) + 1deg)) scale(.96);opacity:1}100%{transform:rotate(var(--rot)) scale(1)}}
+@keyframes parpadeo{0%{opacity:1}50%{opacity:.25}100%{opacity:1}}
+.revela:not(.tapa) h1{margin:16px 0 12px}
+.barra button{text-transform:uppercase;letter-spacing:.06em;font-weight:800;font-size:14px;line-height:1.2}
+.rol-b{padding:14px}
+.revela:not(.tapa){gap:18px}
+.revela:not(.tapa) h1{margin:26px 0 14px;mix-blend-mode:normal;background:var(--paper)}
 </style>
 </head>
 <body>
@@ -1921,7 +1982,7 @@ function vRol(p){
   const ver=ROLVER,imp=p.role==='imp';
   if(!ver)return `<div class="rol-b" role="button" tabindex="0" data-hold="rol">Mantén pulsado para ver mi papel</div>`;
   const socios=S.players.filter(x=>x.role==='imp'&&x.id!==p.id);
-  return `<div class="rol-b ver" role="button" tabindex="0" data-hold="rol"><b>${imp?'Punto':'Ciego'}</b><br>${imp?(socios.length?'Con '+socios.map(x=>esc(x.name)).join(' y ')+'. ':'')+'Tus tareas son de mentira.':'Haz tus tareas y descubre al Punto.'}</div>`;
+  return `<div class="rol-b ver ${imp?'imp':'crew'}" role="button" tabindex="0" data-hold="rol"><b>${imp?'Punto':'Ciego'}</b><br>${imp?(socios.length?'Con '+socios.map(x=>esc(x.name)).join(' y ')+'. ':'')+'Tus tareas son de mentira.':'Haz tus tareas y descubre al Punto.'}</div>`;
 }
 function vAlertas(p){
   let h='';const t=ahora();
@@ -2023,7 +2084,7 @@ function vRevela(){
   const p=mine(),imp=p.role==='imp',socios=S.players.filter(x=>x.role==='imp'&&x.id!==p.id);
   let h=`<h2>La partida ha empezado</h2><p class="tenue">Que nadie vea tu pantalla.</p>`;
   if(!REVELA)h+=`<div class="revela tapa" role="button" tabindex="0" data-hold="papel"><div class="mira-caja">${mira()}${vivo('revela',{look:p.look,hood:p.color,anim:'reposo',k:'tapa',yaw:3.14,w:130,h:170,ph:'espalda',alt:'Tu personaje, de espaldas'})}</div><span>Mantén pulsado para ver tu papel</span></div>`;
-  else h+=`<div class="revela" data-hold="papel" role="button" tabindex="0" aria-label="Papel visible mientras mantienes pulsado">${vivo('revela',{look:p.look,hood:p.color,anim:'giro',est:'',k:'papel',w:170,h:220,ph:'feliz',alt:'Tu personaje'})}<h1>${imp?'Punto':'Ciego'}</h1>
+  else h+=`<div class="revela ${imp?'imp':'crew'}" data-hold="papel" role="button" tabindex="0" aria-label="Papel visible mientras mantienes pulsado">${vivo('revela',{look:p.look,hood:p.color,anim:'giro',est:'',k:'papel',w:170,h:220,ph:'feliz',alt:'Tu personaje'})}<h1>${imp?'Punto':'Ciego'}</h1>
     <p>${imp?`Mata sin que te vean y sabotea. Tus tareas son de mentira: hazlas para disimular.${socios.length?' Tu compañero: '+socios.map(x=>esc(x.name)).join(' y ')+'.':''}`:'Haz tus tareas, no vayas solo y descubre quién es el Punto.'}</p></div>`;
   return `<div class="ov"><div class="ov-cuerpo fit">${h}</div>${VISTO?`<div class="ov-pie"><button class="b-baliza b-ancho" data-a="entendido">Entendido</button></div>`:''}</div>`;
 }
