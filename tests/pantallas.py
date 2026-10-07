@@ -22,7 +22,7 @@ with sync_playwright() as pw:
     ctx=br.new_context(viewport={'width':w,'height':h},device_scale_factor=2,is_mobile=True,has_touch=True)
     p=ctx.new_page(); errs=[]; p.on('pageerror',lambda e:errs.append(str(e)))
     p.goto('http://localhost:8392/?supa=http://localhost:9999&supakey=local&pruebas=1'); p.wait_for_timeout(1500)
-    p.click('[data-a=jugar]'); p.wait_for_timeout(400); p.click('[data-a=modoAcceso][data-m=crear]')
+    p.wait_for_selector('[data-a=modoAcceso]'); p.click('[data-a=modoAcceso][data-m=crear]')
     p.fill('#em','p%d@ejemplo.com'%int(time.time()*1000)); p.fill('#pw','clave1234'); p.click('[data-a=crearCuenta]')
     p.wait_for_selector('#nom'); p.fill('#nom','Ana'+str(int(time.time()))[-4:]); p.wait_for_timeout(800)
     p.click('[data-a=guardarPerfil]'); p.wait_for_selector('[data-a=crear]'); p.click('[data-a=crear]')

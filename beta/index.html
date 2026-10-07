@@ -387,6 +387,12 @@ body.capa{position:fixed;left:0;right:0;width:100%;overflow:hidden}
 .rasgos{list-style:none;padding:0;margin:4px auto 22px;max-width:360px;display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--remache);border:1px solid var(--remache);border-radius:12px;overflow:hidden;text-align:left}
 .rasgos li{background:var(--acero);padding:12px 14px;font-size:14px;color:var(--niebla);line-height:1.3}
 .rasgos b{display:block;color:var(--tiza);font-size:17px;margin-bottom:2px}
+.portada.acc .logo{width:min(46vw,170px)}
+.portada.acc .titulo{font-size:clamp(34px,11vw,44px);margin:0 0 6px}
+.portada.acc .lema{margin:0 auto 6px}
+.acc-caja{text-align:left;margin:8px 0 0}
+.acc-caja .pestanas{margin-top:12px}
+.aviso-inv{margin:10px auto 0;max-width:360px;padding:10px 14px;border:1px solid var(--baliza);border-radius:12px;background:rgba(255,70,55,.1);color:var(--tiza);font-size:15px;text-align:center}
 .b-jugar{display:block;width:100%;max-width:360px;margin:0 auto;min-height:62px;font-family:var(--disp);font-size:24px;font-weight:800;letter-spacing:.12em;background:var(--baliza);border-color:var(--baliza);color:#fff;border-radius:14px}
 .perfil{display:flex;align-items:center;gap:16px;padding:6px 0 18px;border-bottom:1px solid var(--remache)}
 .perfil h2{font-size:30px;margin:0 0 10px;word-break:break-word}
@@ -749,6 +755,12 @@ function guardaTokenApple(sb,ses){
     sb.rpc('guardar_token_apple',{p_token:ses.provider_refresh_token,p_origen:'web'}).then(()=>{},()=>{});
   }catch(e){}
 }
+/* Invitación (?c=CÓDIGO): el código sobrevive a la pantalla de entrar, al registro y a las vueltas de Google/Apple/correo.
+   Se guarda también en el móvil por si la vuelta del proveedor pierde la query (caduca a la hora y solo se rescata al volver de un acceso). */
+function olvidaInvitacion(){
+  PEND_ENTRAR=null;LS.del('pc.invita');
+  try{if(new URLSearchParams(location.search).get('c')){const x=qsExtra();history.replaceState(null,'',location.pathname+(x.length?'?'+x.join('&'):''))}}catch(e){}
+}
 async function iniciaCuentas(){
   try{
     await cargaScript(SB_LIB);
@@ -768,9 +780,9 @@ async function trasSesion(ev,ses){
   const id=u?u.id:'';
   if(id===SES_ID&&ev!=='INICIO'&&ev!=='USER_UPDATED'){USER=u;return}
   SES_ID=id;USER=u;
-  if(!USER){PERFIL=null;pinta();return}
+  if(!USER){PERFIL=null;ACCESO.busy=false;pinta();return}
   await cargaPerfil();
-  if(ev==='SIGNED_IN'&&(VISTA==='acceso'||VISTA==='portada'))VISTA='menu';
+  if(ev==='SIGNED_IN'&&VISTA!=='nuevaClave'&&VISTA!=='borrarCuenta')VISTA='portada';
   ACCESO={modo:'entrar',email:'',pw:'',err:'',msg:'',busy:false};
   pinta();
 }
@@ -784,7 +796,7 @@ async function cargaPerfil(){
     if(PERFIL)LS.set('pc.perfil.'+USER.id,PERFIL);
   }catch(e){console.warn('perfil',e);PERFIL=cache?{...cache,look:limpiaLook(cache.look)}:null;if(cache)toast('Sin conexión con las cuentas: uso tu último perfil guardado')}
   PERFIL_CARGANDO=false;
-  if(PEND_ENTRAR&&PERFIL){const c=PEND_ENTRAR;PEND_ENTRAR=null;entrar(c,PERFIL.name,false)}
+  if(PEND_ENTRAR&&PERFIL){const c=PEND_ENTRAR;PEND_ENTRAR=null;LS.del('pc.invita');entrar(c,PERFIL.name,false)}
 }
 function errorCuenta(e){
   const m=((e&&(e.code||''))+' '+(e&&e.message||'')).toLowerCase();
@@ -1610,19 +1622,21 @@ const REGLAS=`<p>Todos sois Ciegos menos uno o varios Puntos. Nadie sabe quién 
 <p>Los muertos son fantasmas: siguen haciendo tareas y tienen su propio canal de walkie, pero no votan ni hablan en las reuniones.</p>
 <p>Los Puntos ganan si igualan en número a los Ciegos o si nadie para la fuga a tiempo.</p>`;
 
-let VISTA='portada',EDIT=null;
+let VISTA='portada',EDIT=null,REGLAS_ABIERTAS=false;
+const reglasHTML=()=>`<details class="reglas"${REGLAS_ABIERTAS?' open':''}><summary>Cómo se juega</summary>${REGLAS}</details>`;
+document.addEventListener('toggle',e=>{if(e.target.matches&&e.target.matches('details.reglas'))REGLAS_ABIERTAS=e.target.open},true);
 function vPortada(){
   return `<section class="portada"><img class="logo" src="${IMG.logo}" width="300" height="300" alt="Punto Ciego"><h1 class="titulo">PUNT<i></i><br>CIEGO</h1><p class="lema">No puedes confiar en lo que ves</p>
   <ul class="rasgos"><li><b>Tareas</b>en salas de verdad de tu casa</li><li><b>Sabotajes</b>gas, apagones, puertas cerradas</li><li><b>Un traidor</b>que nadie ha visto venir</li><li><b>Walkie</b>para hablar entre móviles</li></ul>
   <button class="b-jugar" data-a="jugar">Jugar</button>
-  <details class="reglas"><summary>Cómo se juega</summary>${REGLAS}</details>
+  ${reglasHTML()}
   <p class="legal"><a href="/privacidad/">Privacidad</a> · <a href="terminos.html">Términos</a> · <a href="/soporte/">Soporte</a></p></section>`;
 }
 function vEditor(){
   const nuevo=!PERFIL,l=limpiaLook(EDIT.look);
   const fila=(t,k,lista,sw)=>`<div class="ed-fila"><p class="lbl">${t}: <b>${esc(sw(l[k]).n)}</b></p><div class="swatches">${lista.map((_,i)=>{const x=sw(i);return `<button class="sw ${l[k]===i?'on':''}" data-a="look" data-k="${k}" data-v="${i}" aria-label="${esc(x.n)}" style="--c:${x.c}">${x.t||''}</button>`}).join('')}</div></div>`;
   return `<section class="bloque"><h2>${nuevo?'Crea tu personaje':'Tu personaje'}</h2>
-  <p class="tenue">${nuevo?`Así te verán los demás en las partidas. ${CUENTAS?'Se guarda en tu cuenta.':'Se guarda en este móvil.'}`:'Los cambios se verán en tu próxima partida.'}</p>
+  <p class="tenue">${PEND_ENTRAR?'Al guardar te unes a la partida a la que te han invitado. ':''}${nuevo?`Así te verán los demás en las partidas. ${CUENTAS?'Se guarda en tu cuenta.':'Se guarda en este móvil.'}`:'Los cambios se verán en tu próxima partida.'}</p>
   ${FIG_FALLO?'<p class="motivo">Este navegador no deja pintar el personaje, así que lo verás con los colores de serie. Tu elección se guarda igual y los demás la verán en sus móviles.</p>':''}
   <div class="ed-pegado"><div class="ed-vista">${mira()}${vivo('editor',{look:l,anim:'reposo',w:150,h:196,drag:true,yaw:.35,alt:'Vista previa de tu personaje. Arrástralo para girarlo.'})}</div>
   ${PJ.estado==='fallo'?'':'<p class="ed-tip">Arrastra el personaje para girarlo</p>'}</div>
@@ -1649,8 +1663,9 @@ function campoClave(auto,valor,ph){
 }
 function vAcceso(){
   const a=ACCESO,crear=a.modo==='crear';
-  return `<section class="bloque"><div class="pf-fig" style="margin:0 auto">${mira()}<img class="pose" src="${IMG.movil}" width="150" alt=""></div>
-  <div class="pestanas"><button class="${crear?'':'on'}" data-a="modoAcceso" data-m="entrar">Entrar</button><button class="${crear?'on':''}" data-a="modoAcceso" data-m="crear">Crear cuenta</button></div>
+  return `<section class="portada acc"><img class="logo" src="${IMG.logo}" width="300" height="300" alt="Punto Ciego"><h1 class="titulo">PUNT<i></i><br>CIEGO</h1><p class="lema">No puedes confiar en lo que ves</p>
+  ${PEND_ENTRAR?`<p class="aviso-inv" role="status">Te han invitado a una partida: entra para unirte.</p>`:''}
+  <div class="bloque acc-caja"><div class="pestanas"><button class="${crear?'':'on'}" data-a="modoAcceso" data-m="entrar">Entrar</button><button class="${crear?'on':''}" data-a="modoAcceso" data-m="crear">Crear cuenta</button></div>
   ${GOOGLE?`<button class="b-google b-ancho" data-a="google" ${a.busy?'disabled':''}>${G_LOGO}<span>${crear?'Registrarme con Google':'Entrar con Google'}</span></button>`:''}
   ${APPLE?`<button class="b-apple b-ancho" data-a="apple" ${a.busy?'disabled':''}>${A_LOGO}<span>${crear?'Registrarme con Apple':'Entrar con Apple'}</span></button>`:''}
   ${GOOGLE||APPLE?`<div class="o-sep" aria-hidden="true">o con tu correo</div>`:''}
@@ -1659,8 +1674,8 @@ function vAcceso(){
   <p><label class="lbl" for="pw">Contraseña</label>${campoClave(crear?'new-password':'current-password',a.pw,crear?'Mínimo 8 caracteres':'')}</p>
   ${a.err?`<p class="motivo" role="alert">${esc(a.err)}</p>`:''}${a.msg?`<p class="aviso-ok" role="status">${esc(a.msg)}</p>`:''}
   <button class="b-baliza b-ancho" data-a="${crear?'crearCuenta':'entrarCuenta'}" ${a.busy?'disabled':''}>${a.busy?'Un momento…':crear?'Crear cuenta':'Entrar'}</button>
-  ${crear?'':`<p><button class="b-link" data-a="olvido">He olvidado la contraseña</button></p>`}
-  <p><button class="b-link" data-a="aPortada">Volver</button></p>
+  ${crear?'':`<p style="text-align:center"><button class="b-link" data-a="olvido">He olvidado la contraseña</button></p>`}</div>
+  ${reglasHTML()}
   <p class="legal">Al crear una cuenta (mínimo 14 años) aceptas los <a href="terminos.html" target="_blank" rel="noopener">términos y condiciones</a> y la <a href="/privacidad/" target="_blank" rel="noopener">política de privacidad</a>.</p></section>`;
 }
 function campoBorrar(){
@@ -1684,17 +1699,17 @@ function vNuevaClave(){
   ${ACCESO.err?`<p class="motivo">${esc(ACCESO.err)}</p>`:''}
   <button class="b-baliza b-ancho" data-a="nuevaClave" ${ACCESO.busy?'disabled':''}>Guardar contraseña</button></section>`;
 }
-function vEsperaCuentas(txt){return `<section class="bloque" style="text-align:center">${pose('camina',110)}<h2>${txt}</h2></section>`}
+function vEsperaCuentas(txt){return `<section class="portada acc" role="status"><img class="logo" src="${IMG.logo}" width="300" height="300" alt="Punto Ciego"><h1 class="titulo">PUNT<i></i><br>CIEGO</h1><p class="lema">${txt}</p></section>`}
 function vHome(){
-  if(VISTA==='portada')return vPortada();
   if(VISTA==='nuevaClave')return vNuevaClave();
   if(CUENTAS){
-    if(SB_ESTADO==='cargando')return vEsperaCuentas('Conectando con las cuentas…');
-    if(SB_ESTADO==='error')return `<section class="bloque"><h2>No se puede conectar con las cuentas</h2><p class="tenue">Comprueba la conexión a internet y vuelve a intentarlo.</p><button class="b-baliza b-ancho" data-a="reintentarCuentas">Reintentar</button><p><button class="b-link" data-a="aPortada">Volver</button></p></section>`;
+    if(SB_ESTADO==='cargando')return vEsperaCuentas('Cargando…');
+    if(SB_ESTADO==='error')return `<section class="bloque"><h2>No se puede conectar con las cuentas</h2><p class="tenue">Comprueba la conexión a internet y vuelve a intentarlo.</p><button class="b-baliza b-ancho" data-a="reintentarCuentas">Reintentar</button></section>`;
     if(!USER)return vAcceso();
     if(PERFIL_CARGANDO&&!PERFIL)return vEsperaCuentas('Cargando tu personaje…');
     if(VISTA==='borrarCuenta')return vBorrarCuenta();
   }
+  if(VISTA==='portada'&&!(CUENTAS&&USER&&!PERFIL))return vPortada();
   if(!PERFIL||VISTA==='editor'){if(!EDIT)EDIT={name:PERFIL?PERFIL.name:'',look:{...limpiaLook(PERFIL?PERFIL.look:LOOK0)}};return vEditor()}
   const ult=LS.get('imp.ultima');
   const q=(new URLSearchParams(location.search).get('c')||'').toUpperCase().slice(0,5);
@@ -3144,7 +3159,7 @@ function salir(){
 }
 function cambiaCfg(fn){if(!soyHost())return;const c=JSON.parse(JSON.stringify(S.cfg));fn(c);accion('cfg',{cfg:c})}
 const ACT={
-  jugar(){WK.ctx();VISTA=CUENTAS&&!USER?'acceso':PERFIL?'menu':'editor';EDIT=null;scrollTo(0,0)},
+  jugar(){WK.ctx();VISTA=PERFIL?'menu':'editor';EDIT=null;scrollTo(0,0)},
   modoAcceso(d){ACCESO.modo=d.m;ACCESO.err='';ACCESO.msg=''},
   verClave(){ACCESO.ver=!ACCESO.ver},
   async google(){
@@ -3158,16 +3173,15 @@ const ACT={
   async entrarCuenta(){
     const a=ACCESO;a.err='';a.msg='';if(!a.email||!a.pw){a.err='Escribe el correo y la contraseña.';return}
     a.busy=true;pinta();const {error}=await SB.auth.signInWithPassword({email:a.email.trim(),password:a.pw});
-    a.busy=false;if(error)a.err=errorCuenta(error);else VISTA='menu';pinta()},
+    if(error){a.busy=false;a.err=errorCuenta(error)}else VISTA='portada';pinta()},
   async crearCuenta(){
     const a=ACCESO;a.err='';a.msg='';if(!a.email||!a.pw){a.err='Escribe el correo y una contraseña.';return}
     if(a.pw.length<8){a.err='La contraseña tiene que tener al menos 8 caracteres.';return}
     a.busy=true;pinta();
     const {data,error}=await SB.auth.signUp({email:a.email.trim(),password:a.pw,options:{emailRedirectTo:location.origin+location.pathname}});
-    a.busy=false;
-    if(error)a.err=errorCuenta(error);
-    else if(!data.session){a.msg='Cuenta creada. Te hemos mandado un correo para confirmarla; ábrelo y vuelve aquí para entrar.';a.modo='entrar';a.pw=''}
-    else VISTA='editor';
+    if(error){a.busy=false;a.err=errorCuenta(error)}
+    else if(!data.session){a.busy=false;a.msg='Cuenta creada. Te hemos mandado un correo para confirmarla; ábrelo y vuelve aquí para entrar.';a.modo='entrar';a.pw=''}
+    else VISTA='portada';
     pinta()},
   async olvido(){
     const a=ACCESO;a.err='';a.msg='';if(!a.email){a.err='Escribe primero tu correo.';return}
@@ -3176,8 +3190,8 @@ const ACT={
   async nuevaClave(){
     const pw=(($('#pw')||{}).value||'');ACCESO.err='';if(pw.length<8){ACCESO.err='Mínimo 8 caracteres.';return}
     ACCESO.busy=true;pinta();const {error}=await SB.auth.updateUser({password:pw});ACCESO.busy=false;
-    if(error)ACCESO.err=errorCuenta(error);else{toast('Contraseña cambiada');VISTA='menu';ACCESO.pw='';ACCESO.ver=false}pinta()},
-  async salirCuenta(){if(SB)await SB.auth.signOut();USER=null;PERFIL=null;SES_ID='';EDIT=null;VISTA='portada';pinta()},
+    if(error)ACCESO.err=errorCuenta(error);else{toast('Contraseña cambiada');VISTA='portada';ACCESO.pw='';ACCESO.ver=false}pinta()},
+  async salirCuenta(){if(SB)await SB.auth.signOut();USER=null;PERFIL=null;SES_ID='';EDIT=null;VISTA='portada';olvidaInvitacion();pinta()},
   aBorrarCuenta(){BORRAR={pw:'',palabra:'',err:'',busy:false,ver:false};VISTA='borrarCuenta';scrollTo(0,0)},
   verClaveBorrar(){BORRAR.ver=!BORRAR.ver},
   async confirmarBorrado(){
@@ -3196,7 +3210,7 @@ const ACT={
       try{await SB.auth.signOut()}catch(e){}
       LS.del('pc.perfil.'+uid);
       USER=null;PERFIL=null;SES_ID='';EDIT=null;BORRAR={pw:'',palabra:'',err:'',busy:false,ver:false};
-      VISTA='portada';toast('Cuenta eliminada');pinta();
+      VISTA='portada';olvidaInvitacion();toast('Cuenta eliminada');pinta();
     }catch(e){
       b.busy=false;b.err=navigator.onLine?'No se ha podido borrar la cuenta. Inténtalo de nuevo.':'Sin conexión: no se ha podido borrar la cuenta.';pinta();
     }
@@ -3209,14 +3223,15 @@ const ACT={
   async guardarPerfil(){const n=(($('#nom')||{}).value||'').trim().slice(0,16);if(!n){toast('Escribe un nombre de jugador');$('#nom').focus();return}
     const look=limpiaLook(EDIT.look);
     if(CUENTAS){
-      if(!USER){VISTA='acceso';return}
+      if(!USER)return;
       GUARDANDO=true;pinta();
       const {error}=await SB.from('profiles').upsert({id:USER.id,username:n,look,updated_at:new Date().toISOString()});
       GUARDANDO=false;
       if(error){toast(error.code==='23505'?'Ese nombre ya lo usa otra persona. Elige otro.':errorCuenta(error));pinta();return}
       PERFIL={stats:{p:0,v:0,i:0},...(PERFIL||{}),name:n,look};LS.set('pc.perfil.'+USER.id,PERFIL);
     }else{PERFIL={name:n,look};LS.set('pc.perfil',PERFIL);LS.set('imp.nombre',n)}
-    EDIT=null;VISTA='menu';scrollTo(0,0);toast('Personaje guardado');pinta()},
+    EDIT=null;VISTA='menu';scrollTo(0,0);toast('Personaje guardado');pinta();
+    if(PEND_ENTRAR){const c=PEND_ENTRAR;PEND_ENTRAR=null;LS.del('pc.invita');entrar(c,n,false)}},
   crear(){if(!PERFIL){VISTA='editor';return}entrar(codigoNuevo(),PERFIL.name,true)},
   unirme(){if(!PERFIL){VISTA='editor';return}const n=PERFIL.name,c=(($('#cod')||{}).value||'').trim().toUpperCase();
     if(c.length!==5){toast('El código tiene 5 letras');$('#cod').focus();return}entrar(c,n,false)},
@@ -3343,7 +3358,11 @@ if(PRUEBAS){const f=document.createElement('button');f.id='prFab';f.hidden=true;
 (function arranque(){
   const q=(new URLSearchParams(location.search).get('c')||'').toUpperCase();
   const ult=LS.get('imp.ultima');
-  if(CUENTAS){if(q&&q===ult)PEND_ENTRAR=q;pinta();iniciaCuentas();return}
+  if(CUENTAS){
+    const vuelta=/access_token|refresh_token|[?&#]code=|type=(signup|recovery|magiclink|invite|email)|error_description/.test(location.hash+location.search);
+    if(q.length===5){PEND_ENTRAR=q;LS.set('pc.invita',{c:q,t:Date.now()})}
+    else if(vuelta){const g=LS.get('pc.invita');if(g&&g.c&&Date.now()-g.t<3600000)PEND_ENTRAR=g.c}
+    pinta();iniciaCuentas();return}
   if(q&&q===ult&&PERFIL){entrar(q,PERFIL.name,false);return}
   pinta();
 })();
