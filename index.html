@@ -701,7 +701,7 @@ const P=(st,id)=>st.players.find(p=>p.id===id);
 const salas=st=>st.cfg.rooms.filter(r=>r.on);
 const sala=id=>S&&S.cfg.rooms.find(r=>r.id===id);
 const cerrada=id=>!!(S&&S.phase==='play'&&S.locks.some(l=>l.room===id&&l.until>ahora()));
-const ROPA=[['Negra',null],['Grafito','#4A4A52'],['Hueso','#E6DFD2'],['Oliva','#6B7A3A'],['Marino','#22406E'],['Burdeos','#7C1F2E'],['Camel','#B8894F'],['Roja','#FF4637'],['Rosa','#E58FB5'],['Lavanda','#9C8AD8']];
+const ROPA=[['Negra',null],['Grafito','#4A4A52'],['Hueso','#E6DFD2'],['Oliva','#6B7A3A'],['Marino','#22406E'],['Burdeos','#7C1F2E'],['Camel','#B8894F'],['Roja','#FF4637'],['Rosa','#E58FB5'],['Lavanda','#9C8AD8'],['Azul eléctrico','#2F6FE0'],['Cielo','#7FB7E6'],['Turquesa','#1FA3A0'],['Verde bosque','#1F6B3A'],['Lima','#A6D83A'],['Mostaza','#D9A21B'],['Naranja','#E8742A'],['Terracota','#B4533A'],['Berenjena','#5B2A6B'],['Fucsia','#D6338C']];
 const ESTAMPADOS=['Lisa','Rayas','Cuadros','Camuflaje'];
 const GUANTES=[['Blancos',null],['Negros','#2A2A2E'],['Rojos','#E5483A'],['Amarillos','#F2D23A'],['Azules','#2F6FE0'],['Verdes','#2FA05A']];
 const OJOS=[['Blancos',null],['Rojos','#FF4637'],['Cian','#5FE0F0'],['Amarillos','#FFD84A'],['Lima','#B6F24A'],['Rosas','#FF8FC8']];
@@ -1493,8 +1493,8 @@ function vAtajos(){
 }
 
 /* ============ red de la partida ============ */
-function publicarEstado(bump){
-  if(!S||!soyHost())return;
+function publicarEstado(bump,forzar){
+  if(!S||(!soyHost()&&!forzar))return;
   if(bump)S.v++;S.hb=ahora();S.app=APP_V;
   const me=mine();if(me)me.seen=S.hb;
   LS.set('imp.st.'+ME.code,S);
@@ -1546,13 +1546,13 @@ function aplicar(a,local){
   const pub=reducir(S,a,ahora(),!!local);
   if(a.t==='ping'||pub===false)return;
   S.ackd=[...(S.ackd||[]).slice(-90),a.id];
-  publicarEstado(true);eventos();pinta();
+  publicarEstado(true,a.t==='leave'&&!!local);eventos();pinta();
 }
 function accion(t,data={}){
   if(BLOQUEO)return;
   const a={id:uid(12),pid:ME.pid,gid:S&&S.gid,app:APP_V,t,...data};
-  if(soyHost()){aplicar(a,true);return}
-  PEND.set(a.id,{a,n:0});enviar('a',a);
+  if(soyHost()){aplicar(a,true);return a}
+  PEND.set(a.id,{a,n:0});enviar('a',a);return a;
 }
 setInterval(()=>{
   for(const [id,p] of PEND){if(++p.n>25){PEND.delete(id);continue}if(p.n%2===0)enviar('a',p.a)}
@@ -1632,7 +1632,7 @@ const REGLAS=`<p>Todos sois Ciegos menos uno o varios Puntos. Nadie sabe quién 
 <p>Los muertos son fantasmas: siguen haciendo tareas y tienen su propio canal de walkie, pero no votan ni hablan en las reuniones.</p>
 <p>Los Puntos ganan si igualan en número a los Ciegos o si nadie para la fuga a tiempo.</p>`;
 
-let VISTA='portada',EDIT=null,REGLAS_ABIERTAS=false;
+let VISTA='portada',PORT_VOL=false,EDIT=null,REGLAS_ABIERTAS=false;
 const reglasHTML=()=>`<details class="reglas"${REGLAS_ABIERTAS?' open':''}><summary>Cómo se juega</summary>${REGLAS}</details>`;
 document.addEventListener('toggle',e=>{if(e.target.matches&&e.target.matches('details.reglas'))REGLAS_ABIERTAS=e.target.open},true);
 function vPortada(){
@@ -1645,7 +1645,7 @@ function vPortada(){
 function vEditor(){
   const nuevo=!PERFIL,l=limpiaLook(EDIT.look);
   const fila=(t,k,lista,sw)=>`<div class="ed-fila"><p class="lbl">${t}: <b>${esc(sw(l[k]).n)}</b></p><div class="swatches">${lista.map((_,i)=>{const x=sw(i);return `<button class="sw ${l[k]===i?'on':''}" data-a="look" data-k="${k}" data-v="${i}" aria-label="${esc(x.n)}" style="--c:${x.c}">${x.t||''}</button>`}).join('')}</div></div>`;
-  return `<section class="bloque"><h2>${nuevo?'Crea tu personaje':'Tu personaje'}</h2>
+  return `<section class="bloque"><button class="b-link" data-a="editorVolver">‹ Volver</button><h2>${nuevo?'Crea tu personaje':'Tu personaje'}</h2>
   <p class="tenue">${PEND_ENTRAR?'Al guardar te unes a la partida a la que te han invitado. ':''}${nuevo?`Así te verán los demás en las partidas. ${CUENTAS?'Se guarda en tu cuenta.':'Se guarda en este móvil.'}`:'Los cambios se verán en tu próxima partida.'}</p>
   ${FIG_FALLO?'<p class="motivo">Este navegador no deja pintar el personaje, así que lo verás con los colores de serie. Tu elección se guarda igual y los demás la verán en sus móviles.</p>':''}
   <div class="ed-pegado"><div class="ed-vista">${mira()}${vivo('editor',{look:l,anim:'reposo',w:150,h:196,drag:true,yaw:.35,alt:'Vista previa de tu personaje. Arrástralo para girarlo.'})}</div>
@@ -1719,7 +1719,7 @@ function vHome(){
     if(PERFIL_CARGANDO&&!PERFIL)return vEsperaCuentas('Cargando tu personaje…');
     if(VISTA==='borrarCuenta')return vBorrarCuenta();
   }
-  if(VISTA==='portada'&&!(CUENTAS&&USER&&!PERFIL))return vPortada();
+  if(VISTA==='portada'&&!(CUENTAS&&USER&&!PERFIL&&!PORT_VOL))return vPortada();
   if(!PERFIL||VISTA==='editor'){if(!EDIT)EDIT={name:PERFIL?PERFIL.name:'',look:{...limpiaLook(PERFIL?PERFIL.look:LOOK0)}};return vEditor()}
   const ult=LS.get('imp.ultima');
   const q=(new URLSearchParams(location.search).get('c')||'').toUpperCase().slice(0,5);
@@ -1767,7 +1767,7 @@ function vPruebas(){
 }
 function vLobby(){
   const host=soyHost(),c=S.cfg,ps=S.players,on=salas(S),V=VENUES[c.venue],mx=maxImp(ps.length);
-  let h=`<section class="codigo"><p class="lbl">Código de la partida</p><div class="cod-grande">${[...ME.code].map(ch=>`<span>${ch}</span>`).join('')}</div>
+  let h=`<button class="b-link" data-a="salir">‹ Volver</button><section class="codigo"><p class="lbl">Código de la partida</p><div class="cod-grande">${[...ME.code].map(ch=>`<span>${ch}</span>`).join('')}</div>
   <button class="b-sec" data-a="compartir">Compartir enlace</button>
   <div class="qr-invita">${qrSVG(urlPartida())}</div><p class="tenue" style="margin-top:6px">O que escaneen este código con la cámara del móvil</p></section>
   <section class="bloque"><h2>${ps.length} a bordo</h2><p class="tenue" style="font-size:13.5px">El chat es entre amigos y no está moderado. Bloquea o reporta a cualquiera desde esta lista.</p><ul class="gente">${ps.map(p=>`<li>${dot(p)}<span>${esc(p.name)}</span>${bt(p)}${p.id===S.hostId?'<em>anfitrión</em>':''}${p.id===ME.pid?'<em>tú</em>':''}${p.id!==ME.pid?`<button class="b-mini${BLK.has(p.id)?' on':''}" data-a="jug" data-p="${p.id}" data-n="${esc(p.name)}" aria-label="Bloquear o reportar a ${esc(p.name)}">${BLK.has(p.id)?'Bloqueado':'Bloquear'}</button>`:''}${host&&p.id!==ME.pid?`<button class="b-mini" data-a="kick" data-p="${p.id}" style="margin-left:6px">Quitar</button>`:''}</li>`).join('')}</ul></section>`;
@@ -1949,7 +1949,7 @@ function vFin(){
   const e=S.end||{};const imps=S.players.filter(x=>x.role==='imp');
   const q=e.w==='imp'&&imps[0]?imps[0]:mine();
   const cara=e.w?vivo('fin',{look:q?q.look:LOOK0,hood:q?q.color:BLANCO,anim:'victoria',est:e.w==='imp'?'rojo':'',k:S.gid+'-'+e.w,w:190,h:230,ph:e.w==='imp'?'tresq':'feliz',alt:e.w==='imp'?'El Punto celebra':'Los Ciegos celebran'}):pose('frente',150,'',mine());
-  let h=`<div class="ov-franja"></div>${cara}${e.w?`<h1 class="fin-w ${e.w}">${e.w==='imp'?(imps.length>1?'Ganan los Puntos':'Gana el Punto'):'Ganan los Ciegos'}</h1>`:'<h1>Partida terminada</h1>'}
+  let h=`<div class="ov-franja"></div><button class="b-link" data-a="salir">‹ Volver</button>${cara}${e.w?`<h1 class="fin-w ${e.w}">${e.w==='imp'?(imps.length>1?'Ganan los Puntos':'Gana el Punto'):'Ganan los Ciegos'}</h1>`:'<h1>Partida terminada</h1>'}
   <p class="sub">${esc(e.why||'')}</p>
   ${imps.length?`<p class="dondes">${imps.length>1?'Los Puntos eran':'El Punto era'} <b>${imps.map(x=>esc(x.name)).join(' y ')}</b>.</p>`:''}
   <ul class="gente roles">${S.players.map(x=>`<li>${dot(x)}<span class="${x.role==='imp'?'imp':''}">${esc(x.name)}</span>${bt(x)}<em>${x.role==='imp'?'Punto':'Ciego'}${x.ejected?', expulsado':x.dead?', muerto':''}</em></li>`).join('')}</ul>
@@ -2059,7 +2059,7 @@ setInterval(pinta,250);
 /* ============ hojas ============ */
 /* los minijuegos que usan sensores, micro o temporizadores propios dejan aquí cómo pararse (SHEET.limpia) */
 function pararSheet(){if(SHEET&&SHEET.limpia){try{SHEET.limpia()}catch(e){}}}
-function abrirSheet(h,extra={}){pararSheet();$('#shBody').innerHTML=h;$('#sheet').hidden=false;SHEET={...extra};$('.sh-caja').scrollTop=0;capas();
+function abrirSheet(h,extra={}){pararSheet();$('#shBody').innerHTML=(S&&mine()&&(S.phase==='play'||S.phase==='meeting')?'':'<button class="b-link" data-a="cerrarSheet">‹ Volver</button>')+h;$('#sheet').hidden=false;SHEET={...extra};$('.sh-caja').scrollTop=0;capas();
   /* toda hoja tiene abajo una forma clara de volver, además de la ✕: a la sala si se abrió desde ella, si no al panel */
   const r=extra.sala&&!extra.esSala&&sala(extra.sala);
   $('#shPie').innerHTML=r?`<button class="b-sec b-ancho" data-a="volverSala">Volver a ${esc(r.name)}</button>`
@@ -3179,7 +3179,7 @@ async function entrar(code,name,crear){
   despierto();pinta();
 }
 function salir(){
-  if(S&&mine()&&S.phase==='lobby')accion('leave');
+  if(S&&mine()&&S.phase==='lobby'){const a=accion('leave');if(a)setTimeout(()=>enviar('a',a),250)} /* salida a propósito: se avisa dos veces y el anfitrión la aplica y publica al momento */
   const code=ME.code,cons=NET.cons;setTimeout(()=>{if(NET.cons===cons)netStop()},600);
   ME={code:null,pid:null,name:ME.name};S=null;VISTA='menu';PEND.clear();cerrarSheet();WK.cerrar();WK.reco=false;WK.suelta();LS.del('imp.ultima');
   if(code)LS.del('imp.st.'+code);
@@ -3188,7 +3188,7 @@ function salir(){
 }
 function cambiaCfg(fn){if(!soyHost())return;const c=JSON.parse(JSON.stringify(S.cfg));fn(c);accion('cfg',{cfg:c})}
 const ACT={
-  jugar(){WK.ctx();VISTA=PERFIL?'menu':'editor';EDIT=null;scrollTo(0,0)},
+  jugar(){WK.ctx();PORT_VOL=false;VISTA=PERFIL?'menu':'editor';EDIT=null;scrollTo(0,0)},
   modoAcceso(d){ACCESO.modo=d.m;ACCESO.err='';ACCESO.msg=''},
   verClave(){ACCESO.ver=!ACCESO.ver},
   async google(){
@@ -3220,7 +3220,7 @@ const ACT={
     const pw=(($('#pw')||{}).value||'');ACCESO.err='';if(pw.length<8){ACCESO.err='Mínimo 8 caracteres.';return}
     ACCESO.busy=true;pinta();const {error}=await SB.auth.updateUser({password:pw});ACCESO.busy=false;
     if(error)ACCESO.err=errorCuenta(error);else{toast('Contraseña cambiada');VISTA='portada';ACCESO.pw='';ACCESO.ver=false}pinta()},
-  async salirCuenta(){if(SB)await SB.auth.signOut();USER=null;PERFIL=null;SES_ID='';EDIT=null;VISTA='portada';olvidaInvitacion();pinta()},
+  async salirCuenta(){PORT_VOL=false;if(SB)await SB.auth.signOut();USER=null;PERFIL=null;SES_ID='';EDIT=null;VISTA='portada';olvidaInvitacion();pinta()},
   aBorrarCuenta(){BORRAR={pw:'',palabra:'',err:'',busy:false,ver:false};VISTA='borrarCuenta';scrollTo(0,0)},
   verClaveBorrar(){BORRAR.ver=!BORRAR.ver},
   async confirmarBorrado(){
@@ -3245,6 +3245,13 @@ const ACT={
     }
   },
   reintentarCuentas(){SB_ESTADO='cargando';SB?SB.auth.getSession().then(r=>trasSesion('INICIO',r.data.session)).then(()=>{SB_ESTADO='listo';pinta()},()=>{SB_ESTADO='error';pinta()}):iniciaCuentas()},
+  /* ‹ Volver de arriba: hace lo mismo que el botón de abajo (Volver / Cerrar sesión / Cancelar); si hay cambios sin guardar, pregunta antes */
+  editorVolver(){
+    const base=PERFIL?{name:PERFIL.name,look:limpiaLook(PERFIL.look)}:{name:'',look:limpiaLook(LOOK0)},n=(($('#nom')||{}).value||EDIT.name||'').trim();
+    if(n===base.name&&JSON.stringify(limpiaLook(EDIT.look))===JSON.stringify(base.look))return ACT.editorSalirOk();
+    abrirSheet(`<h2>¿Salir sin guardar los cambios?</h2><p class="tenue">Se perderán los cambios que has hecho en tu personaje.</p><button class="b-alarma b-ancho" data-a="editorSalirOk">Salir sin guardar</button><p><button class="b-link" data-a="cerrarSheet">Seguir editando</button></p>`);
+  },
+  editorSalirOk(){cerrarSheet();if(!PERFIL){PORT_VOL=!!(CUENTAS&&USER);return ACT.aPortada()}return ACT.aMenu()}, /* con sesión iniciada vuelve a la portada sin cerrarla (PORT_VOL deja ver la portada aunque aún no haya personaje) */
   aPortada(){VISTA='portada';EDIT=null;scrollTo(0,0)},
   aMenu(){VISTA='menu';EDIT=null;scrollTo(0,0)},
   editar(){VISTA='editor';EDIT=null;scrollTo(0,0)},
