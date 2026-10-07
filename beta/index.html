@@ -40,7 +40,7 @@ if(navigator.serviceWorker)navigator.serviceWorker.addEventListener('message',fu
   --red-text:#ff4637; --muted:#9a968d; --line-dark:#3b3a37; --line-ui:#6a675f; --surface:#151517; --surface-2:#1d1d20;
   --blood:#1a0808; --ok-c:#63C283; --sonar-c:#9CC4D4; --danger-soft:#ff8f86;
   --radius:3px; --border-w:2px; --border:var(--border-w) solid var(--paper);
-  --shadow-hard:4px 4px 0 var(--red-dark); --shadow-paper:4px 4px 0 var(--ink);
+  --shadow-gray:4px 4px 0 var(--line-dark); --shadow-gray-paper:4px 4px 0 #b9b4a8; /* sombra dura: SOLO gris y SOLO en elementos de contorno, nunca en rellenos de color */
   --t:140ms; --tap:44px;
   --mono:"JetBrains Mono","IBM Plex Mono",ui-monospace,"Cascadia Mono",Consolas,"Courier New",monospace;
   /* alias de los nombres antiguos: el resto del CSS sigue funcionando */
@@ -354,13 +354,13 @@ body.capa{position:fixed;left:0;right:0;width:100%;overflow:hidden}
 .g-polilla{position:absolute;background:transparent;border:0;font-size:26px;padding:6px;min-height:0}
 .hecho-ok{text-align:center;font-family:var(--disp);font-size:38px;color:var(--ok);padding:30px 0}
 
-#toast{position:fixed;left:50%;bottom:calc(96px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);z-index:60;background:var(--tiza);color:var(--acero);padding:10px 16px;border-radius:10px;font-weight:600;max-width:90vw;display:none;box-shadow:0 8px 24px rgba(0,0,0,.4)}
+#toast{position:fixed;left:50%;bottom:calc(96px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);z-index:60;background:var(--tiza);color:var(--acero);padding:10px 16px;border-radius:10px;font-weight:600;max-width:90vw;display:none}
 
 #wkFab{position:fixed;right:14px;bottom:calc(84px + env(safe-area-inset-bottom,0px));z-index:45;width:62px;height:62px;border-radius:50%;padding:0;background:var(--tiza);border-color:var(--tiza);color:#0C0C0C;font-size:26px;box-shadow:0 6px 18px rgba(0,0,0,.45)}
 #wkFab.solo{bottom:calc(18px + env(safe-area-inset-bottom,0px))}
 #wkFab b{position:absolute;top:-4px;right:-4px;min-width:24px;height:24px;border-radius:12px;background:var(--alarma);color:#fff;font-size:13px;display:grid;place-items:center;padding:0 6px}
 #wkFab[hidden],#wkFab b[hidden]{display:none}
-#wkTalk{position:fixed;top:calc(8px + env(safe-area-inset-top,0px));left:50%;transform:translateX(-50%);z-index:55;background:var(--tiza);color:#0C0C0C;font-weight:600;padding:8px 14px;border-radius:999px;box-shadow:0 6px 18px rgba(0,0,0,.4);white-space:nowrap}
+#wkTalk{position:fixed;top:calc(8px + env(safe-area-inset-top,0px));left:50%;transform:translateX(-50%);z-index:55;background:var(--tiza);color:#0C0C0C;font-weight:600;padding:8px 14px;border-radius:999px;white-space:nowrap}
 #wkTalk[hidden]{display:none}
 #wk{position:fixed;inset:0;z-index:48}
 #wk[hidden]{display:none}
@@ -466,11 +466,15 @@ button:active:not([disabled]){filter:none}
 input,select{background:var(--surface);border:var(--border-w) solid var(--line-ui);border-radius:var(--radius);min-height:var(--tap);transition:border-color var(--t)}
 input:focus,select:focus{border-color:var(--paper)}
 input::placeholder{color:#6d6a63}
-.b-baliza,.b-alarma,.b-jugar,.b-sec{text-transform:uppercase;letter-spacing:.08em;font-weight:800;box-shadow:var(--shadow-hard)}
-.b-baliza,.b-jugar{background:var(--red-btn);border-color:var(--paper);color:var(--paper)}
-.b-alarma{background:var(--red-dark);border-color:var(--paper);color:var(--paper)}
-.b-sec{background:transparent;color:var(--paper);box-shadow:4px 4px 0 var(--line-dark)}
-.b-baliza:active:not([disabled]),.b-alarma:active:not([disabled]),.b-jugar:active:not([disabled]),.b-sec:active:not([disabled]){transform:translate(4px,4px);box-shadow:none}
+.b-baliza,.b-alarma,.b-jugar,.b-sec{text-transform:uppercase;letter-spacing:.08em;font-weight:800}
+/* relleno rojo: plano, sin sombra ni borde; cuatro marcas de esquina crema (retícula, como el anillo del avatar) */
+.b-baliza,.b-alarma,.b-jugar{--m:var(--paper);border:0;color:var(--paper);background-color:var(--red-btn);background-repeat:no-repeat;background-image:linear-gradient(var(--m),var(--m)),linear-gradient(var(--m),var(--m)),linear-gradient(var(--m),var(--m)),linear-gradient(var(--m),var(--m)),linear-gradient(var(--m),var(--m)),linear-gradient(var(--m),var(--m)),linear-gradient(var(--m),var(--m)),linear-gradient(var(--m),var(--m));background-size:12px 2px,2px 12px,12px 2px,2px 12px,12px 2px,2px 12px,12px 2px,2px 12px;background-position:left 6px top 6px,left 6px top 6px,right 6px top 6px,right 6px top 6px,left 6px bottom 6px,left 6px bottom 6px,right 6px bottom 6px,right 6px bottom 6px}
+.b-alarma{background-color:var(--red-dark)}
+.b-baliza:active:not([disabled]),.b-jugar:active:not([disabled]){background-color:var(--red-dark);transform:scale(.98)}
+.b-alarma:active:not([disabled]){filter:brightness(.8);transform:scale(.98)}
+/* contorno: sombra dura gris; al pulsar se hunde y la sombra desaparece */
+.b-sec,.b-peq,.barra button:not(.b-alarma),.b-google{background:transparent;color:var(--paper);box-shadow:var(--shadow-gray)}
+.b-sec:active:not([disabled]),.b-peq:active:not([disabled]),.barra button:not(.b-alarma):active:not([disabled]),.b-google:active:not([disabled]){transform:translate(4px,4px);box-shadow:none}
 button[disabled]{box-shadow:none;opacity:.4}
 .b-link{border:0;box-shadow:none;text-transform:none;min-height:var(--tap);font-family:var(--mono);font-size:14px}
 .b-mini,.b-peq{min-height:var(--tap);font-family:var(--mono);font-size:12px;text-transform:uppercase;letter-spacing:.06em;border-color:var(--line-ui);color:var(--muted)}
@@ -499,12 +503,12 @@ details.reglas summary::after{font-family:var(--mono)}
 .aviso-inv{border-radius:var(--radius);border:var(--border-w) solid var(--red);font-family:var(--mono);font-size:14px}
 
 /* 3 · sala de espera */
-.codigo{background:var(--paper);color:var(--ink);border:var(--border);border-radius:var(--radius);box-shadow:var(--shadow-hard);transform:rotate(-.4deg);padding:34px 14px 18px;margin:8px 0 22px;position:relative}
+.codigo{background:var(--paper);color:var(--ink);border:var(--border);border-radius:var(--radius);transform:rotate(-.4deg);padding:34px 14px 18px;margin:8px 0 22px;position:relative}
 .codigo::before{content:"EXP. · SALA DE ESPERA";position:absolute;top:8px;left:10px;font-family:var(--mono);font-size:10.5px;letter-spacing:.14em;color:var(--red-dark);border:1.5px solid var(--red-dark);padding:1px 6px;border-radius:var(--radius)}
 .codigo .lbl{color:var(--ink);margin-bottom:8px}
 .cod-grande{gap:6px}
 .cod-grande span{font-family:var(--mono);font-weight:800;font-size:38px;width:50px;height:66px;background:var(--ink);color:var(--paper);border:0;border-bottom:4px solid var(--red);border-radius:var(--radius)}
-.codigo .b-sec{background:var(--paper);color:var(--ink);border-color:var(--ink);box-shadow:var(--shadow-paper)}
+.codigo .b-sec{background:var(--paper);color:var(--ink);border-color:var(--ink);box-shadow:var(--shadow-gray-paper)}
 .codigo .b-sec:active:not([disabled]){box-shadow:none}
 .qr-invita{border-radius:var(--radius);border:var(--border-w) solid var(--ink);padding:6px}
 .codigo .tenue{color:#4a4741;font-family:var(--mono);font-size:12px}
@@ -527,10 +531,9 @@ ul.gente em{font-family:var(--mono);font-size:11px;letter-spacing:.08em;text-tra
 .alerta,.cerrada,.dondes,.coms,.cam-fila,.voto,.ps,.opc,.tarea,.rol-b,.fantasma,.revela,.g-real,.g-lector,.g-tarjeta,.g-cal,.g-onda,.g-sucio,.g-jardin,.g-vaho,.g-pantalla,.pestanas,.pf-fig,.wk-m button{border-radius:var(--radius)}
 .pestanas button.on{background:var(--paper);color:var(--ink)}
 .bt{border-radius:var(--radius)}
-#toast{border-radius:var(--radius);box-shadow:var(--shadow-hard);border:var(--border-w) solid var(--ink)}
-#wkFab{border-radius:var(--radius);box-shadow:var(--shadow-hard);border:var(--border-w) solid var(--ink)}
-#wkTalk{border-radius:var(--radius);box-shadow:var(--shadow-hard);font-family:var(--mono)}
-body.en-juego #wkFab{box-shadow:var(--shadow-hard)}
+#toast{border-radius:var(--radius);box-shadow:none;border:var(--border-w) solid var(--ink)}
+#wkFab{border-radius:var(--radius);box-shadow:none;border:var(--border-w) solid var(--ink)}
+#wkTalk{border-radius:var(--radius);box-shadow:none;font-family:var(--mono)}
 #prFab,#wkPtt{border-radius:var(--radius)}
 .ps-n,.wk-m button,.bot-tag{border-radius:var(--radius)}
 .ps-n{min-width:26px}
@@ -542,7 +545,7 @@ body.en-juego #wkFab{box-shadow:var(--shadow-hard)}
 .bt{height:14px;border:var(--border-w) solid var(--paper);background:var(--ink);padding:1px}
 .bt i{background:repeating-linear-gradient(90deg,var(--ok) 0 8px,transparent 8px 10px)}
 .rol-b{border:var(--border-w) dashed var(--line-ui);font-family:var(--mono);font-size:13px;text-transform:uppercase;letter-spacing:.08em;background:var(--surface)}
-.rol-b.ver{background:var(--paper);color:var(--ink);border:var(--border);border-style:solid;box-shadow:var(--shadow-hard);font-family:var(--txt);text-transform:none;letter-spacing:0;font-size:15px}
+.rol-b.ver{background:var(--paper);color:var(--ink);border:var(--border);border-style:solid;font-family:var(--txt);text-transform:none;letter-spacing:0;font-size:15px}
 .rol-b.ver b{display:inline-block;font-family:var(--disp);font-weight:400;font-size:30px;letter-spacing:.08em;text-transform:uppercase;border:3px solid var(--ink);padding:0 .3em;border-radius:var(--radius);transform:rotate(-3deg);margin:2px 0 8px}
 .rol-b.ver.imp b{color:var(--red-dark);border-color:var(--red-dark)}
 .pn-tit{border-top:var(--border);padding-top:12px}
@@ -555,7 +558,7 @@ body.en-juego #wkFab{box-shadow:var(--shadow-hard)}
 .ps.cerr,.ps.sab{border-color:transparent;border-bottom-color:var(--line-dark);border-left-color:var(--red);background:var(--surface-2)}
 .tarea{border:var(--border-w) solid var(--line-ui)}
 .t-sala{font-family:var(--disp);font-weight:400;letter-spacing:.03em;text-transform:uppercase}
-.alerta{background:var(--blood);border:var(--border-w) solid var(--red);border-top:0;overflow:visible;box-shadow:var(--shadow-hard)}
+.alerta{background:var(--blood);border:var(--border-w) solid var(--red);border-top:0;overflow:visible}
 .alerta::before{content:"";display:block;height:10px;background:repeating-linear-gradient(-45deg,var(--red) 0 10px,var(--ink) 10px 20px)}
 .alerta h3 span{font-family:var(--mono)}
 .cerrada,.dondes{border-left:4px solid var(--red);border-radius:var(--radius);background:var(--surface)}
@@ -582,7 +585,7 @@ button.voto:active{background:var(--surface-2);border-color:var(--paper)}
 .revela.tapa{background:var(--surface);border:var(--border-w) dashed var(--line-ui);border-radius:var(--radius);position:relative;padding-top:34px}
 .revela.tapa::before{content:"CONFIDENCIAL · NO ENSEÑAR";position:absolute;top:10px;left:10px;font-family:var(--mono);font-size:10.5px;letter-spacing:.14em;color:var(--red-text);border:1.5px solid var(--red-text);padding:1px 6px;border-radius:var(--radius)}
 .revela.tapa span{font-family:var(--mono);font-size:14px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;background:var(--paper);color:var(--ink);padding:8px 12px;border-radius:var(--radius)}
-.revela:not(.tapa){position:relative;background:var(--paper);color:var(--ink);border:var(--border);border-radius:var(--radius);box-shadow:var(--shadow-hard);padding-top:34px}
+.revela:not(.tapa){position:relative;background:var(--paper);color:var(--ink);border:var(--border);border-radius:var(--radius);padding-top:34px}
 .revela:not(.tapa)::before{content:"EXP. 04 · TU PAPEL · NO ENSEÑAR";position:absolute;top:10px;left:10px;font-family:var(--mono);font-size:10.5px;letter-spacing:.14em;color:var(--red-dark);border:1.5px solid var(--red-dark);padding:1px 6px;border-radius:var(--radius)}
 .revela:not(.tapa) p{color:var(--ink);font-size:16px;max-width:34ch}
 .revela:not(.tapa) h1{display:inline-block;font-size:clamp(60px,17vw,100px);letter-spacing:.06em;line-height:1;padding:0 .2em;border:.07em solid var(--ink);border-radius:var(--radius);color:var(--ink);--rot:-7deg;transform:rotate(var(--rot));mix-blend-mode:multiply;animation:sello 180ms ease-out,parpadeo 240ms steps(2) 180ms}
@@ -1871,7 +1874,7 @@ function vHome(){
   ${CUENTAS&&PERFIL.stats?`<p class="stats"><span><b>${PERFIL.stats.p}</b> ${PERFIL.stats.p===1?'partida':'partidas'}</span><span><b>${PERFIL.stats.v}</b> ${PERFIL.stats.v===1?'victoria':'victorias'}</span><span><b>${PERFIL.stats.i}</b> de Punto</span></p>`:''}
   ${q?'':`<div class="bloque"><button class="b-baliza b-ancho" data-a="crear">Crear partida</button></div>`}
   <div class="bloque ${q?'':'o'}"><label class="lbl" for="cod">${q?'Código de la partida':'¿Te han pasado un código?'}</label>
-  <div class="fila"><input id="cod" class="in-cod" maxlength="5" value="${esc(q)}" placeholder="ABCDE" autocapitalize="characters" autocomplete="off" spellcheck="false"><button class="${q?'b-baliza':''}" data-a="unirme">Unirme</button></div></div>
+  <div class="fila"><input id="cod" class="in-cod" maxlength="5" value="${esc(q)}" placeholder="ABCDE" autocapitalize="characters" autocomplete="off" spellcheck="false"><button class="${q?'b-baliza':'b-sec'}" data-a="unirme">Unirme</button></div></div>
   ${q?`<div class="bloque"><button class="b-link" data-a="crear">Crear una partida nueva</button></div>`:''}
   ${ult?`<div class="bloque"><button class="b-link" data-a="volver" data-c="${esc(ult)}">Volver a la partida ${esc(ult)}</button></div>`:''}
   ${PRUEBAS?`<div class="bloque"><button class="b-link" data-a="galeria">Galería de minijuegos (pruebas)</button></div>`:''}
