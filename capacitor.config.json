@@ -1,0 +1,9 @@
+{
+  "appId": "es.puntostudio.puntociego",
+  "appName": "Punto Ciego",
+  "webDir": "www",
+  "ios": {
+    "contentInset": "never",
+    "backgroundColor": "#0C0C0C"
+  }
+}

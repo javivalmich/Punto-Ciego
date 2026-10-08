@@ -758,6 +758,22 @@ async function borrarCuentaRemota(sb){
   const {error:rpcErr}=await sb.rpc('eliminar_mi_cuenta');
   if(rpcErr)throw rpcErr;
 }
+/* App nativa (Capacitor, iOS): Sign in with Apple con el plugin @capacitor-community/apple-sign-in + signInWithIdToken.
+   El plugin se registra por nombre: el puente nativo ya inyecta window.Capacitor, no hace falta bundler. */
+const EN_APP=!!(window.Capacitor&&window.Capacitor.isNativePlatform&&window.Capacitor.isNativePlatform());
+const APPLE_BUNDLE_ID='es.puntostudio.puntociego';
+async function sha256Hex(t){const b=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(t));return Array.from(new Uint8Array(b),x=>x.toString(16).padStart(2,'0')).join('')}
+function appleCancelado(e){return /1001|cancel/i.test((e&&(e.code||e.message))||'')}
+async function entraConAppleNativo(){
+  const plugin=window.Capacitor.registerPlugin('SignInWithApple');
+  const raw=Array.from(crypto.getRandomValues(new Uint8Array(32)),x=>x.toString(16).padStart(2,'0')).join('');
+  /* a Apple se le da el nonce con hash; a Supabase, el original (así lo verifica contra el token) */
+  const r=await plugin.authorize({clientId:APPLE_BUNDLE_ID,redirectURI:SUPA.url+'/auth/v1/callback',scopes:'email name',nonce:await sha256Hex(raw)});
+  const tok=r&&r.response&&r.response.identityToken;
+  if(!tok)throw new Error('Apple no devolvió el token');
+  const {error}=await SB.auth.signInWithIdToken({provider:'apple',token:tok,nonce:raw});
+  if(error)throw error;
+}
 /* Al entrar con Apple, Supabase da el token de Apple una sola vez: se guarda (solo el servidor puede leerlo) para poder revocarlo al borrar la cuenta */
 function guardaTokenApple(sb,ses){
   try{
@@ -3197,6 +3213,10 @@ const ACT={
     if(error){a.busy=false;a.err=errorCuenta(error);pinta()}},
   async apple(){
     const a=ACCESO;a.err='';a.msg='';a.busy=true;pinta();
+    if(EN_APP){ /* app nativa: el sistema da el token de Apple y Supabase lo valida (no hay redirección ni secret de 6 meses) */
+      try{await entraConAppleNativo();a.busy=false;pinta()}
+      catch(e){a.busy=false;if(!appleCancelado(e)){console.warn('apple',e);a.err=errorCuenta(e)}pinta()}
+      return}
     const {error}=await SB.auth.signInWithOAuth({provider:'apple',options:{redirectTo:location.origin+location.pathname}});
     if(error){a.busy=false;a.err=errorCuenta(error);pinta()}},
   async entrarCuenta(){

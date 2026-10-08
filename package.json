@@ -1,0 +1,19 @@
+{
+  "name": "punto-ciego",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Punto Ciego, de Punto Studio. La web se sirve tal cual desde la raíz (GitHub Pages); package.json solo existe para la app iOS con Capacitor.",
+  "scripts": {
+    "web": "node scripts/preparar-www.mjs",
+    "cap:sync": "node scripts/preparar-www.mjs && cap sync ios",
+    "cap:abrir": "npm run cap:sync && cap open ios"
+  },
+  "dependencies": {
+    "@capacitor-community/apple-sign-in": "^7.1.0",
+    "@capacitor/core": "^7.6.9"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "^7.6.9",
+    "@capacitor/ios": "^7.6.9"
+  }
+}

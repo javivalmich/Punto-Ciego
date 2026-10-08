@@ -32,3 +32,12 @@ secrets/
 tienda/vista-previa-recortes.png
 .claude/
 .cap/
+
+# App iOS (Capacitor): www/ se genera con scripts/preparar-www.mjs
+www/
+ios/App/Pods/
+ios/App/build/
+ios/DerivedData/
+ios/App/App/public/
+ios/App/App/capacitor.config.json
+ios/capacitor-cordova-ios-plugins/
