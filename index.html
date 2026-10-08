@@ -436,7 +436,7 @@ body.en-portada details.reglas{margin:12px 0 0}
 .clave .ver{position:absolute;right:2px;top:50%;transform:translateY(-50%);width:auto;min-height:44px;padding:0 14px;background:none;border:0;color:var(--niebla);font-size:14px;font-weight:500;text-decoration:underline;text-underline-offset:3px}
 .b-google{display:flex;align-items:center;justify-content:center;gap:10px;background:var(--casco);color:var(--tiza)}
 .b-google svg{flex:0 0 auto}
-.b-apple{display:flex;align-items:center;justify-content:center;gap:10px;background:var(--tiza);color:#000}
+.b-apple{display:flex;align-items:center;justify-content:center;gap:10px;background:#fff;color:#000;min-height:48px;border-color:#fff}
 .b-apple svg{flex:0 0 auto}
 .o-sep{display:flex;align-items:center;gap:12px;color:var(--niebla);font-size:14px;margin:14px 0 4px}
 .o-sep::before,.o-sep::after{content:'';flex:1;height:1px;background:var(--remache)}
@@ -1749,7 +1749,7 @@ function vAcceso(){
   ${PEND_ENTRAR?`<p class="aviso-inv" role="status">Te han invitado a una partida: entra para unirte.</p>`:''}
   <div class="bloque acc-caja"><div class="pestanas"><button class="${crear?'':'on'}" data-a="modoAcceso" data-m="entrar">Entrar</button><button class="${crear?'on':''}" data-a="modoAcceso" data-m="crear">Crear cuenta</button></div>
   ${GOOGLE?`<button class="b-google b-ancho" data-a="google" ${a.busy?'disabled':''}>${G_LOGO}<span>${crear?'Registrarme con Google':'Entrar con Google'}</span></button>`:''}
-  ${APPLE?`<button class="b-apple b-ancho" data-a="apple" ${a.busy?'disabled':''}>${A_LOGO}<span>${crear?'Registrarme con Apple':'Entrar con Apple'}</span></button>`:''}
+  ${APPLE?`<button class="b-apple b-ancho" data-a="apple" ${a.busy?'disabled':''}>${A_LOGO}<span>Continuar con Apple</span></button>`:''}
   ${GOOGLE||APPLE?`<div class="o-sep" aria-hidden="true">o con tu correo</div>`:''}
   <p class="tenue">${crear?'Con tu cuenta tu personaje y tus partidas te siguen a cualquier móvil.':'Entra con el correo y la contraseña de tu cuenta.'}</p>
   <p><label class="lbl" for="em">Correo</label><input id="em" type="email" autocomplete="email" inputmode="email" value="${esc(a.email)}" placeholder="tu@correo.com"></p>
