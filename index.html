@@ -38,7 +38,6 @@ if(navigator.serviceWorker)navigator.serviceWorker.addEventListener('message',fu
   --disp:Outfit,"Avenir Next",system-ui,sans-serif;
   --txt:Outfit,"Avenir Next",system-ui,-apple-system,"Segoe UI",sans-serif;
   box-sizing:border-box;
-  padding-top:env(safe-area-inset-top,0px);
   padding-bottom:env(safe-area-inset-bottom,0px);
 }
 *,*::before,*::after{box-sizing:inherit}
@@ -83,7 +82,7 @@ img[data-pend]{visibility:hidden}
 .fila{display:flex;gap:8px}
 .fila input{flex:1;min-width:0}
 
-#top{position:sticky;top:env(safe-area-inset-top,0px);z-index:9;background:var(--acero);border-bottom:1px solid var(--remache)}
+#top{position:sticky;top:0;padding-top:env(safe-area-inset-top,0px);z-index:9;background:var(--acero);border-bottom:1px solid var(--remache)}
 .tb{max-width:560px;margin:0 auto;display:flex;align-items:center;gap:10px;padding:10px 16px;min-height:52px}
 .marca{font-family:var(--disp);font-weight:800;font-size:18px;letter-spacing:.06em;display:flex;align-items:center;gap:1px}
 .marca i{display:inline-block;width:13px;height:13px;border-radius:50%;border:2.5px solid var(--tiza);margin:0 5px 0 1px;position:relative}
@@ -383,6 +382,16 @@ body.capa{position:fixed;left:0;right:0;width:100%;overflow:hidden}
 .portada .titulo{font-weight:800;font-size:clamp(46px,15vw,64px);line-height:.98;letter-spacing:.06em;margin:4px 0 10px}
 .titulo i{display:inline-block;width:.74em;height:.74em;border-radius:50%;border:.1em solid var(--tiza);margin:0 0 0 .04em;position:relative;vertical-align:-.02em}
 .titulo i::after{content:"";position:absolute;inset:.13em;border-radius:50%;background:var(--baliza)}
+body.en-portada main{padding:6px 16px 0}
+body.en-portada .portada{padding-top:0}
+body.en-portada .portada .logo{width:min(78vw,300px,21vh);width:min(78vw,300px,21dvh)}
+body.en-portada .portada .titulo{font-size:clamp(34px,min(15vw,6vh),64px);font-size:clamp(34px,min(15vw,6dvh),64px);margin:2px 0 6px}
+body.en-portada .portada .lema{margin:0 0 10px}
+body.en-portada .rasgos{margin:0 auto 14px}
+body.en-portada .rasgos li{padding:9px 12px;font-size:13px}
+body.en-portada .rasgos b{font-size:16px}
+body.en-portada .b-jugar{min-height:56px}
+body.en-portada details.reglas{margin:12px 0 0}
 .portada .lema{margin:0 0 18px;font-size:12px;font-weight:600;letter-spacing:.14em;text-wrap:balance;padding-left:.14em;text-transform:uppercase;color:var(--niebla)}
 .rasgos{list-style:none;padding:0;margin:4px auto 22px;max-width:360px;display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--remache);border:1px solid var(--remache);border-radius:12px;overflow:hidden;text-align:left}
 .rasgos li{background:var(--acero);padding:12px 14px;font-size:14px;color:var(--niebla);line-height:1.3}
@@ -2014,7 +2023,7 @@ function pinta(){
   }
   const app=$('#app'),bar=$('#bar'),over=$('#over');
   setHTML(app,h);setHTML(bar,b);bar.hidden=!b;setHTML(over,o);over.hidden=!o;
-  document.body.classList.toggle('en-juego',!!b);document.body.classList.toggle('en-over',!!o);
+  document.body.classList.toggle('en-portada',!!app.querySelector('.portada:not(.acc)'));document.body.classList.toggle('en-juego',!!b);document.body.classList.toggle('en-over',!!o);
   document.body.classList.toggle('ov-pleno',!!o&&!over.querySelector('.ov-tira'));document.body.classList.toggle('ov-tira',!!o&&!!over.querySelector('.ov-tira'));
   if(b)document.documentElement.style.setProperty('--bar-h',bar.getBoundingClientRect().height+'px');
   $('#wkFab').classList.toggle('solo',!b);
