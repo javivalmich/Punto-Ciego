@@ -6,10 +6,10 @@
 |---|---|---|
 | Nombre | **Punto Ciego** | 30 (ambas) |
 | Nombre del desarrollador | **Punto Studio** | |
-| Subtítulo (App Store) | **Among Us en tu propia casa** (26) | 30 |
+| Subtítulo (App Store) | **Impostores por tu casa** (22) | 30 |
 | Descripción breve (Google Play) | **Tareas, sabotajes e impostores por las habitaciones de tu casa, con el móvil.** (78) | 80 |
 | Texto promocional (App Store, opcional) | Un juego de traición para jugar de verdad por la casa: haz tareas, sabotea y descubre quién miente. Gratis y sin anuncios. | 170 |
-| Palabras clave (App Store) | impostor,among us,fiesta,amigos,traidor,tareas,sabotaje,casa,party,social,walkie | 100 |
+| Palabras clave (App Store) | impostor,fiesta,amigos,traidor,tareas,sabotaje,casa,party,social,walkie | 100 |
 | Categoría | Juegos › Fiesta / Aventura (Apple: Juegos › Acción o Familia) | |
 | Idioma principal | Español (España) | |
 | URL de privacidad | https://puntostudio.es/privacidad/ | |

@@ -9,7 +9,7 @@ npm run cap:sync     # copia la web a www/ y sincroniza ios/
 npm run cap:abrir    # lo anterior + abre Xcode
 ```
 
-Hace falta un Mac con Xcode y CocoaPods (`cd ios/App && pod install`; Capacitor 7 porque el plugin de Apple lo exige).
+Hace falta un Mac con Xcode y CocoaPods (`cd ios/App && pod install`; Capacitor 8; el plugin de Apple 7.1 admite `@capacitor/core >=7`).
 En Xcode: elegir el Team en *Signing & Capabilities* (la capability *Sign in with Apple* ya está en `App.entitlements`).
 
 ## Sign in with Apple
