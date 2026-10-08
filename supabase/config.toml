@@ -434,3 +434,6 @@ enabled = true
 
 [functions.eliminar-cuenta]
 verify_jwt = true
+
+[functions.apple-canjear-codigo]
+verify_jwt = true

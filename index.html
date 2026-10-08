@@ -773,6 +773,9 @@ async function entraConAppleNativo(){
   if(!tok)throw new Error('Apple no devolvió el token');
   const {error}=await SB.auth.signInWithIdToken({provider:'apple',token:tok,nonce:raw});
   if(error)throw error;
+  /* El authorizationCode caduca a los 5 min y vale una vez: se canjea ya en el servidor para poder revocar el token al borrar la cuenta. No bloquea el acceso si falla. */
+  const code=r.response.authorizationCode;
+  if(code)try{await SB.functions.invoke('apple-canjear-codigo',{body:{authorizationCode:code}})}catch(e){console.warn('apple-canjear',e)}
 }
 /* Al entrar con Apple, Supabase da el token de Apple una sola vez: se guarda (solo el servidor puede leerlo) para poder revocarlo al borrar la cuenta */
 function guardaTokenApple(sb,ses){

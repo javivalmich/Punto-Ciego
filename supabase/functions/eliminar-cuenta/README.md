@@ -1,6 +1,6 @@
 # eliminar-cuenta
 
-Edge Function compartida por Punto Ciego y Punto Falso (borra la cuenta de quien la llama; revoca antes el token de Apple si hace falta).
+Su lógica de Apple vive en `../_shared/apple.ts` (prueba: `node supabase/functions/_shared/apple.test.mjs`). Edge Function compartida por Punto Ciego y Punto Falso (borra la cuenta de quien la llama; revoca antes el token de Apple si hace falta).
 
 ## Dependencias fijadas
 

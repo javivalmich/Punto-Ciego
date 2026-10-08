@@ -1,4 +1,4 @@
-// Prueba local de apple.ts: node supabase/functions/eliminar-cuenta/apple.test.mjs (Node 22.6+; genera una clave de prueba, no usa Apple).
+// Prueba local de apple.ts: node supabase/functions/_shared/apple.test.mjs (Node 22.6+; genera una clave de prueba, no usa Apple).
 import {clientSecret,revocar} from './apple.ts';
 import {generateKeyPairSync,createVerify,createPublicKey} from 'node:crypto';
 const {privateKey,publicKey}=generateKeyPairSync('ec',{namedCurve:'prime256v1'});
@@ -15,3 +15,10 @@ console.log(await revocar(cfg,'com.ejemplo.web','rt_abc',f),llamada.u,llamada.m,
 console.log(await revocar(cfg,'x','rt',async()=>new Response('invalid_client',{status:400})));
 console.log(await revocar(cfg,'x','rt',async()=>{throw new Error('sin red')}));
 console.log(await revocar({...cfg,privateKey:'basura'},'x','rt',f));
+// canjear: petición correcta y refresh_token devuelto
+import {canjear} from './apple.ts';
+let c;
+const fc=async(u,o)=>{c={u,body:Object.fromEntries(new URLSearchParams(o.body))};return new Response(JSON.stringify({refresh_token:'rt_nuevo',access_token:'a'}),{status:200})};
+console.log(await canjear(cfg,'es.puntostudio.puntociego','cod123',fc),c.u,{...c.body,client_secret:'…'});
+console.log(await canjear(cfg,'x','cod',async()=>new Response('{"error":"invalid_grant"}',{status:400})));
+console.log(await canjear(cfg,'x','cod',async()=>new Response('{}',{status:200})));

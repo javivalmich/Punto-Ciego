@@ -66,3 +66,31 @@ export async function revocar(
     return { ok: false, detalle: `error al llamar a Apple: ${(e as Error).message}` };
   }
 }
+
+export interface Canje extends Resultado {
+  refreshToken?: string;
+}
+
+/** Canjea el `authorizationCode` que da el login nativo (caduca a los 5 min, un solo uso) por un refresh token. `clientId` = Bundle ID. */
+export async function canjear(
+  cfg: AppleCfg,
+  clientId: string,
+  authorizationCode: string,
+  fetchFn: typeof fetch = fetch,
+  ahoraMs = Date.now(),
+): Promise<Canje> {
+  try {
+    const secret = await clientSecret(cfg, clientId, ahoraMs);
+    const res = await fetchFn('https://appleid.apple.com/auth/token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({ client_id: clientId, client_secret: secret, code: authorizationCode, grant_type: 'authorization_code' }),
+    });
+    if (!res.ok) return { ok: false, detalle: `Apple respondió ${res.status}: ${(await res.text()).slice(0, 200)}` };
+    const j = await res.json();
+    if (typeof j?.refresh_token !== 'string' || !j.refresh_token) return { ok: false, detalle: 'Apple no devolvió refresh_token' };
+    return { ok: true, detalle: 'canjeado', refreshToken: j.refresh_token };
+  } catch (e) {
+    return { ok: false, detalle: `error al llamar a Apple: ${(e as Error).message}` };
+  }
+}

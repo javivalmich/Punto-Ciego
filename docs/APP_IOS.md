@@ -16,4 +16,9 @@ En Xcode: elegir el Team en *Signing & Capabilities* (la capability *Sign in wit
 - **Web**: `signInWithOAuth({provider:'apple'})` (Services ID).
 - **App nativa**: plugin `@capacitor-community/apple-sign-in` → `signInWithIdToken` con nonce (a Apple, el hash SHA-256; a Supabase, el original).
   Ver `entraConAppleNativo` en `index.html`. En Supabase → Providers → Apple, el **Bundle ID** debe estar en *Client IDs* (junto al Services ID).
-- Pendiente: la app nativa no guarda aún el token de revocación de Apple (hace falta canjear `authorizationCode` en el servidor).
+- **Revocación al borrar la cuenta**: tras entrar, la app manda el `authorizationCode` (caduca a los 5 min) a la Edge Function
+  `apple-canjear-codigo`, que lo canjea en `appleid.apple.com/auth/token` con `client_id` = Bundle ID y guarda el refresh token en
+  `apple_tokens` (solo service role, `origen='app'`). `eliminar-cuenta` lo revoca con `/auth/revoke` antes de borrar al usuario:
+  Bundle ID (`APPLE_CLIENT_ID_APP`) para logins de la app, Services ID (`APPLE_CLIENT_ID_WEB`) para los de la web.
+  Secretos: `APPLE_TEAM_ID`, `APPLE_KEY_ID`, `APPLE_PRIVATE_KEY` (contenido del .p8), `APPLE_CLIENT_ID_APP`, `APPLE_CLIENT_ID_WEB`.
+  Desplegar: `npx supabase functions deploy apple-canjear-codigo --project-ref qsmcdfyyxvqmesnbwsod` (y de nuevo `eliminar-cuenta`).
