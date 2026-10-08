@@ -768,13 +768,16 @@ let SB=null,USER=null,SB_ESTADO=CUENTAS?'cargando':'off',PERFIL_CARGANDO=false,G
 let ACCESO={modo:'entrar',email:'',pw:'',err:'',msg:'',busy:false};
 let BORRAR={pw:'',palabra:'',err:'',busy:false,ver:false};
 let PERFIL=null;
+/* Modo invitado: sin cuenta, con perfil local (nombre y personaje en este móvil) y sin estadísticas. Todo lo que no depende de la cuenta funciona igual. */
+let INVITADO=!!LS.get('pc.invitado');
+const perfilLocal=()=>{const x=LS.get('pc.perfil');return x&&x.name?{name:x.name,look:limpiaLook(x.look)}:null};
 let GOOGLE=false; /* se activa solo si el proveedor Google está habilitado en Supabase */
 let APPLE=false; /* se activa solo si el proveedor Apple está habilitado en Supabase */
 if(!CUENTAS){
   PERFIL=LS.get('pc.perfil');
   if(!PERFIL&&LS.get('imp.nombre'))PERFIL={name:LS.get('imp.nombre'),look:{...LOOK0}};
   if(PERFIL)PERFIL.look=limpiaLook(PERFIL.look);
-}
+}else if(INVITADO)PERFIL=perfilLocal();
 function cargaScript(src){return new Promise((ok,ko)=>{const e=document.createElement('script');e.src=src;e.onload=ok;e.onerror=()=>ko(new Error('no carga '+src));document.head.appendChild(e)})}
 /* ---------- Borrado de cuenta y revocación del token de Apple ----------
    La Edge Function `eliminar-cuenta` revoca el token de Apple (si entró con Apple y hay credenciales) y borra la cuenta.
@@ -852,7 +855,8 @@ async function trasSesion(ev,ses){
   const id=u?u.id:'';
   if(id===SES_ID&&ev!=='INICIO'&&ev!=='USER_UPDATED'){USER=u;return}
   SES_ID=id;USER=u;
-  if(!USER){PERFIL=null;fijaBots(false);ACCESO.busy=false;pinta();return}
+  if(!USER){PERFIL=INVITADO?perfilLocal():null;fijaBots(false);ACCESO.busy=false;pinta();return}
+  if(INVITADO){INVITADO=false;LS.del('pc.invitado')} /* al entrar con cuenta se acaba el modo invitado */
   await cargaPerfil();
   if(ev==='SIGNED_IN'&&VISTA!=='nuevaClave'&&VISTA!=='borrarCuenta')VISTA='portada';
   ACCESO={modo:'entrar',email:'',pw:'',err:'',msg:'',busy:false};
@@ -1730,7 +1734,7 @@ function vEditor(){
   const nuevo=!PERFIL,l=limpiaLook(EDIT.look);
   const fila=(t,k,lista,sw)=>`<div class="ed-fila"><p class="lbl">${t}: <b>${esc(sw(l[k]).n)}</b></p><div class="swatches">${lista.map((_,i)=>{const x=sw(i);return `<button class="sw ${l[k]===i?'on':''}" data-a="look" data-k="${k}" data-v="${i}" aria-label="${esc(x.n)}" style="--c:${x.c}">${x.t||''}</button>`}).join('')}</div></div>`;
   return `<section class="bloque"><button class="b-link" data-a="editorVolver">‹ Volver</button><h2>${nuevo?'Crea tu personaje':'Tu personaje'}</h2>
-  <p class="tenue">${PEND_ENTRAR?'Al guardar te unes a la partida a la que te han invitado. ':''}${nuevo?`Así te verán los demás en las partidas. ${CUENTAS?'Se guarda en tu cuenta.':'Se guarda en este móvil.'}`:'Los cambios se verán en tu próxima partida.'}</p>
+  <p class="tenue">${PEND_ENTRAR?'Al guardar te unes a la partida a la que te han invitado. ':''}${nuevo?`Así te verán los demás en las partidas. ${CUENTAS&&USER?'Se guarda en tu cuenta.':'Se guarda en este móvil.'}`:'Los cambios se verán en tu próxima partida.'}</p>
   ${FIG_FALLO?'<p class="motivo">Este navegador no deja pintar el personaje, así que lo verás con los colores de serie. Tu elección se guarda igual y los demás la verán en sus móviles.</p>':''}
   <div class="ed-pegado"><div class="ed-vista">${mira()}${vivo('editor',{look:l,anim:'reposo',w:150,h:196,drag:true,yaw:.35,alt:'Vista previa de tu personaje. Arrástralo para girarlo.'})}</div>
   ${PJ.estado==='fallo'?'':'<p class="ed-tip">Arrastra el personaje para girarlo</p>'}</div>
@@ -1769,6 +1773,8 @@ function vAcceso(){
   ${a.err?`<p class="motivo" role="alert">${esc(a.err)}</p>`:''}${a.msg?`<p class="aviso-ok" role="status">${esc(a.msg)}</p>`:''}
   <button class="b-baliza b-ancho" data-a="${crear?'crearCuenta':'entrarCuenta'}" ${a.busy?'disabled':''}>${a.busy?'Un momento…':crear?'Crear cuenta':'Entrar'}</button>
   ${crear?'':`<p style="text-align:center"><button class="b-link" data-a="olvido">He olvidado la contraseña</button></p>`}</div>
+  <div class="bloque"><button class="b-sec b-ancho" data-a="invitado">Jugar sin cuenta</button>
+  <p class="tenue" style="text-align:center;font-size:14px">Tu nombre y tu personaje se guardan solo en este móvil y no hay estadísticas. Puedes crear una cuenta cuando quieras.</p></div>
   ${reglasHTML()}
   <p class="legal">Al crear una cuenta (mínimo 14 años) aceptas los ${enlaceLegal('terminos','términos y condiciones',1)} y la ${enlaceLegal('privacidad','política de privacidad',1)}.</p></section>`;
 }
@@ -1796,7 +1802,7 @@ function vNuevaClave(){
 function vEsperaCuentas(txt){return `<section class="portada acc" role="status"><img class="logo" src="${IMG.logo}" width="300" height="300" alt="Punto Ciego"><h1 class="titulo">PUNT<i></i><br>CIEGO</h1><p class="lema">${txt}</p></section>`}
 function vHome(){
   if(VISTA==='nuevaClave')return vNuevaClave();
-  if(CUENTAS){
+  if(CUENTAS&&!(INVITADO&&!USER)){
     if(SB_ESTADO==='cargando')return vEsperaCuentas('Cargando…');
     if(SB_ESTADO==='error')return `<section class="bloque"><h2>No se puede conectar con las cuentas</h2><p class="tenue">Comprueba la conexión a internet y vuelve a intentarlo.</p><button class="b-baliza b-ancho" data-a="reintentarCuentas">Reintentar</button></section>`;
     if(!USER)return vAcceso();
@@ -1816,8 +1822,8 @@ function vHome(){
   ${q?`<div class="bloque"><button class="b-link" data-a="crear">Crear una partida nueva</button></div>`:''}
   ${ult?`<div class="bloque"><button class="b-link" data-a="volver" data-c="${esc(ult)}">Volver a la partida ${esc(ult)}</button></div>`:''}
   ${PRUEBAS_LOCAL?`<div class="bloque"><button class="b-link" data-a="galeria">Galería de minijuegos (pruebas)</button></div>`:''}
-  <p><button class="b-link" data-a="aPortada">Pantalla de inicio</button>${CUENTAS&&USER?` <span class="tenue sep">·</span> <button class="b-link" data-a="salirCuenta">Cerrar sesión</button>`:''}</p>
-  <p class="tenue pie">${CUENTAS&&USER?`Sesión iniciada con ${esc(USER.email||'')}.`:'Tu perfil se guarda solo en este móvil.'}</p>
+  <p><button class="b-link" data-a="aPortada">Pantalla de inicio</button>${CUENTAS&&USER?` <span class="tenue sep">·</span> <button class="b-link" data-a="salirCuenta">Cerrar sesión</button>`:CUENTAS?` <span class="tenue sep">·</span> <button class="b-link" data-a="aAcceso">Entrar o crear cuenta</button>`:''}</p>
+  <p class="tenue pie">${CUENTAS&&USER?`Sesión iniciada con ${esc(USER.email||'')}.`:INVITADO?'Juegas sin cuenta: tu perfil se guarda solo en este móvil y no hay estadísticas.':'Tu perfil se guarda solo en este móvil.'}</p>
   ${CUENTAS&&USER?`<p><button class="b-link peligro" data-a="aBorrarCuenta">Eliminar cuenta</button></p>`:''}
   <p class="legal">${enlaceLegal('privacidad','Privacidad',1)} · ${enlaceLegal('terminos','Términos',1)} · ${enlaceLegal('soporte','Soporte',1)}</p>`;
 }
@@ -3289,6 +3295,11 @@ function cambiaCfg(fn){if(!soyHost())return;const c=JSON.parse(JSON.stringify(S.
 const ACT={
   jugar(){WK.ctx();PORT_VOL=false;VISTA=PERFIL?'menu':'editor';EDIT=null;scrollTo(0,0)},
   modoAcceso(d){ACCESO.modo=d.m;ACCESO.err='';ACCESO.msg=''},
+  invitado(){
+    INVITADO=true;LS.set('pc.invitado',1);PERFIL=perfilLocal();PORT_VOL=false;EDIT=null;scrollTo(0,0);
+    if(PEND_ENTRAR){if(PERFIL){const c=PEND_ENTRAR;PEND_ENTRAR=null;LS.del('pc.invita');entrar(c,PERFIL.name,false);return}VISTA='editor';return}
+    VISTA='portada'},
+  aAcceso(){INVITADO=false;LS.del('pc.invitado');PERFIL=null;EDIT=null;VISTA='portada';scrollTo(0,0)},
   verClave(){ACCESO.ver=!ACCESO.ver},
   async google(){
     const a=ACCESO;a.err='';a.msg='';a.busy=true;pinta();
@@ -3361,8 +3372,7 @@ const ACT={
   look(d){if(!EDIT)return;const i=$('#nom');if(i)EDIT.name=i.value;EDIT.look[d.k]=+d.v;PJ.giraA('editor',d.k==='pack'?Math.PI:null);$('#app')._h=''},
   async guardarPerfil(){const n=(($('#nom')||{}).value||'').trim().slice(0,16);if(!n){toast('Escribe un nombre de jugador');$('#nom').focus();return}
     const look=limpiaLook(EDIT.look);
-    if(CUENTAS){
-      if(!USER)return;
+    if(CUENTAS&&USER){
       GUARDANDO=true;pinta();
       const {error}=await SB.from('profiles').upsert({id:USER.id,username:n,look,updated_at:new Date().toISOString()});
       GUARDANDO=false;
@@ -3466,7 +3476,7 @@ const ACT={
 /* Pulsación visible: al tocar un botón se le pone .pulsado (iOS no siempre aplica :active en táctil) y se mantiene al menos 120 ms.
    En los botones que cambian de pantalla se espera hasta que el estado oscuro lleve ~100 ms visible antes de navegar. */
 const SIN_EFECTO=/(^|\s)(b-google|b-apple|b-link|chip|tog|sh-cerrar|g-[\w-]+)(\s|$)/;
-const NAVEGA=new Set(['jugar','crear','unirme','aMenu','aPortada','editar','guardarPerfil','salir','salirCuenta','volver','entendido','empezar','aLobby','galeria','galeriaAbre','galeriaOtra','galeriaLarga','entrarCuenta','crearCuenta','olvido','nuevaClave','aBorrarCuenta','confirmarBorrado','reintentarCuentas','soy','menu','irSala','tarea','reportar','emergencia','volverMenu','volverSala','salaVolver','cerrarSheet']);
+const NAVEGA=new Set(['invitado','aAcceso','jugar','crear','unirme','aMenu','aPortada','editar','guardarPerfil','salir','salirCuenta','volver','entendido','empezar','aLobby','galeria','galeriaAbre','galeriaOtra','galeriaLarga','entrarCuenta','crearCuenta','olvido','nuevaClave','aBorrarCuenta','confirmarBorrado','reintentarCuentas','soy','menu','irSala','tarea','reportar','emergencia','volverMenu','volverSala','salaVolver','cerrarSheet']);
 const pulsable=b=>b&&!b.disabled&&!SIN_EFECTO.test(b.className)&&!b.closest('.paso .ctl,.pestanas,#wkCerrar,.wk-cab');
 function pulsa(e){
   const b=e.target.closest&&e.target.closest('button');if(!pulsable(b))return;
@@ -3532,6 +3542,7 @@ if(LS.get('imp.micok'))$('#wkMicNota').hidden=true;
     const vuelta=/access_token|refresh_token|[?&#]code=|type=(signup|recovery|magiclink|invite|email)|error_description/.test(location.hash+location.search);
     if(q.length===5){PEND_ENTRAR=q;LS.set('pc.invita',{c:q,t:Date.now()})}
     else if(vuelta){const g=LS.get('pc.invita');if(g&&g.c&&Date.now()-g.t<3600000)PEND_ENTRAR=g.c}
+    if(INVITADO&&PERFIL&&PEND_ENTRAR){const c=PEND_ENTRAR;PEND_ENTRAR=null;LS.del('pc.invita');pinta();iniciaCuentas();entrar(c,PERFIL.name,false);return}
     pinta();iniciaCuentas();return}
   if(q&&q===ult&&PERFIL){entrar(q,PERFIL.name,false);return}
   pinta();
