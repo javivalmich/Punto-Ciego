@@ -1,8 +1,10 @@
-# Prueba del indicador puede_bots y de una partida completa con bots (beta/ por defecto; PUNTO_WEB=raiz para probar la raíz, la de la app), contra el servidor que imita a Supabase.
+# Prueba de la práctica con bots (para todos), de los atajos de prueba (solo con puede_bots) y de una partida completa con bots,
+# contra el servidor que imita a Supabase. Prueba la raíz (la de la app); PUNTO_WEB=beta para probar beta/ (no lleva estos cambios).
 # Uso: `python tests/bots_cuenta.py` (necesita playwright y Edge). Arranca solo mocksb.js (con un archivo de datos temporal)
-# y un servidor estático de beta/ en el puerto 8392, así que esos puertos deben estar libres.
-# Comprueba: sin indicador no hay bots (ni con la consola), el cliente no puede ponerse el indicador, con indicador el anfitrión
-# ve «Añadir bots»; y partidas completas: como Ciego (los bots matan, sabotean, reportan y votan) y como Punto (matas tú).
+# y un servidor estático en el puerto 8392, así que esos puertos deben estar libres.
+# Comprueba: cuenta normal e invitado ven «Añadir bots» y pueden usarlos pero sin atajos; el cliente no puede ponerse el indicador
+# puede_bots; con indicador el anfitrión además tiene los atajos; y partidas completas: como Ciego (los bots matan, sabotean,
+# reportan y votan) y como Punto (matas tú).
 import os,sys,json,time,tempfile,subprocess,threading,functools,http.server
 from playwright.sync_api import sync_playwright
 RAIZ=os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -14,7 +16,7 @@ def ok(c,m):
     if not c: fallos.append(m)
 class Q(http.server.SimpleHTTPRequestHandler):
     def log_message(self,*a): pass
-srv=http.server.ThreadingHTTPServer(('127.0.0.1',8392),functools.partial(Q,directory=RAIZ if os.environ.get('PUNTO_WEB')=='raiz' else os.path.join(RAIZ,'beta')))
+srv=http.server.ThreadingHTTPServer(('127.0.0.1',8392),functools.partial(Q,directory=os.path.join(RAIZ,'beta') if os.environ.get('PUNTO_WEB')=='beta' else RAIZ))
 threading.Thread(target=srv.serve_forever,daemon=True).start()
 def mock():
     pr=subprocess.Popen(['node',os.path.join(RAIZ,'mocksb.js')],env={**os.environ,'MOCKSB_DATOS':DATOS},stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)
@@ -64,12 +66,30 @@ with sync_playwright() as pw:
         # cuentas: una normal y una con indicador (que se pone "desde el servidor": editando el archivo del mock)
         cA,pA,eA=cuenta(br,'normal%d@ejemplo.com'%int(time.time()),'Norma'+str(int(time.time()))[-4:])
         cB,pB,eB=cuenta(br,'bots%d@ejemplo.com'%int(time.time()),'Beto'+str(int(time.time()))[-4:]); sB=cB.storage_state()
-        # 1. sin indicador
+        # 1. sin indicador: bots de práctica sí, atajos no
         sala(pA)
-        ok(pA.evaluate("PRUEBAS")==False,'cuenta normal: PRUEBAS desactivado')
-        ok(pA.locator('[data-a=botMas3]').count()==0,'cuenta normal: no aparece «Añadir bots»')
-        pA.evaluate("botAnade(3)"); ok(pA.evaluate("S.players.length")==1,'cuenta normal: ni llamando a la función a mano se añaden bots')
-        pA.evaluate("accion('pruebas',{rol:'imp'})"); ok(pA.evaluate("!S.pr")==True,'cuenta normal: la partida no es de pruebas')
+        ok(pA.evaluate("PRUEBAS")==True,'cuenta normal: la práctica con bots está disponible')
+        ok(pA.evaluate("ATAJOS")==False,'cuenta normal: sin atajos de prueba')
+        ok('Práctica con bots' in pA.inner_text('#app'),'cuenta normal: la sala de espera muestra «Práctica con bots»')
+        ok(pA.locator('[data-a=botMas3]').count()==1,'cuenta normal: aparece «Añadir bots»')
+        pA.click('[data-a=botMas3]'); pA.wait_for_timeout(400)
+        ok(pA.evaluate("S.players.filter(x=>x.bot).length")==3,'cuenta normal: se unen 3 bots')
+        ok(pA.locator('.gente .bot-tag').count()==3,'cuenta normal: los bots llevan la etiqueta «bot»')
+        ok(pA.evaluate("enAtajos()")==False and pA.evaluate("document.querySelector('#prFab').hidden")==True,'cuenta normal: ni función ni botón de atajos')
+        pA.evaluate("accion('atajo',{k:'reunion'})"); ok(pA.evaluate("S.phase")=='lobby','cuenta normal: la acción de atajo no hace nada')
+        # 1b. invitado: sin cuenta, perfil local, sin estadísticas, con bots
+        ctxG=br.new_context(viewport={'width':390,'height':760},is_mobile=True,has_touch=True); pG=ctxG.new_page(); eG=[]; pG.on('pageerror',lambda e:eG.append(str(e)))
+        pG.goto(B); pG.wait_for_selector('[data-a=invitado]'); pG.click('[data-a=invitado]'); pG.wait_for_selector('[data-a=jugar]'); pG.click('[data-a=jugar]')
+        pG.wait_for_selector('#nom'); pG.fill('#nom','Invitada'); pG.wait_for_timeout(600); pG.click('[data-a=guardarPerfil]'); pG.wait_for_selector('[data-a=crear]')
+        ok(pG.evaluate("!USER&&INVITADO")==True,'invitado: sin sesión, en modo invitado')
+        ok(pG.locator('.stats').count()==0 and pG.locator('[data-a=aBorrarCuenta]').count()==0,'invitado: sin estadísticas ni «Eliminar cuenta»')
+        sala(pG); pG.wait_for_selector('[data-a=botMas3]'); pG.click('[data-a=botMas3]'); pG.wait_for_timeout(400)
+        ok(pG.evaluate("S.players.filter(x=>x.bot).length")==3,'invitado: ve «Añadir bots» y se unen 3 bots')
+        ok(pG.evaluate("ATAJOS")==False,'invitado: sin atajos de prueba')
+        pG.evaluate('salir()'); pG.wait_for_selector('[data-a=crear]'); pG.reload(); pG.wait_for_selector('[data-a=jugar]'); pG.click('[data-a=jugar]'); pG.wait_for_selector('[data-a=crear]')
+        ok('Invitada' in pG.inner_text('#app'),'invitado: el perfil local sigue tras recargar')
+        ok(not eG,f'invitado: sin errores de JS {eG}')
+        ctxG.close()
         # 2. el cliente no puede ponerse el indicador
         r=pA.evaluate("""async()=>{const {error}=await SB.from('profiles').upsert({id:USER.id,username:PERFIL.name,puede_bots:true});
           const {data}=await SB.from('profiles').select('puede_bots').eq('id',USER.id).maybeSingle();return {e:!!error,v:data&&data.puede_bots}}""")
@@ -86,7 +106,7 @@ with sync_playwright() as pw:
         for rol,modo,etq in [('crew','inactivo','Ciego (tú no haces nada)'),('imp','imp','Punto (matas tú)'),('crew','tareas','Ciego (haces tus tareas)')]:
             ctx=br.new_context(viewport={'width':390,'height':760},is_mobile=True,has_touch=True,storage_state=sB); p=ctx.new_page(); errs=[]; p.on('pageerror',lambda e:errs.append(str(e)))
             p.goto(B); p.wait_for_selector('[data-a=jugar]'); p.click('[data-a=jugar]'); p.wait_for_selector('[data-a=crear]')
-            ok(p.evaluate("PRUEBAS")==True,f'{etq}: la cuenta con indicador activa los bots')
+            ok(p.evaluate("ATAJOS")==True,f'{etq}: la cuenta con indicador activa los atajos de prueba')
             sala(p); p.wait_for_selector('[data-a=botMas3]')
             ok('Añadir bots' in p.inner_text('#app'),f'{etq}: la sala de espera ofrece «Añadir bots»')
             p.click('[data-a=botMas3]'); p.wait_for_timeout(400)
