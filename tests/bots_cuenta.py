@@ -1,4 +1,4 @@
-# Prueba del indicador puede_bots y de una partida completa con bots (beta/), contra el servidor que imita a Supabase.
+# Prueba del indicador puede_bots y de una partida completa con bots (beta/ por defecto; PUNTO_WEB=raiz para probar la raíz, la de la app), contra el servidor que imita a Supabase.
 # Uso: `python tests/bots_cuenta.py` (necesita playwright y Edge). Arranca solo mocksb.js (con un archivo de datos temporal)
 # y un servidor estático de beta/ en el puerto 8392, así que esos puertos deben estar libres.
 # Comprueba: sin indicador no hay bots (ni con la consola), el cliente no puede ponerse el indicador, con indicador el anfitrión
@@ -14,7 +14,7 @@ def ok(c,m):
     if not c: fallos.append(m)
 class Q(http.server.SimpleHTTPRequestHandler):
     def log_message(self,*a): pass
-srv=http.server.ThreadingHTTPServer(('127.0.0.1',8392),functools.partial(Q,directory=os.path.join(RAIZ,'beta')))
+srv=http.server.ThreadingHTTPServer(('127.0.0.1',8392),functools.partial(Q,directory=RAIZ if os.environ.get('PUNTO_WEB')=='raiz' else os.path.join(RAIZ,'beta')))
 threading.Thread(target=srv.serve_forever,daemon=True).start()
 def mock():
     pr=subprocess.Popen(['node',os.path.join(RAIZ,'mocksb.js')],env={**os.environ,'MOCKSB_DATOS':DATOS},stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)
