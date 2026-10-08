@@ -22,3 +22,9 @@ const fc=async(u,o)=>{c={u,body:Object.fromEntries(new URLSearchParams(o.body))}
 console.log(await canjear(cfg,'es.puntostudio.puntociego','cod123',fc),c.u,{...c.body,client_secret:'…'});
 console.log(await canjear(cfg,'x','cod',async()=>new Response('{"error":"invalid_grant"}',{status:400})));
 console.log(await canjear(cfg,'x','cod',async()=>new Response('{}',{status:200})));
+// clientIdApp: lista permitida de Bundle IDs
+import {clientIdApp} from './apple.ts';
+console.log('Falso permitido:',clientIdApp('es.puntostudio.puntofalso','es.puntostudio.puntociego')==='es.puntostudio.puntofalso');
+console.log('Ciego permitido:',clientIdApp('es.puntostudio.puntociego',undefined)==='es.puntostudio.puntociego');
+console.log('sin pedido → por defecto:',clientIdApp(undefined,'es.puntostudio.puntociego')==='es.puntostudio.puntociego',clientIdApp('',undefined)===null);
+console.log('ajeno rechazado:',clientIdApp('com.otro.app','es.puntostudio.puntociego')===null,clientIdApp(123,'x')===null,clientIdApp('es.puntostudio.web','x')===null);

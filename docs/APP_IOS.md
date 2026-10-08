@@ -21,5 +21,6 @@ En Xcode: elegir el Team en *Signing & Capabilities* (la capability *Sign in wit
   `apple-canjear-codigo`, que lo canjea en `appleid.apple.com/auth/token` con `client_id` = Bundle ID y guarda el refresh token en
   `apple_tokens` (solo service role, `origen='app'`). `eliminar-cuenta` lo revoca con `/auth/revoke` antes de borrar al usuario:
   Bundle ID (`APPLE_CLIENT_ID_APP`) para logins de la app, Services ID (`APPLE_CLIENT_ID_WEB`) para los de la web.
+  Las dos apps nativas (Punto Ciego `es.puntostudio.puntociego` y Punto Falso `es.puntostudio.puntofalso`) comparten estas funciones: la app envía su Bundle ID como `clientId`, la función lo valida contra la lista permitida (`BUNDLE_IDS_APP` en `_shared/apple.ts`) y lo guarda en `apple_tokens.client_id`; `eliminar-cuenta` revoca con ese client_id (filas antiguas sin él: el de siempre según `origen`). Migración: `20261008130000_apple_tokens_client_id.sql`.
   Secretos: `APPLE_TEAM_ID`, `APPLE_KEY_ID`, `APPLE_PRIVATE_KEY` (contenido del .p8), `APPLE_CLIENT_ID_APP`, `APPLE_CLIENT_ID_WEB`.
   Desplegar: `npx supabase functions deploy apple-canjear-codigo --project-ref qsmcdfyyxvqmesnbwsod` (y de nuevo `eliminar-cuenta`).

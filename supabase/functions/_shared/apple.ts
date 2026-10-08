@@ -94,3 +94,18 @@ export async function canjear(
     return { ok: false, detalle: `error al llamar a Apple: ${(e as Error).message}` };
   }
 }
+
+/** Bundle IDs de las apps nativas (Punto Ciego y Punto Falso). No son secretos. */
+export const BUNDLE_IDS_APP = ['es.puntostudio.puntociego', 'es.puntostudio.puntofalso'];
+
+/**
+ * Qué `client_id` usar al canjear el código de un login nativo. El cliente dice de qué app viene (`pedido`) y solo se acepta si está en la
+ * lista permitida (los Bundle IDs de arriba + el APPLE_CLIENT_ID_APP configurado). Sin `pedido` (apps antiguas) se usa `porDefecto`
+ * (APPLE_CLIENT_ID_APP). Devuelve null si el pedido no está permitido.
+ */
+export function clientIdApp(pedido: unknown, porDefecto: string | undefined): string | null {
+  if (pedido === undefined || pedido === null || pedido === '') return porDefecto || null;
+  if (typeof pedido !== 'string') return null;
+  const permitidos = new Set([...BUNDLE_IDS_APP, ...(porDefecto ? [porDefecto] : [])]);
+  return permitidos.has(pedido) ? pedido : null;
+}

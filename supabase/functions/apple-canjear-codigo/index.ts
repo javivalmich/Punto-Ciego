@@ -3,9 +3,10 @@
 // `apple_tokens` (solo accesible con service role) para poder revocarlo al borrar la cuenta (ver `eliminar-cuenta`).
 //
 // Secrets (supabase secrets set ...): APPLE_TEAM_ID, APPLE_KEY_ID, APPLE_PRIVATE_KEY (contenido del .p8),
-// APPLE_CLIENT_ID_APP (Bundle ID: es.puntostudio.puntociego). SUPABASE_URL y SUPABASE_SERVICE_ROLE_KEY los inyecta Supabase.
+// APPLE_CLIENT_ID_APP (Bundle ID por defecto: es.puntostudio.puntociego; se usa si el cliente no dice cuál es).
+// El cliente puede enviar `clientId` (su Bundle ID: Punto Ciego o Punto Falso); solo se acepta si está en la lista permitida de _shared/apple.ts. SUPABASE_URL y SUPABASE_SERVICE_ROLE_KEY los inyecta Supabase.
 import { createClient } from 'npm:@supabase/supabase-js@2.116.0';
-import { canjear, type AppleCfg } from '../_shared/apple.ts';
+import { canjear, clientIdApp, type AppleCfg } from '../_shared/apple.ts';
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
@@ -37,16 +38,20 @@ Deno.serve(async (req) => {
   if (!(user.identities ?? []).some((i) => i.provider === 'apple')) return json(400, { ok: false, error: 'la cuenta no usa Apple' });
 
   let code = '';
+  let pedido: unknown;
   try {
     const body = await req.json();
     code = typeof body?.authorizationCode === 'string' ? body.authorizationCode.trim() : '';
+    pedido = body?.clientId;
   } catch (_) { /* cuerpo vacío o no JSON */ }
   if (!code || code.length > 2000) return json(400, { ok: false, error: 'falta authorizationCode' });
 
   const teamId = Deno.env.get('APPLE_TEAM_ID');
   const keyId = Deno.env.get('APPLE_KEY_ID');
   const privateKey = Deno.env.get('APPLE_PRIVATE_KEY');
-  const clientId = Deno.env.get('APPLE_CLIENT_ID_APP'); // login nativo: client_id = Bundle ID
+  // login nativo: client_id = Bundle ID de la app que llama (validado contra la lista permitida)
+  const clientId = clientIdApp(pedido, Deno.env.get('APPLE_CLIENT_ID_APP'));
+  if (pedido && !clientId) return json(400, { ok: false, error: 'clientId no permitido' });
   if (!teamId || !keyId || !privateKey || !clientId) {
     console.log('apple-canjear-codigo: sin credenciales de Apple configuradas');
     return json(503, { ok: false, error: 'Apple no configurado' });
@@ -60,7 +65,7 @@ Deno.serve(async (req) => {
   }
 
   const { error } = await admin.from('apple_tokens').upsert(
-    { user_id: user.id, refresh_token: r.refreshToken, origen: 'app', updated_at: new Date().toISOString() },
+    { user_id: user.id, refresh_token: r.refreshToken, origen: 'app', client_id: clientId, updated_at: new Date().toISOString() },
     { onConflict: 'user_id' },
   );
   if (error) {

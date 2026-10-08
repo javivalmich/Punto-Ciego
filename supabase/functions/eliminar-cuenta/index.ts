@@ -3,7 +3,7 @@
 // estaba guardado, o Apple falla, la cuenta se borra igual y el motivo queda en la tabla `borrados_log`.
 //
 // Secrets (supabase secrets set ...): APPLE_TEAM_ID, APPLE_KEY_ID, APPLE_PRIVATE_KEY (contenido del .p8),
-// APPLE_CLIENT_ID_WEB (Services ID), APPLE_CLIENT_ID_APP (Bundle ID; logins nativos de la app).
+// APPLE_CLIENT_ID_WEB (Services ID), APPLE_CLIENT_ID_APP (Bundle ID por defecto de los logins nativos; el real va guardado en apple_tokens.client_id).
 // SUPABASE_URL y SUPABASE_SERVICE_ROLE_KEY los inyecta Supabase solos.
 // Versión exacta. Para fijar también las dependencias transitivas, generar el lock con Deno (ver README de esta carpeta):
 //   cd supabase/functions/eliminar-cuenta && deno cache --lock=deno.lock index.ts
@@ -48,8 +48,10 @@ Deno.serve(async (req) => {
       const teamId = Deno.env.get('APPLE_TEAM_ID');
       const keyId = Deno.env.get('APPLE_KEY_ID');
       const privateKey = Deno.env.get('APPLE_PRIVATE_KEY');
-      const { data: fila } = await admin.from('apple_tokens').select('refresh_token, origen').eq('user_id', user.id).maybeSingle();
-      const clientId = fila?.origen === 'app' ? Deno.env.get('APPLE_CLIENT_ID_APP') : Deno.env.get('APPLE_CLIENT_ID_WEB');
+      const { data: fila } = await admin.from('apple_tokens').select('refresh_token, origen, client_id').eq('user_id', user.id).maybeSingle();
+      // Se revoca con el mismo client_id con el que se emitió el token: el guardado junto al token (Bundle ID de Ciego o de Falso) y,
+      // en filas anteriores a esa columna, el de siempre según el origen.
+      const clientId = fila?.client_id || (fila?.origen === 'app' ? Deno.env.get('APPLE_CLIENT_ID_APP') : Deno.env.get('APPLE_CLIENT_ID_WEB'));
       if (!teamId || !keyId || !privateKey || !clientId) detalle = 'sin credenciales de Apple configuradas: no se revoca';
       else if (!fila?.refresh_token) detalle = 'no había token de Apple guardado: no se revoca';
       else {
