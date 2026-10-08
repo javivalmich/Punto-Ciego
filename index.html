@@ -703,7 +703,7 @@ const optK=(tid,step)=>S.gid+'|'+tid+'|'+step;   /* clave ligada a la partida: l
 let JOIN_SENT=false,BUSCA_T=0,HOST_PAUSA=0,ROLVER=false,REVELA=false,VISTO=false,SHEET=null,MODO={m:'menu'},PREV=null;
 let ACT_CONGELADA=null; /* {room,txt,hasta}: última tarea que tuve abierta, sigue contando como "dónde estoy" un rato tras cerrarla */
 
-const urlPartida=()=>location.origin+location.pathname+'?c='+ME.code;
+const urlPartida=()=>(EN_APP?WEB_BASE:location.origin+location.pathname)+'?c='+ME.code; /* en la app, el enlace para compartir y el QR llevan la web pública, no capacitor://localhost */
 const mine=()=>S&&ME.pid?S.players.find(p=>p.id===ME.pid):null;
 const soyHost=()=>!!(S&&ME.pid&&S.hostId===ME.pid);
 const P=(st,id)=>st.players.find(p=>p.id===id);
@@ -771,6 +771,18 @@ async function borrarCuentaRemota(sb){
    El plugin se registra por nombre: el puente nativo ya inyecta window.Capacitor, no hace falta bundler. */
 const EN_APP=!!(window.Capacitor&&window.Capacitor.isNativePlatform&&window.Capacitor.isNativePlatform());
 const APPLE_BUNDLE_ID='es.puntostudio.puntociego';
+/* En la app la página se sirve desde capacitor://localhost: cualquier enlace que salga del WebView con ese origen se lo queda otra app
+   del móvil que use el mismo esquema, y lo que se comparta o vuelva por correo no sirve fuera. Por eso las páginas externas se abren
+   con @capacitor/browser (navegador del sistema dentro de la app) y con la URL pública, y los enlaces para compartir llevan la web. */
+const WEB_BASE='https://puntostudio.es/punto-ciego/';
+const LEGAL={privacidad:['/privacidad/','privacidad.html'],terminos:['terminos.html','terminos.html'],soporte:['/soporte/','soporte.html']}; /* [enlace en la web, página pública] */
+const redirigeA=()=>EN_APP?WEB_BASE:location.origin+location.pathname; /* los enlaces de los correos de Supabase se abren fuera de la app: llevan a la web */
+const enlaceLegal=(k,txt,blank)=>`<a href="${LEGAL[k][0]}" data-ext="${WEB_BASE+LEGAL[k][1]}"${blank?' target="_blank" rel="noopener"':''}>${txt}</a>`;
+document.addEventListener('click',e=>{
+  const a=EN_APP&&e.target.closest&&e.target.closest('a[data-ext]');if(!a)return;
+  e.preventDefault();
+  try{window.Capacitor.registerPlugin('Browser').open({url:a.dataset.ext})}catch(x){console.warn('browser',x)}
+});
 async function sha256Hex(t){const b=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(t));return Array.from(new Uint8Array(b),x=>x.toString(16).padStart(2,'0')).join('')}
 function appleCancelado(e){return /1001|cancel/i.test((e&&(e.code||e.message))||'')}
 async function entraConAppleNativo(){
@@ -803,7 +815,7 @@ async function iniciaCuentas(){
   try{
     await cargaScript(SB_LIB);
     SB=window.supabase.createClient(SUPA.url,SUPA.key,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}});
-    fetch(SUPA.url+'/auth/v1/settings',{headers:{apikey:SUPA.key}}).then(r=>r.json()).then(j=>{if(j&&j.external){if(j.external.google){GOOGLE=true}if(j.external.apple){APPLE=true}pinta()}}).catch(()=>{});
+    fetch(SUPA.url+'/auth/v1/settings',{headers:{apikey:SUPA.key}}).then(r=>r.json()).then(j=>{if(j&&j.external){if(j.external.google&&!EN_APP){GOOGLE=true}if(j.external.apple){APPLE=true}pinta()}}).catch(()=>{});
     SB.auth.onAuthStateChange((ev,ses)=>{guardaTokenApple(SB,ses);setTimeout(()=>trasSesion(ev,ses),0)});
     const {data}=await SB.auth.getSession();
     await trasSesion('INICIO',data.session);
@@ -1668,7 +1680,7 @@ function vPortada(){
   <ul class="rasgos"><li><b>Tareas</b>en salas de verdad de tu casa</li><li><b>Sabotajes</b>gas, apagones, puertas cerradas</li><li><b>Un traidor</b>que nadie ha visto venir</li><li><b>Walkie</b>para hablar entre móviles</li></ul>
   <button class="b-jugar" data-a="jugar">Jugar</button>
   ${reglasHTML()}
-  <p class="legal"><a href="/privacidad/">Privacidad</a> · <a href="terminos.html">Términos</a> · <a href="/soporte/">Soporte</a></p></section>`;
+  <p class="legal">${enlaceLegal('privacidad','Privacidad')} · ${enlaceLegal('terminos','Términos')} · ${enlaceLegal('soporte','Soporte')}</p></section>`;
 }
 function vEditor(){
   const nuevo=!PERFIL,l=limpiaLook(EDIT.look);
@@ -1714,7 +1726,7 @@ function vAcceso(){
   <button class="b-baliza b-ancho" data-a="${crear?'crearCuenta':'entrarCuenta'}" ${a.busy?'disabled':''}>${a.busy?'Un momento…':crear?'Crear cuenta':'Entrar'}</button>
   ${crear?'':`<p style="text-align:center"><button class="b-link" data-a="olvido">He olvidado la contraseña</button></p>`}</div>
   ${reglasHTML()}
-  <p class="legal">Al crear una cuenta (mínimo 14 años) aceptas los <a href="terminos.html" target="_blank" rel="noopener">términos y condiciones</a> y la <a href="/privacidad/" target="_blank" rel="noopener">política de privacidad</a>.</p></section>`;
+  <p class="legal">Al crear una cuenta (mínimo 14 años) aceptas los ${enlaceLegal('terminos','términos y condiciones',1)} y la ${enlaceLegal('privacidad','política de privacidad',1)}.</p></section>`;
 }
 function campoBorrar(){
   const ver=!!BORRAR.ver;
@@ -1763,7 +1775,7 @@ function vHome(){
   <p><button class="b-link" data-a="aPortada">Pantalla de inicio</button>${CUENTAS&&USER?` <span class="tenue sep">·</span> <button class="b-link" data-a="salirCuenta">Cerrar sesión</button>`:''}</p>
   <p class="tenue pie">${CUENTAS&&USER?`Sesión iniciada con ${esc(USER.email||'')}.`:'Tu perfil se guarda solo en este móvil.'}</p>
   ${CUENTAS&&USER?`<p><button class="b-link peligro" data-a="aBorrarCuenta">Eliminar cuenta</button></p>`:''}
-  <p class="legal"><a href="/privacidad/" target="_blank" rel="noopener">Privacidad</a> · <a href="terminos.html" target="_blank" rel="noopener">Términos</a> · <a href="/soporte/" target="_blank" rel="noopener">Soporte</a></p>`;
+  <p class="legal">${enlaceLegal('privacidad','Privacidad',1)} · ${enlaceLegal('terminos','Términos',1)} · ${enlaceLegal('soporte','Soporte',1)}</p>`;
 }
 function vBuscando(){
   const lento=Date.now()-BUSCA_T>7000;
@@ -3221,7 +3233,7 @@ const ACT={
   verClave(){ACCESO.ver=!ACCESO.ver},
   async google(){
     const a=ACCESO;a.err='';a.msg='';a.busy=true;pinta();
-    const {error}=await SB.auth.signInWithOAuth({provider:'google',options:{redirectTo:location.origin+location.pathname}});
+    const {error}=await SB.auth.signInWithOAuth({provider:'google',options:{redirectTo:redirigeA()}});
     if(error){a.busy=false;a.err=errorCuenta(error);pinta()}},
   async apple(){
     const a=ACCESO;a.err='';a.msg='';a.busy=true;pinta();
@@ -3229,7 +3241,7 @@ const ACT={
       try{await entraConAppleNativo();a.busy=false;pinta()}
       catch(e){a.busy=false;if(!appleCancelado(e)){console.warn('apple',e);a.err=errorCuenta(e)}pinta()}
       return}
-    const {error}=await SB.auth.signInWithOAuth({provider:'apple',options:{redirectTo:location.origin+location.pathname}});
+    const {error}=await SB.auth.signInWithOAuth({provider:'apple',options:{redirectTo:redirigeA()}});
     if(error){a.busy=false;a.err=errorCuenta(error);pinta()}},
   async entrarCuenta(){
     const a=ACCESO;a.err='';a.msg='';if(!a.email||!a.pw){a.err='Escribe el correo y la contraseña.';return}
@@ -3239,14 +3251,14 @@ const ACT={
     const a=ACCESO;a.err='';a.msg='';if(!a.email||!a.pw){a.err='Escribe el correo y una contraseña.';return}
     if(a.pw.length<8){a.err='La contraseña tiene que tener al menos 8 caracteres.';return}
     a.busy=true;pinta();
-    const {data,error}=await SB.auth.signUp({email:a.email.trim(),password:a.pw,options:{emailRedirectTo:location.origin+location.pathname}});
+    const {data,error}=await SB.auth.signUp({email:a.email.trim(),password:a.pw,options:{emailRedirectTo:redirigeA()}});
     if(error){a.busy=false;a.err=errorCuenta(error)}
     else if(!data.session){a.busy=false;a.msg='Cuenta creada. Te hemos mandado un correo para confirmarla; ábrelo y vuelve aquí para entrar.';a.modo='entrar';a.pw=''}
     else VISTA='portada';
     pinta()},
   async olvido(){
     const a=ACCESO;a.err='';a.msg='';if(!a.email){a.err='Escribe primero tu correo.';return}
-    a.busy=true;pinta();const {error}=await SB.auth.resetPasswordForEmail(a.email.trim(),{redirectTo:location.origin+location.pathname});
+    a.busy=true;pinta();const {error}=await SB.auth.resetPasswordForEmail(a.email.trim(),{redirectTo:redirigeA()});
     a.busy=false;if(error)a.err=errorCuenta(error);else a.msg='Si hay una cuenta con ese correo, te llegará un enlace para poner una contraseña nueva.';pinta()},
   async nuevaClave(){
     const pw=(($('#pw')||{}).value||'');ACCESO.err='';if(pw.length<8){ACCESO.err='Mínimo 8 caracteres.';return}

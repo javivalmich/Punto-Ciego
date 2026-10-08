@@ -15,6 +15,7 @@ En Xcode: elegir el Team en *Signing & Capabilities* (la capability *Sign in wit
 ## Sign in with Apple
 - **Web**: `signInWithOAuth({provider:'apple'})` (Services ID).
 - **App nativa**: plugin `@capacitor-community/apple-sign-in` → `signInWithIdToken` con nonce (a Apple, el hash SHA-256; a Supabase, el original).
+- **Enlaces externos**: en la app la página va en `capacitor://localhost`, así que Privacidad, Términos y Soporte se abren con `@capacitor/browser` (`Browser.open`) y su URL pública `https://puntostudio.es/punto-ciego/*.html` (`enlaceLegal()` en `index.html`); el enlace de compartir, el QR y las redirecciones de los correos de Supabase llevan la web pública. El botón de Google no se ofrece en la app (su vuelta OAuth acabaría en Safari, no en la app).
   Ver `entraConAppleNativo` en `index.html`. En Supabase → Providers → Apple, el **Bundle ID** debe estar en *Client IDs* (junto al Services ID).
 - **Revocación al borrar la cuenta**: tras entrar, la app manda el `authorizationCode` (caduca a los 5 min) a la Edge Function
   `apple-canjear-codigo`, que lo canjea en `appleid.apple.com/auth/token` con `client_id` = Bundle ID y guarda el refresh token en
