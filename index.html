@@ -16,6 +16,8 @@ setTimeout(f,1500)}
 fetch(D+'manifest.json',{cache:'no-store'}).then(function(r){if(r.ok)ir()}).catch(function(){});
 if(navigator.serviceWorker)navigator.serviceWorker.addEventListener('message',function(e){if(e.data==='mudanza')ir()});
 })();</script>
+<script>/* App nativa (Capacitor): el puente inyecta window.Capacitor sin registerPlugin; se carga el UMD de @capacitor/core (lo copia scripts/preparar-www.mjs a assets/capacitor.js). En la web no se carga nada. */
+if(window.Capacitor&&typeof window.Capacitor.isNativePlatform==='function'&&window.Capacitor.isNativePlatform())document.write('<script src="assets/capacitor.js"><\/script>');</script>
 <meta name="theme-color" content="#0C0C0C">
 <meta name="description" content="Punto Ciego: No puedes confiar en lo que ves. Tareas por las habitaciones de tu casa, sabotajes e impostores, con el móvil.">
 <link rel="manifest" href="manifest.json">
@@ -768,7 +770,9 @@ async function borrarCuentaRemota(sb){
   if(rpcErr)throw rpcErr;
 }
 /* App nativa (Capacitor, iOS): Sign in with Apple con el plugin @capacitor-community/apple-sign-in + signInWithIdToken.
-   El plugin se registra por nombre: el puente nativo ya inyecta window.Capacitor, no hace falta bundler. */
+   Los plugins se registran por nombre (jsName nativo: «SignInWithApple», «Browser») con registerPlugin, que aporta assets/capacitor.js (ver arriba). */
+const PLUGINS={};
+const plugin=n=>PLUGINS[n]||(PLUGINS[n]=window.Capacitor.registerPlugin(n));
 const EN_APP=!!(window.Capacitor&&window.Capacitor.isNativePlatform&&window.Capacitor.isNativePlatform());
 const APPLE_BUNDLE_ID='es.puntostudio.puntociego';
 /* En la app la página se sirve desde capacitor://localhost: cualquier enlace que salga del WebView con ese origen se lo queda otra app
@@ -781,15 +785,16 @@ const enlaceLegal=(k,txt,blank)=>`<a href="${LEGAL[k][0]}" data-ext="${WEB_BASE+
 document.addEventListener('click',e=>{
   const a=EN_APP&&e.target.closest&&e.target.closest('a[data-ext]');if(!a)return;
   e.preventDefault();
-  try{window.Capacitor.registerPlugin('Browser').open({url:a.dataset.ext})}catch(x){console.warn('browser',x)}
+  const url=a.dataset.ext,fallo=x=>{console.warn('browser',x);try{window.open(url,'_blank')}catch(y){}};
+  try{Promise.resolve(plugin('Browser').open({url})).catch(fallo)}catch(x){fallo(x)}
 });
 async function sha256Hex(t){const b=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(t));return Array.from(new Uint8Array(b),x=>x.toString(16).padStart(2,'0')).join('')}
 function appleCancelado(e){return /1001|cancel/i.test((e&&(e.code||e.message))||'')}
 async function entraConAppleNativo(){
-  const plugin=window.Capacitor.registerPlugin('SignInWithApple');
+  const apple=plugin('SignInWithApple');
   const raw=Array.from(crypto.getRandomValues(new Uint8Array(32)),x=>x.toString(16).padStart(2,'0')).join('');
   /* a Apple se le da el nonce con hash; a Supabase, el original (así lo verifica contra el token) */
-  const r=await plugin.authorize({clientId:APPLE_BUNDLE_ID,redirectURI:SUPA.url+'/auth/v1/callback',scopes:'email name',nonce:await sha256Hex(raw)});
+  const r=await apple.authorize({clientId:APPLE_BUNDLE_ID,redirectURI:SUPA.url+'/auth/v1/callback',scopes:'email name',nonce:await sha256Hex(raw)});
   const tok=r&&r.response&&r.response.identityToken;
   if(!tok)throw new Error('Apple no devolvió el token');
   const {error}=await SB.auth.signInWithIdToken({provider:'apple',token:tok,nonce:raw});

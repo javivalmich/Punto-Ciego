@@ -15,4 +15,9 @@ for (const p of incluir) {
   if (!existsSync(join(raiz, p))) throw new Error('Falta ' + p);
   cpSync(join(raiz, p), join(destino, p), { recursive: true });
 }
-console.log('www/ listo: ' + incluir.join(', '));
+/* El puente nativo de iOS inyecta window.Capacitor pero sin registerPlugin: lo aporta @capacitor/core. Sin bundler, se copia su build UMD
+   y index.html lo carga SOLO dentro de la app (la web no lo tiene en assets/). */
+const core = join(raiz, 'node_modules', '@capacitor', 'core', 'dist', 'capacitor.js');
+if (!existsSync(core)) throw new Error('Falta @capacitor/core: ejecuta npm install');
+cpSync(core, join(destino, 'assets', 'capacitor.js'));
+console.log('www/ listo: ' + incluir.join(', ') + ' + assets/capacitor.js');
