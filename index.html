@@ -3535,6 +3535,19 @@ document.addEventListener('pointerdown',()=>{WK.ctx()});
 WK.init();
 if(LS.get('imp.micok'))$('#wkMicNota').hidden=true;
 {const f=document.createElement('button');f.id='prFab';f.hidden=true;f.textContent='⚡ Atajos';f.dataset.a='atajos';document.body.appendChild(f)} /* oculto salvo en cuentas con puede_bots (enAtajos) */
+/* Universal Links: el enlace y el QR de una partida (https://puntostudio.es/punto-ciego/?c=CÓDIGO) abren la app si está instalada (apple-app-site-association en
+   puntostudio.es + entitlement applinks). @capacitor/app avisa con appUrlOpen, también si la app estaba cerrada (el aviso se retiene hasta que hay oyente). */
+function abreEnlace(url){
+  let u;try{u=new URL(url)}catch(e){return}
+  if(u.hostname!=='puntostudio.es'||!/^\/punto-ciego\/(?!beta\/)/.test(u.pathname))return;
+  const c=(u.searchParams.get('c')||'').toUpperCase();if(c.length!==5||/[^A-Z0-9]/.test(c))return;
+  if(ME&&ME.code){if(ME.code!==c)toast('Ya estás en una partida: sal de ella para unirte a la '+c);return}
+  PEND_ENTRAR=c;LS.set('pc.invita',{c,t:Date.now()});
+  if(PERFIL&&(USER||INVITADO)){PEND_ENTRAR=null;LS.del('pc.invita');entrar(c,PERFIL.name,false);return}
+  if(USER&&!PERFIL&&!PERFIL_CARGANDO)VISTA='editor'; /* con sesión y sin personaje: lo crea y al guardar entra (PEND_ENTRAR); sin sesión sale el acceso con el aviso de invitación */
+  pinta();
+}
+if(EN_APP)try{Promise.resolve(plugin('App').addListener('appUrlOpen',e=>abreEnlace(e&&e.url))).catch(x=>console.warn('appUrlOpen',x))}catch(x){console.warn('appUrlOpen',x)}
 (function arranque(){
   const q=(new URLSearchParams(location.search).get('c')||'').toUpperCase();
   const ult=LS.get('imp.ultima');
