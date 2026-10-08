@@ -25,7 +25,7 @@ const ARGS = process.argv.slice(2);
 const CONFIRMAR = ARGS.includes('--confirmar');
 const PORT = +(ARGS.find(a => /^\d+$/.test(a)) || 9999);
 const PENDIENTES = {}; // token de confirmación -> id de usuario
-const DB_FILE = path.join(__dirname, '.mocksb-data.json');
+const DB_FILE = process.env.MOCKSB_DATOS || path.join(__dirname, '.mocksb-data.json'); // MOCKSB_DATOS: otro archivo (los tests usan uno temporal)
 
 function cargaDB() {
   try { return JSON.parse(fs.readFileSync(DB_FILE, 'utf8')); }
@@ -168,9 +168,10 @@ const server = http.createServer(async (req, res) => {
           if (fila.id !== user.id) return envia(res, 403, { message: 'new row violates row-level security policy for table "profiles"', code: '42501' });
           if (fila.username && DB.profiles.some(x => x.id !== fila.id && x.username.toLowerCase() === fila.username.toLowerCase()))
             return envia(res, 409, { message: 'duplicate key value violates unique constraint "profiles_username_unico"', code: '23505' });
+          delete fila.puede_bots; // imita el trigger real: desde la app el indicador ni se crea ni se cambia (solo a mano en .mocksb-data.json)
           let existente = DB.profiles.find(x => x.id === fila.id);
           if (existente) Object.assign(existente, fila);
-          else { existente = { partidas: 0, victorias: 0, como_impostor: 0, ...fila }; DB.profiles.push(existente); }
+          else { existente = { partidas: 0, victorias: 0, como_impostor: 0, puede_bots: false, ...fila }; DB.profiles.push(existente); }
           salida.push(existente);
         }
         guardaDB();

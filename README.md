@@ -52,19 +52,37 @@ entero en el propio móvil, igual que el resto de la app.
 
 Las partidas y el walkie viajan por MQTT cifrado a través de brokers públicos; no hay servidor propio.
 
-## Modo pruebas (jugar solo con bots)
+## Modo bots (jugar solo, para la revisión de Apple y las pruebas)
 
-Abre la web con `?pruebas=1` (por ejemplo `https://puntostudio.es/punto-ciego/?pruebas=1`). Sin ese parámetro
-no existe nada de esto: ni panel, ni botón, ni código activo.
+Solo lo ven las cuentas con `puede_bots = true` en su fila de `profiles`. Ese indicador **solo se cambia desde el servidor**
+(un trigger de Supabase lo fuerza a `false` al crear el perfil y lo conserva al actualizarlo cuando quien llama es la app, así que
+ni el cliente ni un `upsert` manual pueden activarlo). La migración es `supabase/migrations/20261008120000_puede_bots.sql`.
 
-- **Sala de espera** (solo el anfitrión): panel *Pruebas* para añadir o quitar bots, elegir tu papel en la próxima
-  partida (aleatorio, tripulante, impostor) y la velocidad de los bots (lenta, normal, rápida).
+Activarlo en una cuenta (SQL Editor de Supabase; el perfil debe existir, es decir, la cuenta ya ha creado su personaje):
+
+```sql
+update public.profiles set puede_bots = true
+where id = (select id from auth.users where email = 'revisor@ejemplo.com');
+```
+
+Quitarlo: lo mismo con `false`. Ver quién lo tiene: `select username from public.profiles where puede_bots;`.
+
+- **Sala de espera** (solo el anfitrión): bloque *Bots* con **Añadir bots** (3 de golpe; con el anfitrión ya son los 4 que hacen
+  falta), *+1 bot* y *Quitar bots*; elegir tu papel en la próxima partida (aleatorio, Ciego, Punto) y la velocidad de los bots
+  (lenta, normal, rápida).
+- **Los bots** se unen, reciben rol, hacen tareas con esperas de 20 a 50 s (o la duración real de las tareas de vida real), reportan
+  cuerpos, votan en las reuniones, pueden ser expulsados o muertos, y el bot Punto mata y sabotea (gas, luces, comunicaciones, puertas).
+  No hablan por el walkie.
 - **Durante la partida**: botón discreto *⚡ Atajos* para convocar una reunión ya, saltar el debate, terminar la votación,
-  hacer que un bot impostor mate a alguien (incluido tú), lanzar cualquier sabotaje o completar las tareas de los bots.
+  hacer que un bot Punto mate a alguien (incluido tú), lanzar cualquier sabotaje o completar las tareas de los bots.
 - Los bots viven en el navegador del anfitrión: generan acciones con ids `bot-1`, `bot-2`… y se aplican con el mismo
-  reducer que las de los jugadores reales. Si el anfitrión se desconecta, se paran.
-- Las partidas con bots **no** cuentan para las estadísticas de Supabase, y el walkie solo funciona entre personas.
-- El enlace de *Compartir* no lleva `pruebas=1`, y las acciones que llegan por la red con id de bot se descartan.
+  reducer que las de los jugadores reales. Si el anfitrión se desconecta, se paran. Si entra una persona en la sala, se acaba el
+  modo y los bots se van.
+- Las partidas con bots **no** cuentan para las estadísticas de Supabase. El enlace de *Compartir* no lleva ningún parámetro
+  especial y las acciones que llegan por la red con id de bot se descartan.
+- Si la cuenta no tiene el indicador, o la migración aún no está aplicada, no existe nada de esto (ni panel ni atajos).
+- Para los tests en local, `?pruebas=1` sigue activándolo **solo en localhost**; en producción ese parámetro no hace nada.
+  `python tests/bots_cuenta.py` comprueba el indicador y partidas completas como Ciego y como Punto.
 
 ## Instalable y fichas de tienda
 

@@ -23,3 +23,9 @@ where n.nspname = 'public' order by 1;
 
 -- V6. Cuentas: totales y sin confirmar. Tras activar la confirmación, las nuevas quedarán sin confirmar hasta pulsar el enlace.
 select count(*) as total, count(email_confirmed_at) as confirmadas from auth.users;
+
+-- V7. Indicador puede_bots protegido. Esperado: la columna existe (boolean, default false) y el trigger profiles_proteger_puede_bots
+--     está en profiles (insert y update). Cuentas con el indicador activo: solo las que tú hayas activado a mano.
+select column_name, data_type, column_default from information_schema.columns where table_schema = 'public' and table_name = 'profiles' and column_name = 'puede_bots';
+select tgname, tgenabled from pg_trigger where tgrelid = 'public.profiles'::regclass and not tgisinternal;
+select username from public.profiles where puede_bots;
