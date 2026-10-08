@@ -43,8 +43,12 @@ if(window.Capacitor&&typeof window.Capacitor.isNativePlatform==='function'&&wind
   padding-bottom:env(safe-area-inset-bottom,0px);
 }
 *,*::before,*::after{box-sizing:inherit}
-html{overscroll-behavior-y:none;scroll-padding-top:env(safe-area-inset-top,0px);-webkit-text-size-adjust:100%}
-body{margin:0;background:var(--acero);color:var(--tiza);font-family:var(--txt);font-size:16px;line-height:1.45;-webkit-font-smoothing:antialiased;min-height:100vh}
+html,body{overscroll-behavior:none}
+html{scroll-padding-top:env(safe-area-inset-top,0px);-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--acero);color:var(--tiza);font-family:var(--txt);font-size:16px;line-height:1.45;-webkit-font-smoothing:antialiased;min-height:100vh;min-height:var(--vh,100vh)}
+/* pantallas que caben enteras: sin scroll ni barra (lo decide ajustaScroll); si no caben, se desliza solo lo justo */
+html.sin-scroll,html.sin-scroll body{overflow:hidden;height:var(--vh,100%)}
+body.en-menu main{padding-bottom:16px}
 h1,h2,h3{font-family:var(--disp);font-weight:700;margin:0;line-height:1.08;letter-spacing:-.01em}
 h2{font-size:24px}
 p{margin:.4em 0}
@@ -2064,7 +2068,7 @@ function pinta(){
   }
   const app=$('#app'),bar=$('#bar'),over=$('#over');
   setHTML(app,h);setHTML(bar,b);bar.hidden=!b;setHTML(over,o);over.hidden=!o;
-  document.body.classList.toggle('en-portada',!!app.querySelector('.portada:not(.acc)'));document.body.classList.toggle('en-juego',!!b);document.body.classList.toggle('en-over',!!o);
+  document.body.classList.toggle('en-portada',!!app.querySelector('.portada:not(.acc)'));document.body.classList.toggle('en-juego',!!b);document.body.classList.toggle('en-menu',!ME.code&&!!app.querySelector('.perfil'));document.body.classList.toggle('en-over',!!o);
   document.body.classList.toggle('ov-pleno',!!o&&!over.querySelector('.ov-tira'));document.body.classList.toggle('ov-tira',!!o&&!!over.querySelector('.ov-tira'));
   if(b)document.documentElement.style.setProperty('--bar-h',bar.getBoundingClientRect().height+'px');
   $('#wkFab').classList.toggle('solo',!b);
@@ -2072,7 +2076,7 @@ function pinta(){
   if(SHEET&&(SHEET.juego||SHEET.sala)){const p=mine();if(!S||S.phase!=='play'||!p||(p.dead&&p.body))cerrarSheet()}
   if(SHEET&&SHEET.camaras){const p=mine();if(!S||S.phase!=='play'||!p||p.dead)cierraCamaras()}
   if(SHEET&&SHEET.refresh){const el=$('#shVivo');if(el)setHTML(el,SHEET.refresh())}
-  capas();WK.pinta();relojes();aplicaFiguras();
+  capas();ajustaScroll();WK.pinta();relojes();aplicaFiguras();
   if(S&&S.phase==='end'&&CUENTAS&&USER)sumarPartida();
 }
 /* ============ capas: lo que hay debajo de una pantalla completa o una hoja ni se desliza ni se toca ============
@@ -2084,6 +2088,16 @@ let CAPA_Y=null;
 /* altura realmente visible (con la barra de Safari): 100vh en iPhone es la teórica, innerHeight la real */
 function mideVh(){const h=(window.visualViewport&&window.visualViewport.height)||window.innerHeight;document.documentElement.style.setProperty('--vh',Math.round(h)+'px')}
 mideVh();addEventListener('resize',mideVh);addEventListener('orientationchange',()=>setTimeout(mideVh,200));if(window.visualViewport)visualViewport.addEventListener('resize',mideVh);
+/* portada, menú de jugar y partida en curso: si caben en la pantalla no se deslizan (ni barra ni rebote); si no, se desliza lo justo */
+function ajustaScroll(){
+  const h=document.documentElement,b=document.body;
+  if(CAPA_Y!==null)return;
+  if(!(b.classList.contains('en-portada')||b.classList.contains('en-menu')||b.classList.contains('en-juego'))){h.classList.remove('sin-scroll');return}
+  const vh=(window.visualViewport&&window.visualViewport.height)||window.innerHeight;
+  const need=$('#top').offsetHeight+$('#app').offsetHeight+(parseFloat(getComputedStyle(h).paddingBottom)||0);
+  h.classList.toggle('sin-scroll',need<=vh+1);
+  if(h.classList.contains('sin-scroll')&&(window.scrollY||h.scrollTop))window.scrollTo(0,0);
+}
 function capas(){
   const bq=!!$('#bloqueo'),sheet=!$('#sheet').hidden,wk=!$('#wk').hidden,ov=!$('#over').hidden;
   const abierta=bq||sheet||wk||ov||!!document.querySelector('.apagon');
