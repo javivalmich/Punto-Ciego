@@ -668,7 +668,7 @@ class Mq{
   pub(topic,payload,retain){if(!this.up)return false;return this.send(packet(0x30|(retain?1:0),[new Uint8Array(mstr(topic)),payload]))}
   close(){this.dead=true;clearInterval(this.ping);clearTimeout(this.rt);clearTimeout(this.tmo);try{this.ws&&this.ws.close()}catch(e){}}
 }
-const DEF_BROKERS=['wss://broker.hivemq.com:8884/mqtt','wss://broker.emqx.io:8084/mqtt','wss://public:public@public.cloud.shiftr.io','wss://mqtt.eclipseprojects.io:443/mqtt'];
+const DEF_BROKERS=['wss://broker.hivemq.com:8884/mqtt','wss://broker.emqx.io:8084/mqtt','wss://public:public@public.cloud.shiftr.io'];
 const BROKERS=(/^(localhost|127\.0\.0\.1)$/.test(location.hostname)?(new URLSearchParams(location.search).get('broker')||''):'').split(',').filter(Boolean); /* solo en localhost: servidores MQTT de pruebas; en producción un enlace no puede cambiarlos */
 if(!BROKERS.length)BROKERS.push(...DEF_BROKERS);
 const NET={cons:[],topic:null,key:null,seen:new Map()};
@@ -3116,7 +3116,9 @@ const WK={
   desconectar(){this.off=true;this.reco=false;this.suelta();this.cerrar()},
   async empieza(){
     const no=this.noPuede();if(no){this.estado(no);return}
-    if(this.rec)return;const c=this.ctx();
+    if(this.rec)return;
+    if(!redOk()){this.estado('Sin conexión con el servidor del walkie: reintentando…');this.diag();return}
+    const c=this.ctx();
     const r=this.rec={id:uid(10),n:0,ch:this.canal(),t0:Date.now(),pico:0,partes:[],arrancando:true};
     this.btn(true);this.estado('Abriendo micro…');
     try{await this.micro()}catch(e){if(this.rec===r)this.rec=null;this.btn(false);this.nivel(0);
@@ -3162,7 +3164,7 @@ const WK={
     if(r.mr){try{r.mr.stop()}catch(e){}}
     else{this.paraSP(r);this.trozo(r,(r.buf||[]).splice(0),true);
       const tot=r.partes.reduce((a,x)=>a+x.length,0);if(tot>800){const pcm=new Float32Array(tot);let o=0;for(const x of r.partes){pcm.set(x,o);o+=x.length}this.voces.push({t:ahora(),pid:ME.pid,ch:r.ch,pcm,dur:tot/8000});}}
-    this.ruido(.07,.1);this.estado('Enviado');setTimeout(()=>{if(!this.rec)this.estado('')},1500);this.pinta();
+    const sinRed=!redOk();this.ruido(.07,.1);this.estado(sinRed?'No se pudo enviar: sin conexión con el servidor':'Enviado');setTimeout(()=>{if(!this.rec)this.estado('')},sinRed?4000:1500);this.pinta();
   },
   subir(pcm){const c=this.ctx(),sr=c.sampleRate,n=Math.max(1,Math.floor(pcm.length*sr/8000)),b=c.createBuffer(1,n,sr),d=b.getChannelData(0),k=8000/sr;
     for(let i=0;i<n;i++){const x=i*k,i0=Math.floor(x),f=x-i0;d[i]=(pcm[i0]||0)*(1-f)+(pcm[i0+1]||pcm[i0]||0)*f}return b},
