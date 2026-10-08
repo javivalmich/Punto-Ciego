@@ -3,7 +3,7 @@
 <plist version="1.0">
   <dict>
     <key>CFBundleDevelopmentRegion</key>
-    <string>en</string>
+    <string>es</string>
     <key>CFBundleDisplayName</key>
     <string>Punto Ciego</string>
     <key>CFBundleExecutable</key>
@@ -21,7 +21,11 @@
     <key>CFBundleVersion</key>
     <string>$(CURRENT_PROJECT_VERSION)</string>
     <key>NSMicrophoneUsageDescription</key>
-    <string>Punto Ciego usa el micrófono para el walkie-talkie entre jugadores de la misma partida.</string>
+    <string>Punto Ciego usa el micrófono para el walkie-talkie entre jugadores y para algunas pruebas del juego, como soplar.</string>
+    <key>NSMotionUsageDescription</key>
+    <string>Punto Ciego usa el sensor de movimiento en algunas pruebas del juego, como agitar el móvil o mantenerlo nivelado. Los datos no salen del móvil.</string>
+    <key>ITSAppUsesNonExemptEncryption</key>
+    <false/>
     <key>LSRequiresIPhoneOS</key>
     <true/>
     <key>UILaunchStoryboardName</key>
@@ -30,7 +34,7 @@
     <string>Main</string>
     <key>UIRequiredDeviceCapabilities</key>
     <array>
-      <string>armv7</string>
+      <string>arm64</string>
     </array>
     <key>UISupportedInterfaceOrientations</key>
     <array>
