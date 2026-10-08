@@ -668,8 +668,11 @@ class Mq{
   pub(topic,payload,retain){if(!this.up)return false;return this.send(packet(0x30|(retain?1:0),[new Uint8Array(mstr(topic)),payload]))}
   close(){this.dead=true;clearInterval(this.ping);clearTimeout(this.rt);clearTimeout(this.tmo);try{this.ws&&this.ws.close()}catch(e){}}
 }
+const EN_APP=!!(window.Capacitor&&window.Capacitor.isNativePlatform&&window.Capacitor.isNativePlatform());
+/* En la app el WebView se sirve desde capacitor://localhost: sin el !EN_APP, localhost valdría también ahí y los parámetros de pruebas (?pruebas, ?supa, ?broker, ?sblib) tendrían efecto */
+const EN_LOCAL=!EN_APP&&/^(localhost|127\.0\.0\.1)$/.test(location.hostname);
 const DEF_BROKERS=['wss://broker.hivemq.com:8884/mqtt','wss://broker.emqx.io:8084/mqtt','wss://public:public@public.cloud.shiftr.io'];
-const BROKERS=(/^(localhost|127\.0\.0\.1)$/.test(location.hostname)?(new URLSearchParams(location.search).get('broker')||''):'').split(',').filter(Boolean); /* solo en localhost: servidores MQTT de pruebas; en producción un enlace no puede cambiarlos */
+const BROKERS=(EN_LOCAL?(new URLSearchParams(location.search).get('broker')||''):'').split(',').filter(Boolean); /* solo en localhost: servidores MQTT de pruebas; en producción un enlace no puede cambiarlos */
 if(!BROKERS.length)BROKERS.push(...DEF_BROKERS);
 const NET={cons:[],topic:null,key:null,seen:new Map()};
 async function netStart(code){
@@ -745,7 +748,6 @@ const SUPA={
   key:'sb_publishable_gS_zmhigp_Qt-h8jTyQBCg_r9WwTVU9'   // clave publicable: segura en el repo gracias a RLS
 };
 const QS=new URLSearchParams(location.search);
-const EN_LOCAL=/^(localhost|127\.0\.0\.1)$/.test(location.hostname);
 /* Práctica con bots: la ve cualquiera (invitados incluidos) en la sala de espera cuando está solo. Los atajos de prueba (⚡ Atajos)
    siguen reservados a cuentas con puede_bots=true en su perfil de Supabase, un indicador que únicamente se cambia desde el servidor
    (ver supabase/migrations/*_puede_bots.sql). En localhost, además, ?pruebas=1 los activa para los tests; en producción ese
@@ -783,7 +785,6 @@ async function borrarCuentaRemota(sb){
    Los plugins se registran por nombre (jsName nativo: «SignInWithApple», «Browser») con registerPlugin, que aporta assets/capacitor.js (ver arriba). */
 const PLUGINS={};
 const plugin=n=>PLUGINS[n]||(PLUGINS[n]=window.Capacitor.registerPlugin(n));
-const EN_APP=!!(window.Capacitor&&window.Capacitor.isNativePlatform&&window.Capacitor.isNativePlatform());
 const APPLE_BUNDLE_ID='es.puntostudio.puntociego';
 /* En la app la página se sirve desde capacitor://localhost: cualquier enlace que salga del WebView con ese origen se lo queda otra app
    del móvil que use el mismo esquema, y lo que se comparta o vuelva por correo no sirve fuera. Por eso las páginas externas se abren
