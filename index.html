@@ -679,7 +679,13 @@ async function netStart(code){
   netStop();const k=await claves(code);NET.topic=k.topic;NET.key=k.key;
   NET.cons=BROKERS.map(u=>{const m=new Mq(u,onRaw,c=>{if(c.up&&soyHost())publicarEstado(false);pintaTop();WK.diag()});m.sub(NET.topic+'/#');return m});
 }
-function netStop(){NET.cons.forEach(c=>c.close());NET.cons=[];NET.key=null}
+function netStop(){NET.cons.forEach(c=>c.close());NET.cons=[];NET.key=null;clearTimeout(NET.finT);NET.finT=0;NET.vacio=false}
+/* El estado de la partida se publica con retain=true (para que quien entra lo reciba al momento) y los brokers lo guardan. Un mensaje retenido
+   con payload vacío lo borra: se hace al terminar la partida (tras unos segundos para que todos reciban el final) y al salir el anfitrión. */
+function borraRetenido(){
+  if(!NET.topic)return;
+  for(const c of NET.cons)c.pub(NET.topic+'/s',new Uint8Array(0),true);
+}
 const redOk=()=>NET.cons.filter(c=>c.up).length;
 async function enviar(sub,obj,retain){
   if(!NET.key)return 0;const p=await cifra(obj);let ok=0;
@@ -1570,6 +1576,9 @@ function vAtajos(){
 /* ============ red de la partida ============ */
 function publicarEstado(bump,forzar){
   if(!S||(!soyHost()&&!forzar))return;
+  if(S.phase!=='end'){NET.vacio=false;clearTimeout(NET.finT);NET.finT=0}
+  else if(NET.vacio)return; /* partida terminada y estado ya borrado de los brokers: no se vuelve a retener */
+  else if(!NET.finT)NET.finT=setTimeout(()=>{NET.finT=0;if(S&&S.phase==='end'&&soyHost()){borraRetenido();NET.vacio=true}},30000);
   if(bump)S.v++;S.hb=ahora();S.app=APP_V;
   const me=mine();if(me)me.seen=S.hb;
   LS.set('imp.st.'+ME.code,S);
@@ -3267,6 +3276,7 @@ async function entrar(code,name,crear){
   despierto();pinta();
 }
 function salir(){
+  if(soyHost())borraRetenido(); /* si queda alguien, quien coja el mando vuelve a publicar */
   if(S&&mine()&&S.phase==='lobby'){const a=accion('leave');if(a)setTimeout(()=>enviar('a',a),250)} /* salida a propósito: se avisa dos veces y el anfitrión la aplica y publica al momento */
   const code=ME.code,cons=NET.cons;setTimeout(()=>{if(NET.cons===cons)netStop()},600);
   ME={code:null,pid:null,name:ME.name};S=null;VISTA='menu';PEND.clear();cerrarSheet();WK.cerrar();WK.reco=false;WK.suelta();LS.del('imp.ultima');
