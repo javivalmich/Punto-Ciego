@@ -746,11 +746,13 @@ const SUPA={
 };
 const QS=new URLSearchParams(location.search);
 const EN_LOCAL=/^(localhost|127\.0\.0\.1)$/.test(location.hostname);
-/* Bots y atajos (modo pruebas) solo existen para cuentas con puede_bots=true en su perfil de Supabase, un indicador que
-   únicamente se cambia desde el servidor (ver supabase/migrations/*_puede_bots.sql). En localhost, además, ?pruebas=1 los
-   activa para los tests; en producción ese parámetro no hace nada. */
+/* Práctica con bots: la ve cualquiera (invitados incluidos) en la sala de espera cuando está solo. Los atajos de prueba (⚡ Atajos)
+   siguen reservados a cuentas con puede_bots=true en su perfil de Supabase, un indicador que únicamente se cambia desde el servidor
+   (ver supabase/migrations/*_puede_bots.sql). En localhost, además, ?pruebas=1 los activa para los tests; en producción ese
+   parámetro no hace nada. */
 const PRUEBAS_LOCAL=EN_LOCAL&&QS.get('pruebas')==='1';
-let PRUEBAS=PRUEBAS_LOCAL;
+const PRUEBAS=true;
+let ATAJOS=PRUEBAS_LOCAL;
 if(EN_LOCAL&&QS.get('supa')){SUPA.url=QS.get('supa');SUPA.key=QS.get('supakey')||''}
 const SB_LIB=(EN_LOCAL&&QS.get('sblib'))||'assets/vendor/supabase-js/supabase.js';
 const CUENTAS=!!(SUPA.url&&SUPA.key);
@@ -874,8 +876,7 @@ async function cargaPuedeBots(){
   fijaBots(ok);
 }
 function fijaBots(ok){
-  PRUEBAS=PRUEBAS_LOCAL||ok;
-  if(PRUEBAS)pruebasEnSala();
+  ATAJOS=PRUEBAS_LOCAL||ok;
 }
 function errorCuenta(e){
   const m=((e&&(e.code||''))+' '+(e&&e.message||'')).toLowerCase();
@@ -1316,7 +1317,7 @@ function reducir(st,a,now,local){
     if(['azar','crew','imp'].includes(a.rol))r.rol=a.rol;if(a.vel in BOT_VEL)r.vel=a.vel;return true;
   }
   case 'atajo':{ /* modo pruebas: fuerza una situación sin esperar. Solo el anfitrión, en local y en una partida de pruebas */
-    if(!(local&&esHost&&st.pruebas&&soloBots(st)))return true;const m=st.meet;
+    if(!(local&&ATAJOS&&esHost&&st.pruebas&&soloBots(st)))return true;const m=st.meet;
     if(a.k==='reunion'){if(st.phase==='play')reunion(st,now,st.hostId,null)}
     else if(a.k==='debate'){if(st.phase==='meeting'&&m&&m.fase==='disc'){m.fase='vote';m.until=now+st.cfg.vote*1000}}
     else if(a.k==='resolver'){if(st.phase==='meeting'&&m&&m.fase==='vote')resolver(st,now)}
@@ -1370,6 +1371,7 @@ const elige=a=>a[Math.floor(Math.random()*a.length)];
 const velBots=()=>BOT_VEL[(S&&S.pr&&S.pr.vel)||'normal']||1;
 const bt=p=>esBot(p)?'<span class="bot-tag">bot</span>':'';
 const enPruebas=()=>!!(PRUEBAS&&S&&S.pruebas&&soyHost()&&soloBots(S));
+const enAtajos=()=>ATAJOS&&enPruebas();
 function botAccion(pid,t,data){aplicar({id:uid(12),pid,t,...data},true)}
 function botAnade(n=1){
   for(let i=0;i<n;i++)botAnade1();
@@ -1830,8 +1832,8 @@ function vPruebas(){
   const nb=S.players.filter(esBot).length,pr=S.pr||{rol:'azar',vel:'normal'};
   const chips=(a,lista,cur)=>`<div class="chips">${lista.map(([k,t])=>`<button class="chip ${cur===k?'on':''}" data-a="${a}" data-v="${k}">${t}</button>`).join('')}</div>`;
   const lleno=S.players.length>=15;
-  return `<section class="bloque prueba"><h2>Bots <span class="bot-tag">solo tú lo ves</span></h2>
-  <p class="tenue">Juega solo con bots: se unen, hacen tareas, votan y los Puntos matan y sabotean. Viven en este móvil y estas partidas no cuentan para tus estadísticas. Hacen falta 4 jugadores para empezar.</p>
+  return `<section class="bloque prueba"><h2>Práctica con bots <span class="bot-tag">bots</span></h2>
+  <p class="tenue">Para probar el juego tú solo. Los bots son jugadores simulados (llevan la etiqueta «bot»): se unen, hacen tareas, votan y los Puntos matan y sabotean. Viven en este móvil, se van en cuanto se une una persona y estas partidas no cuentan para tus estadísticas. Hacen falta 4 jugadores para empezar.</p>
   <p class="lbl">${nb} ${nb===1?'bot':'bots'} en la sala</p>
   <div class="pr-fila"><button data-a="botMas3" ${lleno?'disabled':''}>Añadir bots</button><button data-a="botMas" ${lleno?'disabled':''}>+1 bot</button><button data-a="botQuita" ${nb?'':'disabled'}>Quitar bots</button></div>
   <p class="lbl">Mi papel en la próxima partida</p>${chips('prRol',[['azar','Aleatorio'],['crew','Ciego'],['imp','Punto']],pr.rol)}
@@ -2072,7 +2074,7 @@ function pinta(){
   document.body.classList.toggle('ov-pleno',!!o&&!over.querySelector('.ov-tira'));document.body.classList.toggle('ov-tira',!!o&&!!over.querySelector('.ov-tira'));
   if(b)document.documentElement.style.setProperty('--bar-h',bar.getBoundingClientRect().height+'px');
   $('#wkFab').classList.toggle('solo',!b);
-  const pf=$('#prFab');if(pf){const q=mine();pf.hidden=!(enPruebas()&&q&&(S.phase==='play'||S.phase==='meeting'));pf.classList.toggle('solo',!b)}
+  const pf=$('#prFab');if(pf){const q=mine();pf.hidden=!(enAtajos()&&q&&(S.phase==='play'||S.phase==='meeting'));pf.classList.toggle('solo',!b)}
   if(SHEET&&(SHEET.juego||SHEET.sala)){const p=mine();if(!S||S.phase!=='play'||!p||(p.dead&&p.body))cerrarSheet()}
   if(SHEET&&SHEET.camaras){const p=mine();if(!S||S.phase!=='play'||!p||p.dead)cierraCamaras()}
   if(SHEET&&SHEET.refresh){const el=$('#shVivo');if(el)setHTML(el,SHEET.refresh())}
@@ -3252,10 +3254,6 @@ const WK={
 
 /* ============ acciones de la interfaz ============ */
 const qsExtra=()=>[PRUEBAS_LOCAL?'pruebas=1':''].filter(Boolean);
-/* el anfitrión de una cuenta con bots abre su sala (aún sin nadie más) en modo pruebas */
-function pruebasEnSala(){
-  if(S&&PRUEBAS&&S.hostId===ME.pid&&S.phase==='lobby'&&!S.pruebas&&soloBots(S)){S.pruebas=true;S.pr={rol:'azar',vel:'normal'};publicarEstado(true);pinta()}
-}
 async function entrar(code,name,crear){
   ME={code,pid:pidPara(code),name};LS.set('imp.pid.'+code,ME.pid);LS.set('imp.ultima',code);
   JOIN_SENT=false;PEND.clear();OPT.clear();PREV=null;OFF=0;OFFS=[];S=null;BUSCA_T=Date.now();HECHAS=new Set();
@@ -3443,15 +3441,15 @@ const ACT={
   botQuita(){botsQuita()},
   prRol(d){if(enPruebas())accion('pruebas',{rol:d.v})},
   prVel(d){if(enPruebas())accion('pruebas',{vel:d.v})},
-  atajos(){if(!enPruebas())return;ATJ='menu';abrirSheet('<div id="shVivo"></div>',{refresh:vAtajos});setHTML($('#shVivo'),vAtajos())},
+  atajos(){if(!enAtajos())return;ATJ='menu';abrirSheet('<div id="shVivo"></div>',{refresh:vAtajos});setHTML($('#shVivo'),vAtajos())},
   atajoVolver(){ATJ='menu'},
-  atajoReunion(){if(enPruebas()&&S.phase==='play'){accion('atajo',{k:'reunion'});cerrarSheet()}},
-  atajoDebate(){if(enPruebas())accion('atajo',{k:'debate'})},
-  atajoVotar(){if(enPruebas())atajoVotar()},
-  atajoMata(d){if(enPruebas())atajoMata(d.p)},
-  atajoSab(d){if(!enPruebas())return;if(d.k==='door'){ATJ='puerta';return}atajoSab(d.k)},
-  atajoPuertaA(d){if(enPruebas()){atajoSab('door',d.r);ATJ='menu'}},
-  atajoTareas(){if(enPruebas())atajoTareas()}
+  atajoReunion(){if(enAtajos()&&S.phase==='play'){accion('atajo',{k:'reunion'});cerrarSheet()}},
+  atajoDebate(){if(enAtajos())accion('atajo',{k:'debate'})},
+  atajoVotar(){if(enAtajos())atajoVotar()},
+  atajoMata(d){if(enAtajos())atajoMata(d.p)},
+  atajoSab(d){if(!enAtajos())return;if(d.k==='door'){ATJ='puerta';return}atajoSab(d.k)},
+  atajoPuertaA(d){if(enAtajos()){atajoSab('door',d.r);ATJ='menu'}},
+  atajoTareas(){if(enAtajos())atajoTareas()}
 };
 /* Pulsación visible: al tocar un botón se le pone .pulsado (iOS no siempre aplica :active en táctil) y se mantiene al menos 120 ms.
    En los botones que cambian de pantalla se espera hasta que el estado oscuro lleve ~100 ms visible antes de navegar. */
@@ -3514,7 +3512,7 @@ document.addEventListener('pointerdown',()=>{WK.ctx()});
 
 WK.init();
 if(LS.get('imp.micok'))$('#wkMicNota').hidden=true;
-{const f=document.createElement('button');f.id='prFab';f.hidden=true;f.textContent='⚡ Atajos';f.dataset.a='atajos';document.body.appendChild(f)} /* oculto salvo en cuentas con bots (enPruebas) */
+{const f=document.createElement('button');f.id='prFab';f.hidden=true;f.textContent='⚡ Atajos';f.dataset.a='atajos';document.body.appendChild(f)} /* oculto salvo en cuentas con puede_bots (enAtajos) */
 (function arranque(){
   const q=(new URLSearchParams(location.search).get('c')||'').toUpperCase();
   const ult=LS.get('imp.ultima');
