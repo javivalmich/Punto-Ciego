@@ -24,6 +24,16 @@
     <string>Punto Ciego usa el micrófono para el walkie-talkie entre jugadores y para algunas pruebas del juego, como soplar.</string>
     <key>NSMotionUsageDescription</key>
     <string>Punto Ciego usa el sensor de movimiento en algunas pruebas del juego, como agitar el móvil o mantenerlo nivelado. Los datos no salen del móvil.</string>
+    <key>CFBundleURLTypes</key>
+    <array>
+      <dict>
+        <key>CFBundleURLSchemes</key>
+        <array>
+          <!-- Google Sign-In: ID de cliente iOS invertido. Sustituye REEMPLAZAR por la parte inicial del ID (NNNN-xxxx) y pon el ID completo en GOOGLE_IOS_ID de index.html -->
+          <string>com.googleusercontent.apps.REEMPLAZAR</string>
+        </array>
+      </dict>
+    </array>
     <key>ITSAppUsesNonExemptEncryption</key>
     <false/>
     <key>LSRequiresIPhoneOS</key>

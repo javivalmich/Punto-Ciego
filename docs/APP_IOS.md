@@ -16,7 +16,7 @@ En Xcode: elegir el Team en *Signing & Capabilities* (la capability *Sign in wit
 - **Web**: `signInWithOAuth({provider:'apple'})` (Services ID).
 - **App nativa**: plugin `@capacitor-community/apple-sign-in` → `signInWithIdToken` con nonce (a Apple, el hash SHA-256; a Supabase, el original).
 - **Plugins desde JS sin bundler**: el puente nativo inyecta `window.Capacitor` sin `registerPlugin`. `scripts/preparar-www.mjs` copia el UMD de `@capacitor/core` a `www/assets/capacitor.js` e `index.html` lo carga solo si `Capacitor.isNativePlatform()` (en la web no existe). Los plugins se piden con `plugin('Browser')` y `plugin('SignInWithApple')`, el `jsName` nativo de cada uno.
-- **Enlaces externos**: en la app la página va en `capacitor://localhost`, así que Privacidad, Términos y Soporte se abren con `@capacitor/browser` (`Browser.open`) y su URL pública `https://puntostudio.es/punto-ciego/*.html` (`enlaceLegal()` en `index.html`); el enlace de compartir, el QR y las redirecciones de los correos de Supabase llevan la web pública. El botón de Google no se ofrece en la app (su vuelta OAuth acabaría en Safari, no en la app).
+- **Enlaces externos**: en la app la página va en `capacitor://localhost`, así que Privacidad, Términos y Soporte se abren con `@capacitor/browser` (`Browser.open`) y su URL pública `https://puntostudio.es/punto-ciego/*.html` (`enlaceLegal()` en `index.html`); el enlace de compartir, el QR y las redirecciones de los correos de Supabase llevan la web pública. Google en la app va con login nativo (ver «Google en la app»), no con OAuth web (su vuelta acabaría en Safari).
   Ver `entraConAppleNativo` en `index.html`. En Supabase → Providers → Apple, el **Bundle ID** debe estar en *Client IDs* (junto al Services ID).
 - **Revocación al borrar la cuenta**: tras entrar, la app manda el `authorizationCode` (caduca a los 5 min) a la Edge Function
   `apple-canjear-codigo`, que lo canjea en `appleid.apple.com/auth/token` con `client_id` = Bundle ID y guarda el refresh token en
@@ -25,3 +25,16 @@ En Xcode: elegir el Team en *Signing & Capabilities* (la capability *Sign in wit
   Las dos apps nativas (Punto Ciego `es.puntostudio.puntociego` y Punto Falso `es.puntostudio.puntofalso`) comparten estas funciones: la app envía su Bundle ID como `clientId`, la función lo valida contra la lista permitida (`BUNDLE_IDS_APP` en `_shared/apple.ts`) y lo guarda en `apple_tokens.client_id`; `eliminar-cuenta` revoca con ese client_id (filas antiguas sin él: el de siempre según `origen`). Migración: `20261008130000_apple_tokens_client_id.sql`.
   Secretos: `APPLE_TEAM_ID`, `APPLE_KEY_ID`, `APPLE_PRIVATE_KEY` (contenido del .p8), `APPLE_CLIENT_ID_APP`, `APPLE_CLIENT_ID_WEB`.
   Desplegar: `npx supabase functions deploy apple-canjear-codigo --project-ref qsmcdfyyxvqmesnbwsod` (y de nuevo `eliminar-cuenta`).
+
+
+## Google en la app
+
+Plugin `@capgo/capacitor-social-login` (pod `CapgoCapacitorSocialLogin`, solo con Google: `capacitor.config.json` desactiva Facebook, Apple y Twitter del plugin) + `supabase.auth.signInWithIdToken({provider:'google'})` con nonce (a Google se le pasa el hash; a Supabase, el original), igual que Apple. En la app, Apple sale por encima de Google.
+
+Mientras `GOOGLE_IOS_ID` (index.html) esté vacío, la app no muestra el botón de Google.
+
+1. **Google Cloud Console** → proyecto de Punto Studio → APIs y servicios → Credenciales → Crear credenciales → ID de cliente de OAuth → tipo **iOS**, ID de paquete `es.puntostudio.puntociego`. Si falta, configura antes la pantalla de consentimiento.
+2. Copia el **ID de cliente** (`NNNN-xxxx.apps.googleusercontent.com`) a `GOOGLE_IOS_ID` en `index.html`.
+3. En `ios/App/App/Info.plist`, sustituye `REEMPLAZAR` en `com.googleusercontent.apps.REEMPLAZAR` por `NNNN-xxxx` (el ID invertido; sin `.apps.googleusercontent.com`).
+4. **Supabase** → Authentication → Providers → Google: el Client ID / Secret del cliente **web** siguen siendo los de la web. En **Authorized Client IDs** añade el ID de cliente **iOS** del paso 1 (si ya hay otros, separados por comas). El token nativo lleva como audiencia el cliente iOS; sin esto Supabase lo rechaza.
+5. `npm run cap:sync`, `pod install` (en el Mac) y compilar. No se puede probar en el simulador sin cuenta de Google en el dispositivo/simulador.
