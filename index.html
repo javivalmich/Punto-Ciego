@@ -812,7 +812,7 @@ async function sha256Hex(t){const b=await crypto.subtle.digest('SHA-256',new Tex
 /* Google nativo en la app: @capgo/capacitor-social-login (jsName «SocialLogin») + signInWithIdToken, con nonce como en Apple.
    GOOGLE_IOS_ID es el ID de cliente OAuth de tipo iOS (Google Cloud Console, bundle es.puntostudio.puntociego); mientras esté vacío, la app no ofrece Google.
    Su esquema inverso (com.googleusercontent.apps.…) debe estar también en CFBundleURLTypes de ios/App/App/Info.plist. */
-const GOOGLE_IOS_ID='';
+const GOOGLE_IOS_ID='696175970854-40tmmdnkpqb0gkclc964i72htekg42r5.apps.googleusercontent.com';
 let GOOGLE_INI=false;
 function googleCancelado(e){return /USER_CANCELLED|cancel/i.test((e&&(e.code||e.message))||'')}
 async function entraConGoogleNativo(){
